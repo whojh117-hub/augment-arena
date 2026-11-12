@@ -987,7 +987,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 20;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 21;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1209,8 +1209,13 @@ function guestFrame(now, dt) {
         vp.x = clamp(vp.x + mx * sp * dt, R, W - R); vp.y = clamp(vp.y + my * sp * dt, R, H - R);
         for (const w of WALLS) resolveCircleRect(vp, R, w);
         if (net.pdGrace <= 0) {
-          const ex = tx - vp.x, ey = ty - vp.y, el = Math.hypot(ex, ey), free = ml > 0.05 ? 90 : 0;      // 움직이는 중엔 지연만큼의 차이는 허용
-          if (el > free) { const k = Math.min(1, dt * (ml > 0.05 ? 6 : 10)) * (el - free) / el; vp.x += ex * k; vp.y += ey * k; }
+          if (ml > 0.05) {      // 움직이는 중엔 지연만큼의 차이는 허용
+            const ex = tx - vp.x, ey = ty - vp.y, el = Math.hypot(ex, ey), free = 90;
+            if (el > free) { const k = Math.min(1, dt * 6) * (el - free) / el; vp.x += ex * k; vp.y += ey * k; }
+          } else if (Math.hypot(d[2], d[3]) < 8) {      // 멈췄고 서버도 멈춘 뒤에만 서버 위치로 살짝 맞춤 (낡은 이동 정보로 흔들리지 않게)
+            const rx = W - d[0], ry = d[1], ex = rx - vp.x, ey = ry - vp.y, el = Math.hypot(ex, ey);
+            if (el > 2.5) { const k = Math.min(1, dt * 8); vp.x += ex * k; vp.y += ey * k; }
+          }
         }
       }
     } else if (!vp._init || Math.hypot(tx - vp.x, ty - vp.y) > 140) { vp.x = tx; vp.y = ty; vp._init = 1; }
