@@ -8,6 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = Number(process.env.PORT) || 3000;
+const TEST_LAT = Number(process.env.TEST_LAT) || 0;      // 테스트용 인위적 지연(ms). 평소엔 0
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const NAME_RE = /^[a-z0-9][a-z0-9_.-]{0,47}$/;
 const MAX_PRES = 4096, MAX_ROOMS_PER_CONN = 4, MAX_PEERS_PER_ROOM = 8, MAX_CONNS = 400;
@@ -86,7 +87,7 @@ class Conn {
 function broadcast(room, except, obj) {
   const m = rooms.get(room); if (!m) return;
   const f = textFrame(obj);
-  for (const c of m.keys()) if (c !== except) c.raw(f);
+  for (const c of m.keys()) if (c !== except) { if (TEST_LAT) setTimeout(() => c.raw(f), TEST_LAT); else c.raw(f); }
 }
 function joinRoom(c, name) {
   if (!NAME_RE.test(name) && name !== '') return;
