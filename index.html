@@ -987,7 +987,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 22;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 23;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1144,6 +1144,7 @@ function guestPeers() {
   if (pr.gp && me && pr.gp !== me.peer && !net.started) { netMsg('이미 상대가 있는 방이에요.', true); return; }
   const s = pr.s; if (!s || s.n === net.lastN) return;
   net.lastN = s.n; net.snap = s; net.snapT = performance.now(); net.lastRx = net.snapT;
+  if (net.qt) { const t0 = net.qt[s.a]; if (t0) { const smp = (net.snapT - t0) / 1000; if (smp > 0 && smp < 1.5) net.rtt = Math.min(0.4, Math.max(0.04, net.rtt * 0.8 + smp * 0.2)); } for (const k of Object.keys(net.qt)) if (Number(k) <= s.a) delete net.qt[k]; }
   net.q = net.q.filter(q => q[0] > s.a);
   if (!net.started) startOnlineGuest(s);
   ingestEvents(s);
@@ -1153,9 +1154,9 @@ function startOnlineGuest(s) {
   net.started = true; net.hostChar = s.ch[0];
   game = new Game(myChar, s.ch[0], 'normal'); game.remote = true;
   game.setMove = (mx, my) => { net.mv = [-mx, my]; };                                   // 화면이 좌우 반전이라 이동 방향도 반전해서 보냄
-  net.pd = null; net.hold = null; net.cdo = {}; net.pfx = []; net.pb = []; net.sh = null;
+  net.pd = null; net.hold = null; net.cdo = {}; net.pfx = []; net.pb = []; net.sh = null; net.qt = {}; net.rtt = 0.15; net.atkBuf = 0; net.ownPrev = new Set(); net.pbSn = -1;
   game.pressDash = () => {
-    net.q.push([++net.qid, 'd']);
+    qpush([++net.qid, 'd']);
     const vp = game.players[0], now = performance.now();      // 대시는 누르는 즉시 내 화면에서 먼저 움직임 (예측)
     if (net.snap && net.snap.ph === 'fight' && vp.alive && vp.dashCd <= 0 && vp.stun <= 0 && !vp.charge && !net.pd) {
       const m = readMove(), ml = Math.hypot(m[0], m[1]); let dx, dy;
@@ -1164,26 +1165,27 @@ function startOnlineGuest(s) {
       predFx({ k: 'ring', x: vp.x, y: vp.y, r: 28, life: 0.25, max: 0.25, col: '#6be08a' });
     }
   };
-  game.pressAttack = () => net.q.push([++net.qid, 'a']);
+  game.pressAttack = () => { qpush([++net.qid, 'a']); if (net.snap && net.snap.ph === 'fight') net.atkBuf = ATK_BUFFER; };
   game.pressSkill = (i, ang) => {
-    net.q.push([++net.qid, 's', i, typeof ang === 'number' ? r2(Math.PI - ang) : null]);
+    qpush([++net.qid, 's', i, typeof ang === 'number' ? r2(Math.PI - ang) : null]);
     const vp = game.players[0]; if (net.snap && net.snap.ph === 'fight' && vp.alive && vp.stun <= 0 && vp.skCd[i] <= 0 && !net.pd) { net.cdo['s' + i] = { v: vp.ch.skills[i].cd, t: performance.now() }; predictSkill(i, ang, net.qid); }      // 쿨타임·효과는 누르는 즉시 내 화면에 먼저 표시
   };
   scene = 'play'; lastPh = ''; floats = []; parts = []; net.lastRx = performance.now(); net.snapT = performance.now();
   setupButtons(); resetTouch(); $('menu').hidden = true; $('net').hidden = true; $('end').hidden = true; setEndMode();
 }
+function qpush(q) { net.q.push(q); net.qt[q[0]] = performance.now(); }
 function predFx(o) { game.fx.push(o); net.pfx.push({ k: o.k, x: o.x, y: o.y, t: performance.now() }); }
 function predictSkill(i, angArg, qid) {      // 스킬을 누르는 즉시 내 화면에 효과를 먼저 보여줌. 실제 판정·피해는 방장이 함 (화면 좌표 기준)
-  const g = game, vp = g.players[0], sk = vp.ch.skills[i], aimed = typeof angArg === 'number', ang = aimed ? angArg : vp.aim, now = performance.now();
+  const g = game, vp = g.players[0], sk = vp.ch.skills[i], aimed = typeof angArg === 'number', ang = aimed ? angArg : vp.aim, now = performance.now(), L = Math.min(0.35, net.rtt || 0.15);
   for (const f of sk.fx) {
     if (f.t === 'proj') { const keep = g.bullets; g.bullets = []; g.fireProj(vp, f, ang); for (const b of g.bullets) { b.qid = qid; b.t0 = now; net.pb.push(b); } g.bullets = keep; }
     else if (f.t === 'aoe') predFx({ k: 'ring', x: vp.x, y: vp.y, r: f.radius, life: 0.3, max: 0.3, col: f.col || '#ffffff' });
-    else if (f.t === 'cone' && f.guard) predFx({ k: 'cone', x: vp.x, y: vp.y, a: ang, arc: f.arc, r: f.range, life: f.guard, max: f.guard, col: f.col || '#e8edf7', follow: 0 });
-    else if (f.t === 'line' && f.delay) predFx({ k: 'tele', x: vp.x, y: vp.y, a: ang, len: f.len, w: f.w, life: f.delay, max: f.delay, col: f.col || '#ff8a4a' });
+    else if (f.t === 'cone' && f.guard) predFx({ k: 'cone', x: vp.x, y: vp.y, a: ang, arc: f.arc, r: f.range, life: f.guard + L, max: f.guard + L, col: f.col || '#e8edf7', follow: 0 });
+    else if (f.t === 'line' && f.delay) predFx({ k: 'tele', x: vp.x, y: vp.y, a: ang, len: f.len, w: f.w, life: f.delay + L, max: f.delay + L, col: f.col || '#ff8a4a' });
     else if (f.t === 'shield') { predFx({ k: 'ring', x: vp.x, y: vp.y, r: 50, life: 0.35, max: 0.35, col: f.col || '#6ec1ff' }); net.sh = { a: f.amount, d: f.dur, t: now }; }
     else if (f.t === 'buff') predFx({ k: 'ring', x: vp.x, y: vp.y, r: 60, life: 0.4, max: 0.4, col: f.col || '#ffd24a' });
     else if (f.t === 'charge') {
-      const T = f.dist / f.speed + 0.1;
+      const T = f.dist / f.speed + 0.1 + L;
       predFx({ k: 'tele', x: vp.x, y: vp.y, a: ang, len: f.dist, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
       if (f.endR) predFx({ k: 'teleC', x: vp.x + Math.cos(ang) * f.dist, y: vp.y + Math.sin(ang) * f.dist, r: f.endR, life: T, max: T, col: f.col || '#5b8def' });
       net.pd = { t: f.dist / f.speed, dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed }; net.hold = { qid, t0: now };
@@ -1200,6 +1202,12 @@ function predictSkill(i, angArg, qid) {      // 스킬을 누르는 즉시 내 �
       predFx({ k: 'ring', x: vp.x, y: vp.y, r: 30, life: 0.25, max: 0.25, col: vp.ch.color }); net.hold = { qid, t0: now };
     }
   }
+}
+function predictAttack() {      // 평타도 누르는 즉시 내 화면에 먼저 표시 (피해 판정은 방장)
+  const g = game, vp = g.players[0], a = vp.ch.atk, now = performance.now();
+  net.cdo.a = { v: a.cd, t: now };
+  if (a.type === 'melee') predFx({ k: 'cone', x: vp.x, y: vp.y, a: vp.aim, arc: a.arc, r: a.range, life: 0.2, max: 0.2, col: '#e8edf7', follow: -1 });
+  else { const keep = g.bullets; g.bullets = []; g.fireProj(vp, { dmg: a.dmg, speed: a.speed, r: a.r }, vp.aim); for (const b of g.bullets) { b.qid = 0; b.t0 = now; net.pb.push(b); } g.bullets = keep; }
 }
 function ingestEvents(s) {
   const g = game, now = performance.now(), age = 0;
@@ -1258,15 +1266,21 @@ function guestFrame(now, dt) {
     if (j === 1) {      // 방금 누른 대시·스킬의 쿨타임은 서버 응답 전에도 바로 표시
       const co = net.cdo;
       if (co.d) { if (now - co.d.t > 700) co.d = null; else vp.dashCd = Math.max(vp.dashCd, co.d.v - (now - co.d.t) / 1000); }
+      if (co.a) { if (now - co.a.t > co.a.v * 1000 + 100) co.a = null; else vp.atkCd = Math.max(vp.atkCd, co.a.v - (now - co.a.t) / 1000); }
       if (net.sh) { const el = (now - net.sh.t) / 1000; if (el > 0.7) net.sh = null; else if (vp.shield < net.sh.a) { vp.shield = net.sh.a; vp.shieldMax = net.sh.a; vp.shieldT = net.sh.d - el; } }      // 방패는 누르는 즉시 표시
       for (let i = 0; i < 3; i++) { const c = co['s' + i]; if (c) { if (now - c.t > 700) co['s' + i] = null; else vp.skCd[i] = Math.max(vp.skCd[i], c.v - (now - c.t) / 1000); } }
     }
   }
   g.bullets = s.b.map(b => ({ x: clamp(W - (b[1] + b[3] * age), 0, W), y: clamp(b[2] + b[4] * age, 0, H), r: b[5], owner: 1 - b[6], col: b[7] || null }));
   net.pfx = net.pfx.filter(p => now - p.t < 1200);
+  if (net.pbSn !== s.n) {
+    net.pbSn = s.n; const cur = new Set(); let fresh = 0;
+    for (const b of s.b) if (b[6] === 1) { cur.add(b[0]); if (!net.ownPrev.has(b[0])) fresh++; }
+    net.ownPrev = cur; if (fresh > 0) net.pb.splice(0, fresh);
+  }
   net.pb = net.pb.filter(b => {      // 서버가 내 입력을 받아 실제 투사체를 보내오면(또는 너무 오래되면) 예측 투사체는 지움
     b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
-    if ((s.a | 0) >= b.qid || now - b.t0 > 900 || b.life <= 0 || b.x < b.r || b.x > W - b.r || b.y < b.r || b.y > H - b.r) return false;
+    if ((b.qid > 0 && (s.a | 0) >= b.qid && now - b.t0 > 250) || now - b.t0 > 700 || b.life <= 0 || b.x < b.r || b.x > W - b.r || b.y < b.r || b.y > H - b.r) return false;
     if (!b.pierce) for (const w of WALLS) if (resolveCircleRect(b, b.r, w)) return false;
     return true;
   });
@@ -1275,6 +1289,12 @@ function guestFrame(now, dt) {
   // 내 입력 보내기
   const m = readMove(); net.mv = [-m[0], m[1]];
   const hold = atkHeld(); g.players[0].atkHold = hold;
+  { const vp0 = g.players[0], e0 = g.players[1];
+    if (net.atkBuf > 0) net.atkBuf -= dt;
+    if (s.ph === 'fight' && vp0.alive && vp0.stun <= 0 && !vp0.charge && !net.pd && vp0.dashT <= 0 && vp0.atkCd <= 0) {
+      const a0 = vp0.ch.atk, dist0 = Math.hypot(e0.x - vp0.x, e0.y - vp0.y), inR = a0.type === 'melee' ? dist0 <= a0.range + R : (dist0 <= a0.range && g.clear(vp0.x, vp0.y, e0.x, e0.y));
+      if (net.atkBuf > 0 || (hold && inR)) { predictAttack(); net.atkBuf = 0; }
+    } }
   const i = { mx: r2(net.mv[0]), my: r2(net.mv[1]), h: hold ? 1 : 0, q: net.q.slice(-8) }, key = JSON.stringify(i);
   if (net.m && (key !== net.lastIn || now - net.inT > 250) && now - net.inT >= 33) { net.inT = now; net.lastIn = key; net.m.presence({ i }).catch(() => {}); }
 }
