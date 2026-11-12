@@ -158,7 +158,7 @@
   const wsend = o => { if (open) { try { ws.send(JSON.stringify(o)); } catch (e) { /* 무시 */ } } };
   const view = r => { const l = [{ peer: ME || 'me', by: null, isMe: true, sameTab: true, kind: 'viewer', guest: false, presence: r.me, updatedAt: Date.now() }]; for (const [id, v] of r.peers) l.push({ peer: id, by: null, isMe: false, sameTab: false, kind: 'viewer', guest: false, presence: v.presence, updatedAt: v.updatedAt }); return l; };
   const notify = r => { if (r.sched) return; r.sched = true; requestAnimationFrame(() => { r.sched = false; const peers = view(r); for (const h of [...r.handlers]) { try { h({ peers, joined: [], left: [], updated: [] }); } catch (e) { /* 무시 */ } } }); };
-  const flush = r => { if (r.pend) return; r.pend = true; setTimeout(() => { r.pend = false; if (r.joined) wsend({ t: 'pres', room: r.name, p: r.me }); }, 33); };
+  const flush = r => { if (r.pend) return; r.pend = true; setTimeout(() => { r.pend = false; if (r.joined) wsend({ t: 'pres', room: r.name, p: r.me }); }, 16); };
   function connect() {
     ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
     ws.onopen = () => { open = true; retry = 0; for (const r of rooms.values()) if (r.joined) { wsend({ t: 'join', room: r.name }); wsend({ t: 'pres', room: r.name, p: r.me }); } };
@@ -987,7 +987,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 23;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 24;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1049,6 +1049,7 @@ $('btnHost').onclick = netHost;
 $('btnJoin').onclick = () => { const c = $('joinCode').value.trim().toLowerCase(); if (!/^[a-z0-9]{4}$/.test(c)) { netMsg('방 코드는 4글자예요.', true); return; } netJoin(c); };
 
 function netLeave() {
+  pingTag(false); net.pingT = 0;
   if (net.offPeers) { try { net.offPeers(); } catch (e) { /* 무시 */ } }
   if (net.m) { net.m.leave().catch(() => {}); }
   net.offPeers = null; net.m = null; net.role = 'none'; net.started = false; net.gp = null; net.snap = null; net.lastN = -1; net.q = []; net.hostRm = net.guestRm = net.rmSent = false;
@@ -1111,7 +1112,7 @@ function hostCollectEv() {      // 화면에서 지워지기 전에 이번 프�
   net.evBuf = net.evBuf.filter(x => now - x.t < 1200);
 }
 function hostSend(now) {
-  if (!net.m || now - net.sendT < 33) return; net.sendT = now;
+  if (!net.m || now - net.sendT < 22) return; net.sendT = now;
   const g = game, P = g.players;
   const pl = P.map(p => [r1(p.x), r1(p.y), r1(p.vx), r1(p.vy), r2(p.aim), r1(p.hp), p.maxHp, p.alive ? 1 : 0, r2(p.stun), r2(p.slowT), r1(p.shield), p.shieldMax, r2(p.shieldT), r2(p.drT), r2(p.haste), r2(p.dashT),
     p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul)]);
@@ -1224,14 +1225,20 @@ function ingestEvents(s) {
   }
   for (const m of [net.seenFx, net.seenEv]) for (const [k, t] of m) if (now - t > 6000) m.delete(k);
 }
+function pingTag(show, ms) {
+  let el = document.getElementById("pingTag");
+  if (!el) { if (!show) return; el = document.createElement("div"); el.id = "pingTag"; el.style.cssText = "position:fixed;right:8px;bottom:6px;z-index:5;font:600 12px system-ui,sans-serif;color:#9fb0cc;background:rgba(10,14,24,.55);padding:2px 8px;border-radius:10px;pointer-events:none"; document.body.appendChild(el); }
+  el.hidden = !show; if (show) el.textContent = "핑 " + ms + "ms";
+}
 function guestFrame(now, dt) {
   const g = game, s = net.snap; if (!s) return;
+  if (now - (net.pingT || 0) > 500) { net.pingT = now; pingTag(true, Math.round((net.rtt || 0.15) * 1000)); }
   if (s.ph !== 'fight') { net.pd = null; net.hold = null; net.pb = []; net.pfx = []; net.sh = null; }
-  const age = Math.min(0.25, (now - net.snapT) / 1000);
+  const age = Math.min(0.25, (now - net.snapT) / 1000), lead = Math.min(0.1, (net.rtt || 0.15) * 0.5);
   g.ph = s.ph; g.round = s.rd; g.score = [s.sc[1], s.sc[0]]; g.res = s.rs == null ? null : { w: s.rs < 0 ? s.rs : 1 - s.rs }; g.matchWinner = s.mw < 0 ? -1 : 1 - s.mw;
   g.timer = s.tm - age; g.fightT = s.ft + (s.ph === 'fight' ? age : 0);
   for (let j = 0; j < 2; j++) {
-    const d = s.p[j], vp = g.players[1 - j], tx = clamp(W - (d[0] + d[2] * age), R, W - R), ty = clamp(d[1] + d[3] * age, R, H - R);
+    const d = s.p[j], vp = g.players[1 - j], ea = j === 0 ? age + lead : age, tx = clamp(W - (d[0] + d[2] * ea), R, W - R), ty = clamp(d[1] + d[3] * ea, R, H - R);
     const own = j === 1 && s.ph === 'fight';
     let hold = false;
     if (own && net.hold) { hold = now - net.hold.t0 < 1800 && ((s.a | 0) < net.hold.qid || d[15] > 0 || !!d[16]); if (!hold) net.hold = null; }
@@ -1271,7 +1278,7 @@ function guestFrame(now, dt) {
       for (let i = 0; i < 3; i++) { const c = co['s' + i]; if (c) { if (now - c.t > 700) co['s' + i] = null; else vp.skCd[i] = Math.max(vp.skCd[i], c.v - (now - c.t) / 1000); } }
     }
   }
-  g.bullets = s.b.map(b => ({ x: clamp(W - (b[1] + b[3] * age), 0, W), y: clamp(b[2] + b[4] * age, 0, H), r: b[5], owner: 1 - b[6], col: b[7] || null }));
+  g.bullets = s.b.map(b => ({ x: clamp(W - (b[1] + b[3] * (age + lead)), 0, W), y: clamp(b[2] + b[4] * (age + lead), 0, H), r: b[5], owner: 1 - b[6], col: b[7] || null }));
   net.pfx = net.pfx.filter(p => now - p.t < 1200);
   if (net.pbSn !== s.n) {
     net.pbSn = s.n; const cur = new Set(); let fresh = 0;
@@ -1296,7 +1303,7 @@ function guestFrame(now, dt) {
       if (net.atkBuf > 0 || (hold && inR)) { predictAttack(); net.atkBuf = 0; }
     } }
   const i = { mx: r2(net.mv[0]), my: r2(net.mv[1]), h: hold ? 1 : 0, q: net.q.slice(-8) }, key = JSON.stringify(i);
-  if (net.m && (key !== net.lastIn || now - net.inT > 250) && now - net.inT >= 33) { net.inT = now; net.lastIn = key; net.m.presence({ i }).catch(() => {}); }
+  if (net.m && (key !== net.lastIn || now - net.inT > 250) && now - net.inT >= 22) { net.inT = now; net.lastIn = key; net.m.presence({ i }).catch(() => {}); }
 }
 function opponentLeft() {
   if (net.ended) return; net.ended = true;
@@ -1320,6 +1327,7 @@ function frame(now) {
   aimPrev = null;
   for (const r of roles.values()) if (r.type === 'skill' && Math.hypot(r.dx, r.dy) > DRAG_MIN) aimPrev = { i: r.i, ang: Math.atan2(r.dy, r.dx) };
   acc += dt;
+  if (net.role !== 'guest' && net.pingT) { net.pingT = 0; pingTag(false); }
   if (net.role === 'guest') { guestFrame(now, dt); acc = 0; }
   else {
     while (acc >= STEP) {
