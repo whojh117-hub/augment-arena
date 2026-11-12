@@ -164,6 +164,7 @@
     ws.onopen = () => { open = true; retry = 0; for (const r of rooms.values()) if (r.joined) { wsend({ t: 'join', room: r.name }); wsend({ t: 'pres', room: r.name, p: r.me }); } };
     ws.onmessage = ev => {
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.t === 'snap' || m.t === 'verr' || m.t === 'left') { if (window.claude.sa.h) window.claude.sa.h(m); return; }
       const r = rooms.get(m.room); if (!r) return;
       if (m.t === 'init') { ME = m.me || ME; r.peers.clear(); for (const [id, p] of m.peers) r.peers.set(id, { presence: p, updatedAt: Date.now() }); wsend({ t: 'pres', room: r.name, p: r.me }); }
       else if (m.t === 'u') r.peers.set(m.id, { presence: m.p, updatedAt: Date.now() });
@@ -188,7 +189,7 @@
   }
   const lobby = get(''); lobby.joined = true; connect();
   setInterval(() => { for (const r of rooms.values()) if (r.joined && open) wsend({ t: 'pres', room: r.name, p: r.me }); }, 1000);
-  window.claude = { use: async n => (n === 'room' ? api(lobby) : null) };
+  window.claude = { use: async n => (n === 'room' ? api(lobby) : null), sa: { h: null, send: o => wsend(o) } };
 })();
 </script>
 <script>
@@ -679,7 +680,7 @@ function startGame() {
 $('btnStart').onclick = startGame;
 $('btnAgain').onclick = () => {
   if (net.role === 'host') { net.hostRm = true; $('btnAgain').textContent = '상대 대기 중…'; if (net.guestRm) hostRematch(); return; }
-  if (net.role === 'guest') { net.rmSent = true; net.m.presence({ rm: 1 }).catch(() => {}); $('btnAgain').textContent = '방장 대기 중…'; return; }
+  if (net.role === 'guest') { net.rmSent = true; if (isSA()) window.claude.sa.send({ t: 'rm' }); else net.m.presence({ rm: 1 }).catch(() => {}); $('btnAgain').textContent = isSA() ? '상대 대기 중…' : '방장 대기 중…'; return; }
   if (oppKey === 'random') { startGame(); return; } game.startMatch(); lastPh = ''; floats = []; parts = []; $('end').hidden = true; resetTouch(); };
 $('btnMenu').onclick = () => { if (net.role !== 'none') netLeave(); setEndMode(); scene = 'menu'; game = null; $('end').hidden = true; $('menu').hidden = false; ctl.hidden = true; resetTouch(); };
 
@@ -987,7 +988,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 24;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 25;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -997,6 +998,7 @@ const cid = ch => CHAR_ORDER.find(k => CHARS[k] === ch);
 const r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100;
 const CODE_CH = 'abcdefghjkmnpqrstuvwxyz23456789';
 const randCode = () => Array.from({ length: 4 }, () => CODE_CH[Math.floor(Math.random() * CODE_CH.length)]).join('');
+const isSA = () => !!(window.claude && window.claude.sa);      // 우리 서버에서 연 페이지면 서버가 판정함
 const hasClaude = () => !!(window.claude && typeof claude.use === 'function');
 function netMsg(t, warn) { const el = $('netMsg'); el.textContent = t; el.style.color = warn ? '#ff9a5a' : ''; }
 function lobbyPresence(p) { if (net.room) net.room.presence(p).catch(() => {}); }
@@ -1009,6 +1011,7 @@ async function netBoot() {
     const r = await Promise.race([claude.use('room'), new Promise(res => setTimeout(() => res(null), 10000))]);
     if (!r) return null;
     net.room = r; r.presence({ v: BUILD, o: null }).catch(() => {});
+    if (isSA()) window.claude.sa.h = m => { if (m.t === 'snap') onSnap(m.s); else if (m.t === 'verr') versionBlock(m.v); else if (m.t === 'left') opponentLeft(); };
     net.offLobby = r.onPeers(() => { renderRooms(); checkUpdate(); }, () => {});
   } catch (e) { /* 온라인 사용 불가 */ }
   return net.room;
@@ -1070,7 +1073,7 @@ async function netHost() {
   lobbyPresence({ o: net.code, c: myChar });
   $('netBtns').hidden = true; $('netHost').hidden = false; $('hostCode').textContent = net.code.toUpperCase();
   netMsg('상대를 기다리는 중… 코드를 알려주거나, 상대가 "열린 방"에서 이 방을 고르면 시작돼요.');
-  net.offPeers = net.m.onPeers(hostPeers, () => {});
+  net.offPeers = isSA() ? null : net.m.onPeers(hostPeers, () => {});
 }
 $('btnHostCancel').onclick = () => { netLeave(); netMsg('방을 닫았어요.'); renderRooms(); };
 function hostPeers() {
@@ -1132,7 +1135,7 @@ async function netJoin(code) {
   try { net.m = await net.room.join('g-' + code); } catch (e) { netMsg('방에 들어가지 못했어요(' + (e && e.code) + ').', true); net.role = 'none'; return; }
   net.m.presence({ r: 'g', c: myChar, v: BUILD, i: { mx: 0, my: 0, h: 0, q: [] } }).catch(() => {});
   netMsg('방 ' + code.toUpperCase() + '에 들어갔어요. 방장을 기다리는 중…');
-  net.joinAt = performance.now(); net.offPeers = net.m.onPeers(guestPeers, () => {});
+  net.joinAt = performance.now(); net.offPeers = isSA() ? null : net.m.onPeers(guestPeers, () => {});
   setTimeout(() => { if (net.role === 'guest' && !net.started) netMsg('방장이 응답하지 않아요. 코드를 확인하거나 방장이 방을 만들었는지 확인하세요.', true); }, 8000);
 }
 function guestPeers() {
@@ -1143,13 +1146,17 @@ function guestPeers() {
   if (pr.v !== BUILD) { versionBlock(pr.v); return; }
   const me = peers.find(p => p.sameTab);
   if (pr.gp && me && pr.gp !== me.peer && !net.started) { netMsg('이미 상대가 있는 방이에요.', true); return; }
-  const s = pr.s; if (!s || s.n === net.lastN) return;
+  onSnap(pr.s);
+}
+function onSnap(s) {
+  if (!s || s.n === net.lastN || !net.m || (net.role !== 'guest' && net.role !== 'host')) return;
+  if (isSA() && net.role === 'host') { net.role = 'guest'; lobbyPresence({ o: null }); }
   net.lastN = s.n; net.snap = s; net.snapT = performance.now(); net.lastRx = net.snapT;
   if (net.qt) { const t0 = net.qt[s.a]; if (t0) { const smp = (net.snapT - t0) / 1000; if (smp > 0 && smp < 1.5) net.rtt = Math.min(0.4, Math.max(0.04, net.rtt * 0.8 + smp * 0.2)); } for (const k of Object.keys(net.qt)) if (Number(k) <= s.a) delete net.qt[k]; }
   net.q = net.q.filter(q => q[0] > s.a);
   if (!net.started) startOnlineGuest(s);
   ingestEvents(s);
-  if (s.ph !== 'over' && net.rmSent) { net.rmSent = false; net.m.presence({ rm: 0 }).catch(() => {}); }
+  if (s.ph !== 'over' && net.rmSent) { net.rmSent = false; if (!isSA()) net.m.presence({ rm: 0 }).catch(() => {}); }
 }
 function startOnlineGuest(s) {
   net.started = true; net.hostChar = s.ch[0];
@@ -1303,7 +1310,7 @@ function guestFrame(now, dt) {
       if (net.atkBuf > 0 || (hold && inR)) { predictAttack(); net.atkBuf = 0; }
     } }
   const i = { mx: r2(net.mv[0]), my: r2(net.mv[1]), h: hold ? 1 : 0, q: net.q.slice(-8) }, key = JSON.stringify(i);
-  if (net.m && (key !== net.lastIn || now - net.inT > 250) && now - net.inT >= 22) { net.inT = now; net.lastIn = key; net.m.presence({ i }).catch(() => {}); }
+  if (net.m && (key !== net.lastIn || now - net.inT > 250) && now - net.inT >= 22) { net.inT = now; net.lastIn = key; if (isSA()) window.claude.sa.send({ t: 'in', i }); else net.m.presence({ i }).catch(() => {}); }
 }
 function opponentLeft() {
   if (net.ended) return; net.ended = true;
