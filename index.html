@@ -987,7 +987,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 21;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 22;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1153,29 +1153,59 @@ function startOnlineGuest(s) {
   net.started = true; net.hostChar = s.ch[0];
   game = new Game(myChar, s.ch[0], 'normal'); game.remote = true;
   game.setMove = (mx, my) => { net.mv = [-mx, my]; };                                   // 화면이 좌우 반전이라 이동 방향도 반전해서 보냄
-  net.pd = null; net.pdGrace = 0; net.cdo = {};
+  net.pd = null; net.hold = null; net.cdo = {}; net.pfx = []; net.pb = []; net.sh = null;
   game.pressDash = () => {
     net.q.push([++net.qid, 'd']);
     const vp = game.players[0], now = performance.now();      // 대시는 누르는 즉시 내 화면에서 먼저 움직임 (예측)
     if (net.snap && net.snap.ph === 'fight' && vp.alive && vp.dashCd <= 0 && vp.stun <= 0 && !vp.charge && !net.pd) {
       const m = readMove(), ml = Math.hypot(m[0], m[1]); let dx, dy;
       if (ml > 0.2) { dx = m[0] / ml; dy = m[1] / ml; } else { dx = -Math.cos(vp.aim); dy = -Math.sin(vp.aim); }
-      net.pd = { t: DASH.time, dx, dy }; net.cdo.d = { v: DASH.cd, t: now };
-      game.fx.push({ k: 'ring', x: vp.x, y: vp.y, r: 28, life: 0.25, max: 0.25, col: '#6be08a' });
+      net.pd = { t: DASH.time, dx, dy }; net.cdo.d = { v: DASH.cd, t: now }; net.hold = { qid: net.qid, t0: now };
+      predFx({ k: 'ring', x: vp.x, y: vp.y, r: 28, life: 0.25, max: 0.25, col: '#6be08a' });
     }
   };
   game.pressAttack = () => net.q.push([++net.qid, 'a']);
   game.pressSkill = (i, ang) => {
     net.q.push([++net.qid, 's', i, typeof ang === 'number' ? r2(Math.PI - ang) : null]);
-    const vp = game.players[0]; if (net.snap && net.snap.ph === 'fight' && vp.alive && vp.stun <= 0 && vp.skCd[i] <= 0 && !net.pd) net.cdo['s' + i] = { v: vp.ch.skills[i].cd, t: performance.now() };      // 쿨타임 표시는 바로 시작
+    const vp = game.players[0]; if (net.snap && net.snap.ph === 'fight' && vp.alive && vp.stun <= 0 && vp.skCd[i] <= 0 && !net.pd) { net.cdo['s' + i] = { v: vp.ch.skills[i].cd, t: performance.now() }; predictSkill(i, ang, net.qid); }      // 쿨타임·효과는 누르는 즉시 내 화면에 먼저 표시
   };
   scene = 'play'; lastPh = ''; floats = []; parts = []; net.lastRx = performance.now(); net.snapT = performance.now();
   setupButtons(); resetTouch(); $('menu').hidden = true; $('net').hidden = true; $('end').hidden = true; setEndMode();
+}
+function predFx(o) { game.fx.push(o); net.pfx.push({ k: o.k, x: o.x, y: o.y, t: performance.now() }); }
+function predictSkill(i, angArg, qid) {      // 스킬을 누르는 즉시 내 화면에 효과를 먼저 보여줌. 실제 판정·피해는 방장이 함 (화면 좌표 기준)
+  const g = game, vp = g.players[0], sk = vp.ch.skills[i], aimed = typeof angArg === 'number', ang = aimed ? angArg : vp.aim, now = performance.now();
+  for (const f of sk.fx) {
+    if (f.t === 'proj') { const keep = g.bullets; g.bullets = []; g.fireProj(vp, f, ang); for (const b of g.bullets) { b.qid = qid; b.t0 = now; net.pb.push(b); } g.bullets = keep; }
+    else if (f.t === 'aoe') predFx({ k: 'ring', x: vp.x, y: vp.y, r: f.radius, life: 0.3, max: 0.3, col: f.col || '#ffffff' });
+    else if (f.t === 'cone' && f.guard) predFx({ k: 'cone', x: vp.x, y: vp.y, a: ang, arc: f.arc, r: f.range, life: f.guard, max: f.guard, col: f.col || '#e8edf7', follow: 0 });
+    else if (f.t === 'line' && f.delay) predFx({ k: 'tele', x: vp.x, y: vp.y, a: ang, len: f.len, w: f.w, life: f.delay, max: f.delay, col: f.col || '#ff8a4a' });
+    else if (f.t === 'shield') { predFx({ k: 'ring', x: vp.x, y: vp.y, r: 50, life: 0.35, max: 0.35, col: f.col || '#6ec1ff' }); net.sh = { a: f.amount, d: f.dur, t: now }; }
+    else if (f.t === 'buff') predFx({ k: 'ring', x: vp.x, y: vp.y, r: 60, life: 0.4, max: 0.4, col: f.col || '#ffd24a' });
+    else if (f.t === 'charge') {
+      const T = f.dist / f.speed + 0.1;
+      predFx({ k: 'tele', x: vp.x, y: vp.y, a: ang, len: f.dist, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
+      if (f.endR) predFx({ k: 'teleC', x: vp.x + Math.cos(ang) * f.dist, y: vp.y + Math.sin(ang) * f.dist, r: f.endR, life: T, max: T, col: f.col || '#5b8def' });
+      net.pd = { t: f.dist / f.speed, dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed }; net.hold = { qid, t0: now };
+    } else if (f.t === 'blink') {
+      let dx, dy; const m = readMove(), ml = Math.hypot(m[0], m[1]);
+      if (aimed) { const sgn = f.dir === 'away' ? -1 : 1; dx = Math.cos(ang) * sgn; dy = Math.sin(ang) * sgn; }
+      else if (f.dir === 'toward') { dx = Math.cos(vp.aim); dy = Math.sin(vp.aim); }
+      else if (f.dir === 'move' && ml > 0.2) { dx = m[0] / ml; dy = m[1] / ml; }
+      else { dx = -Math.cos(vp.aim); dy = -Math.sin(vp.aim); }
+      predFx({ k: 'ring', x: vp.x, y: vp.y, r: 30, life: 0.25, max: 0.25, col: vp.ch.color });
+      vp.x = clamp(vp.x + dx * f.dist, R, W - R); vp.y = clamp(vp.y + dy * f.dist, R, H - R);
+      for (const w of WALLS) resolveCircleRect(vp, R, w);
+      vp.x = clamp(vp.x, R, W - R); vp.y = clamp(vp.y, R, H - R);
+      predFx({ k: 'ring', x: vp.x, y: vp.y, r: 30, life: 0.25, max: 0.25, col: vp.ch.color }); net.hold = { qid, t0: now };
+    }
+  }
 }
 function ingestEvents(s) {
   const g = game, now = performance.now(), age = 0;
   for (const f of s.f) {      // 효과(링·부채꼴·직선 예고 등): 처음 보는 것만 추가. 좌우 반전
     if (net.seenFx.has(f.i)) continue; net.seenFx.set(f.i, now);
+    { const hx = W - f.x, mi = net.pfx.findIndex(p => p.k === f.k && now - p.t < 1000 && Math.hypot(p.x - hx, p.y - f.y) < 100); if (mi >= 0) { net.pfx.splice(mi, 1); continue; } }
     const o = { k: f.k, x: W - f.x, y: f.y, life: f.l, max: f.m, col: f.c };
     if (f.a != null) o.a = Math.PI - f.a; if (f.r != null) o.r = f.r; if (f.len != null) { o.len = f.len; o.w = f.w; } if (f.arc != null) o.arc = f.arc; o.follow = f.f != null && f.f >= 0 ? 1 - f.f : -1;
     g.fx.push(o);
@@ -1188,27 +1218,28 @@ function ingestEvents(s) {
 }
 function guestFrame(now, dt) {
   const g = game, s = net.snap; if (!s) return;
-  if (s.ph !== 'fight') { net.pd = null; net.pdGrace = 0; }
+  if (s.ph !== 'fight') { net.pd = null; net.hold = null; net.pb = []; net.pfx = []; net.sh = null; }
   const age = Math.min(0.25, (now - net.snapT) / 1000);
   g.ph = s.ph; g.round = s.rd; g.score = [s.sc[1], s.sc[0]]; g.res = s.rs == null ? null : { w: s.rs < 0 ? s.rs : 1 - s.rs }; g.matchWinner = s.mw < 0 ? -1 : 1 - s.mw;
   g.timer = s.tm - age; g.fightT = s.ft + (s.ph === 'fight' ? age : 0);
   for (let j = 0; j < 2; j++) {
     const d = s.p[j], vp = g.players[1 - j], tx = clamp(W - (d[0] + d[2] * age), R, W - R), ty = clamp(d[1] + d[3] * age, R, H - R);
     const own = j === 1 && s.ph === 'fight';
+    let hold = false;
+    if (own && net.hold) { hold = now - net.hold.t0 < 1800 && ((s.a | 0) < net.hold.qid || d[15] > 0 || !!d[16]); if (!hold) net.hold = null; }
     if (own && net.pd) {      // 내 대시: 서버 응답을 기다리지 않고 바로 이동
       const pd = net.pd, st = Math.min(dt, pd.t); vp._init = 1;
-      vp.x = clamp(vp.x + pd.dx * DASH.speed * st, R, W - R); vp.y = clamp(vp.y + pd.dy * DASH.speed * st, R, H - R);
+      const psp = pd.speed || DASH.speed; vp.x = clamp(vp.x + pd.dx * psp * st, R, W - R); vp.y = clamp(vp.y + pd.dy * psp * st, R, H - R);
       for (const w of WALLS) resolveCircleRect(vp, R, w);
-      pd.t -= dt; if (pd.t <= 0) { net.pd = null; net.pdGrace = 0.5; }
-    } else if (own && d[7] && !d[16] && d[8] <= 0 && (net.pdGrace > 0 || d[15] <= 0)) {      // 내 걷기: 내 화면에서 먼저 움직이고 서버 위치로 부드럽게 맞춤
-      if (net.pdGrace > 0) net.pdGrace -= dt;
+      pd.t -= dt; if (pd.t <= 0) net.pd = null;
+    } else if (own && d[7] && d[8] <= 0 && (hold || (!d[16] && d[15] <= 0))) {      // 내 걷기: 내 화면에서 먼저 움직이고 서버 위치로 부드럽게 맞춤
       const m = readMove(); let mx = m[0], my = m[1]; const ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; }
       const sp = vp.ch.speed * (d[9] > 0 ? d[22] : 1) * (d[14] > 0 ? (vp.hasteMul || 1) : 1), er = Math.hypot(tx - vp.x, ty - vp.y);
-      if (!vp._init || er > (net.pdGrace > 0 ? 320 : 150)) { vp.x = tx; vp.y = ty; vp._init = 1; }
+      if (!vp._init || er > (hold ? 450 : 150)) { vp.x = tx; vp.y = ty; vp._init = 1; }
       else {
         vp.x = clamp(vp.x + mx * sp * dt, R, W - R); vp.y = clamp(vp.y + my * sp * dt, R, H - R);
         for (const w of WALLS) resolveCircleRect(vp, R, w);
-        if (net.pdGrace <= 0) {
+        if (!hold) {
           if (ml > 0.05) {      // 움직이는 중엔 지연만큼의 차이는 허용
             const ex = tx - vp.x, ey = ty - vp.y, el = Math.hypot(ex, ey), free = 90;
             if (el > free) { const k = Math.min(1, dt * 6) * (el - free) / el; vp.x += ex * k; vp.y += ey * k; }
@@ -1220,7 +1251,6 @@ function guestFrame(now, dt) {
       }
     } else if (!vp._init || Math.hypot(tx - vp.x, ty - vp.y) > 140) { vp.x = tx; vp.y = ty; vp._init = 1; }
     else { const k = Math.min(1, dt * 18); vp.x += (tx - vp.x) * k; vp.y += (ty - vp.y) * k; }
-    const predicted = own && (net.pd || (net.pdGrace > 0));
     if (own && net.pd) { vp.dashT = net.pd.t; }
     vp.vx = -d[2]; vp.vy = d[3]; vp.aim = Math.PI - d[4]; vp.hp = d[5]; vp.maxHp = d[6]; vp.alive = !!d[7]; vp.stun = d[8]; vp.slowT = d[9]; vp.shield = d[10]; vp.shieldMax = d[11]; vp.shieldT = d[12]; vp.drT = d[13]; vp.haste = d[14]; vp.dashT = d[15];
     vp.charge = d[16] ? { dx: -d[16][0], dy: d[16][1] } : null; vp.atkCd = Math.max(0, d[17] - age); vp.dashCd = Math.max(0, d[18] - age); vp.skCd = [d[19], d[20], d[21]].map(v => Math.max(0, v - age)); vp.slowMul = d[22];
@@ -1228,10 +1258,19 @@ function guestFrame(now, dt) {
     if (j === 1) {      // 방금 누른 대시·스킬의 쿨타임은 서버 응답 전에도 바로 표시
       const co = net.cdo;
       if (co.d) { if (now - co.d.t > 700) co.d = null; else vp.dashCd = Math.max(vp.dashCd, co.d.v - (now - co.d.t) / 1000); }
+      if (net.sh) { const el = (now - net.sh.t) / 1000; if (el > 0.7) net.sh = null; else if (vp.shield < net.sh.a) { vp.shield = net.sh.a; vp.shieldMax = net.sh.a; vp.shieldT = net.sh.d - el; } }      // 방패는 누르는 즉시 표시
       for (let i = 0; i < 3; i++) { const c = co['s' + i]; if (c) { if (now - c.t > 700) co['s' + i] = null; else vp.skCd[i] = Math.max(vp.skCd[i], c.v - (now - c.t) / 1000); } }
     }
   }
   g.bullets = s.b.map(b => ({ x: clamp(W - (b[1] + b[3] * age), 0, W), y: clamp(b[2] + b[4] * age, 0, H), r: b[5], owner: 1 - b[6], col: b[7] || null }));
+  net.pfx = net.pfx.filter(p => now - p.t < 1200);
+  net.pb = net.pb.filter(b => {      // 서버가 내 입력을 받아 실제 투사체를 보내오면(또는 너무 오래되면) 예측 투사체는 지움
+    b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+    if ((s.a | 0) >= b.qid || now - b.t0 > 900 || b.life <= 0 || b.x < b.r || b.x > W - b.r || b.y < b.r || b.y > H - b.r) return false;
+    if (!b.pierce) for (const w of WALLS) if (resolveCircleRect(b, b.r, w)) return false;
+    return true;
+  });
+  for (const b of net.pb) g.bullets.push(b);
   for (const f of g.fx) f.life -= dt; g.fx = g.fx.filter(f => f.life > 0);
   // 내 입력 보내기
   const m = readMove(); net.mv = [-m[0], m[1]];
