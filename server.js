@@ -196,6 +196,7 @@ function onMessage(c, msg) {
     m.set(c, p); broadcast(room, c, { t: 'u', room, id: c.id, p }); checkSession(room);
   } else if (msg.t === 'in') { if (c.sess && msg.i && typeof msg.i === 'object') { const s = c.sess.s, k = c.sess.k, i = msg.i; if (TEST_LAT) setTimeout(() => { if (c.sess) s.input(k, i); }, TEST_LAT); else s.input(k, i); } }
   else if (msg.t === 'dbg') { if (process.env.TEST_DEBUG && c.sess) { const g = c.sess.s.game; if (msg.fin && g.ph === 'fight') { g.players[1].hp = 1; g.players[0].x = g.players[1].x - 40; g.players[0].y = g.players[1].y; } } }      // 테스트 전용(환경변수가 있을 때만)
+  else if (msg.t === 'ping') { c.send({ t: 'pong', id: msg.id }); }
   else if (msg.t === 'rm') { if (c.sess) c.sess.s.wantRematch(c.sess.k); }
 }
 

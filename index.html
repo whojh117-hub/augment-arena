@@ -164,7 +164,7 @@
     ws.onopen = () => { open = true; retry = 0; for (const r of rooms.values()) if (r.joined) { wsend({ t: 'join', room: r.name }); wsend({ t: 'pres', room: r.name, p: r.me }); } };
     ws.onmessage = ev => {
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
-      if (m.t === 'snap' || m.t === 'verr' || m.t === 'left') { if (window.claude.sa.h) window.claude.sa.h(m); return; }
+      if (m.t === 'snap' || m.t === 'verr' || m.t === 'left' || m.t === 'pong') { if (window.claude.sa.h) window.claude.sa.h(m); return; }
       const r = rooms.get(m.room); if (!r) return;
       if (m.t === 'init') { ME = m.me || ME; r.peers.clear(); for (const [id, p] of m.peers) r.peers.set(id, { presence: p, updatedAt: Date.now() }); wsend({ t: 'pres', room: r.name, p: r.me }); }
       else if (m.t === 'u') r.peers.set(m.id, { presence: m.p, updatedAt: Date.now() });
@@ -988,7 +988,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 25;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 26;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1011,7 +1011,7 @@ async function netBoot() {
     const r = await Promise.race([claude.use('room'), new Promise(res => setTimeout(() => res(null), 10000))]);
     if (!r) return null;
     net.room = r; r.presence({ v: BUILD, o: null }).catch(() => {});
-    if (isSA()) window.claude.sa.h = m => { if (m.t === 'snap') onSnap(m.s); else if (m.t === 'verr') versionBlock(m.v); else if (m.t === 'left') opponentLeft(); };
+    if (isSA()) window.claude.sa.h = m => { if (m.t === 'pong') { const t0 = net.pingAt && net.pingAt[m.id]; if (t0) { const v = performance.now() - t0; net.pong = net.pong ? net.pong * 0.7 + v * 0.3 : v; delete net.pingAt[m.id]; } } else if (m.t === 'snap') onSnap(m.s); else if (m.t === 'verr') versionBlock(m.v); else if (m.t === 'left') opponentLeft(); };
     net.offLobby = r.onPeers(() => { renderRooms(); checkUpdate(); }, () => {});
   } catch (e) { /* 온라인 사용 불가 */ }
   return net.room;
@@ -1239,7 +1239,7 @@ function pingTag(show, ms) {
 }
 function guestFrame(now, dt) {
   const g = game, s = net.snap; if (!s) return;
-  if (now - (net.pingT || 0) > 500) { net.pingT = now; pingTag(true, Math.round((net.rtt || 0.15) * 1000)); }
+  if (now - (net.pingT || 0) > 500) { net.pingT = now; if (isSA()) { net.pingAt = net.pingAt || {}; const id = (net.pid = (net.pid || 0) + 1); net.pingAt[id] = now; for (const k of Object.keys(net.pingAt)) if (now - net.pingAt[k] > 5000) delete net.pingAt[k]; window.claude.sa.send({ t: 'ping', id }); } pingTag(true, Math.round(net.pong || (net.rtt || 0.15) * 1000)); }
   if (s.ph !== 'fight') { net.pd = null; net.hold = null; net.pb = []; net.pfx = []; net.sh = null; }
   const age = Math.min(0.25, (now - net.snapT) / 1000), lead = Math.min(0.1, (net.rtt || 0.15) * 0.5);
   g.ph = s.ph; g.round = s.rd; g.score = [s.sc[1], s.sc[0]]; g.res = s.rs == null ? null : { w: s.rs < 0 ? s.rs : 1 - s.rs }; g.matchWinner = s.mw < 0 ? -1 : 1 - s.mw;
