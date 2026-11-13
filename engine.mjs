@@ -49,7 +49,10 @@ const CHARS = {
       { name: '순간이동', icon: '✨', desc: '드래그한 방향(탭하면 이동 방향, 없으면 뒤)으로 순간이동', cd: 10, ai: { use: 'escape', minD: 130 }, fx: [{ t: 'blink', dist: 220, dir: 'move' }] },
     ] },
 };
-const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage'];
+CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: '🗡️', color: '#ff3b3b', role: '근접 · 암살', locked: true, hp: 0, speed: 230, keep: 64,
+  atk: { type: 'melee', dmg: 0, cd: 1, range: 60, arc: 2 },
+  skills: [{ name: '???', icon: '❔', desc: '준비 중', cd: 0, fx: [] }, { name: '???', icon: '❔', desc: '준비 중', cd: 0, fx: [] }, { name: '???', icon: '❔', desc: '준비 중', cd: 0, fx: [] }] };
+const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage'];      // 실제로 플레이할 수 있는 캐릭터 (암살자는 스킬 완성 후 추가)
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
 for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink'].includes(f.t));
 
@@ -407,4 +410,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 27;
+export const BUILD = 28;

@@ -117,7 +117,7 @@ export class Hub {
     if (!hh || !gg) return;
     let bad = false;
     for (const [c, p] of [hh, gg]) if (p.v !== SERVER_BUILD) { bad = true; if (!c.verrAt || Date.now() - c.verrAt > 3000) { c.verrAt = Date.now(); c.send({ t: 'verr', v: SERVER_BUILD }); } }
-    if (bad || !eng.CHARS[hh[1].c] || !eng.CHARS[gg[1].c]) return;
+    if (bad || !eng.CHAR_ORDER.includes(hh[1].c) || !eng.CHAR_ORDER.includes(gg[1].c)) return;
     this.sessions.set(room, new Session(this, room, hh[0], gg[0], hh[1].c, gg[1].c));
   }
   onMessage(c, msg) {

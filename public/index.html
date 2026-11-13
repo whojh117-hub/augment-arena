@@ -30,19 +30,31 @@
   .logo { margin: 0; font-family: var(--display); font-size: 50px; font-weight: 400; letter-spacing: 2px; line-height: 1; }
   .logo .a { color: var(--me); } .logo .b { color: var(--opp); }
   .tag { margin: 0; color: var(--dim); font-size: 15px; }
-  .chars { display: flex; gap: 14px; }
-  .ch { width: 214px; padding: 14px 12px 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; cursor: pointer;
+  .chars { display: flex; gap: 10px; }
+  .ch { width: 132px; padding: 12px 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; cursor: pointer;
     background: var(--surface); color: var(--fg); border: 2px solid var(--line); border-radius: 14px; }
-  .ch[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); }
-  .ch .ic { font-size: 44px; line-height: 1.1; }
-  .ch .nm { font-family: var(--display); font-size: 24px; }
-  .ch .ro { font-size: 12px; color: var(--dim); }
-  .ch .hp { font-size: 13px; font-weight: 700; color: var(--good); margin: 2px 0 4px; }
-  .ch ul { list-style: none; padding: 0; margin: 0; width: 100%; display: flex; flex-direction: column; gap: 3px; }
-  .ch li { font-size: 12px; text-align: left; color: #c3cde0; display: flex; gap: 6px; align-items: baseline; }
-  .ch li i { font-style: normal; width: 18px; text-align: center; }
-  .ch li b { font-weight: 700; color: var(--fg); }
-  .ch li s { text-decoration: none; margin-left: auto; color: var(--dim); font-size: 11px; }
+  .ch[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 20%, var(--surface)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+  .ch .ic { font-size: 40px; line-height: 1.1; }
+  .ch .nm { font-family: var(--display); font-size: 22px; }
+  .ch .ro { font-size: 11px; color: var(--dim); }
+  .ch.lock .ic { filter: grayscale(.4); }
+  .info { width: 780px; min-height: 150px; background: var(--surface); border: 2px solid var(--ic, var(--line)); border-radius: 14px; padding: 12px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .info .h { display: flex; align-items: baseline; gap: 12px; }
+  .info .h b { font-family: var(--display); font-size: 24px; font-weight: 400; color: var(--ic, var(--fg)); }
+  .info .h span { color: var(--dim); font-size: 12px; }
+  .info .st { display: flex; gap: 18px; font-size: 14px; font-weight: 700; color: var(--good); }
+  .info ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 3px; }
+  .info li { font-size: 12.5px; color: #c3cde0; display: flex; gap: 8px; align-items: baseline; line-height: 1.4; }
+  .info li i { font-style: normal; width: 20px; text-align: center; }
+  .info li b { font-weight: 700; color: var(--fg); min-width: 76px; }
+  .info li s { text-decoration: none; margin-left: auto; color: var(--dim); font-size: 11px; white-space: nowrap; }
+  .info .na { margin: auto; color: #ff7a7a; font: 700 20px var(--body); text-align: center; }
+  .btn.blue { background: var(--me); color: #04101f; }
+  .btn:disabled { opacity: .35; cursor: not-allowed; }
+  #vs { background: #0a0d13f5; }
+  .vsT { margin: 0 0 4px; font-family: var(--display); font-weight: 400; font-size: 40px; }
+  .vsMe { color: var(--fg); font-size: 17px; font-weight: 700; }
+  .vsL { color: var(--dim); font-size: 14px; margin-top: 4px; }
   .row { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
   #net { background: #0a0d13f5; }
   .netbox { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 300px; }
@@ -102,20 +114,26 @@
 
     <div id="menu" class="panel">
       <h1 class="logo"><span class="a">증강</span> <span class="b">아레나</span></h1>
-      <p class="tag">내 캐릭터와 상대(랜덤 또는 직접 선택)를 고르세요</p>
+      <p class="tag">캐릭터를 고르고 대전 방식을 선택하세요</p>
       <div class="chars" id="chars"></div>
-      <div class="opts">
+      <div class="info" id="info"></div>
+      <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button></div>
+      <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심(손 떼면 정지) · <b>오른쪽</b> 큰 버튼은 공격(톡 누르면 1회, 꾹 누르면 자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(그냥 탭하면 상대 쪽) · 작은 초록 버튼은 대시(무적, 쿨타임 5초)<br>3라운드 먼저 이기면 승리 · 탱커·전사·궁수·마법사 중 하나를 고르거나 랜덤으로 정할 수 있어요</div>
+      <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
+    </div>
+
+    <div id="vs" class="panel" hidden>
+      <h2 class="vsT">컴퓨터 대전 설정</h2>
+      <div class="vsMe" id="vsMe"></div>
+      <div class="vsL">상대 캐릭터</div>
       <div class="seg" id="oppSeg" role="group" aria-label="상대"></div>
+      <div class="vsL">난이도</div>
       <div class="seg" id="diffSeg" role="group" aria-label="난이도">
         <button data-d="easy" aria-pressed="false">쉬움</button>
         <button data-d="normal" aria-pressed="true">보통</button>
         <button data-d="hard" aria-pressed="false">어려움</button>
       </div>
-      </div>
-      <div class="row"><button class="btn" id="btnStart">게임 시작</button><button class="btn ghost" id="btnOnline">🌐 온라인 대전</button></div>
-      <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심(손 떼면 정지) · <b>오른쪽</b> 큰 버튼은 공격(톡 누르면 1회, 꾹 누르면 자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(그냥 탭하면 상대 쪽) · 작은 초록 버튼은 대시(무적, 쿨타임 5초)<br>3라운드 먼저 이기면 승리 · 탱커·궁수·마법사 수치는 임시값이에요</div>
-      <div class="note" id="diag" style="font-size:11px">입력 확인: 화면을 터치해 보세요 → 터치 0 · 포인터 0</div>
-      <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
+      <div class="row" style="margin-top:10px"><button class="btn" id="btnVsGo">게임 시작</button><button class="btn ghost" id="btnVsBack">뒤로</button></div>
     </div>
 
     <div id="net" class="panel" hidden>
@@ -247,7 +265,10 @@ const CHARS = {
       { name: '순간이동', icon: '✨', desc: '드래그한 방향(탭하면 이동 방향, 없으면 뒤)으로 순간이동', cd: 10, ai: { use: 'escape', minD: 130 }, fx: [{ t: 'blink', dist: 220, dir: 'move' }] },
     ] },
 };
-const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage'];
+CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: '🗡️', color: '#ff3b3b', role: '근접 · 암살', locked: true, hp: 0, speed: 230, keep: 64,
+  atk: { type: 'melee', dmg: 0, cd: 1, range: 60, arc: 2 },
+  skills: [{ name: '???', icon: '❔', desc: '준비 중', cd: 0, fx: [] }, { name: '???', icon: '❔', desc: '준비 중', cd: 0, fx: [] }, { name: '???', icon: '❔', desc: '준비 중', cd: 0, fx: [] }] };
+const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage'];      // 실제로 플레이할 수 있는 캐릭터 (암살자는 스킬 완성 후 추가)
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
 for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink'].includes(f.t));
 
@@ -619,7 +640,7 @@ let otAt = 0, otDone = false;      // 서든데스 시작 알림 문구(라운�
 try {
   const d = localStorage.getItem('aa_diff'); if (DIFFS[d]) diffKey = d;
   const c = localStorage.getItem('aa_char'); if (CHARS[c]) myChar = c;
-  const o = localStorage.getItem('aa_opp'); if (o === 'random' || CHARS[o]) oppKey = o;
+  const o = localStorage.getItem('aa_opp'); if (o === 'random' || CHAR_ORDER.includes(o)) oppKey = o;
 } catch (e) { /* 무시 */ }
 if (window.matchMedia && matchMedia('(pointer: coarse)').matches) touchMode = true;
 
@@ -633,17 +654,40 @@ function fit() {
 addEventListener('resize', fit); fit();
 
 // 메뉴
+const MENU_ORDER = [...CHAR_ORDER, 'assassin'];
+let selKey = 'random';      // 'random' 또는 캐릭터 id (암살자는 선택만 되고 아직 사용 불가)
+try { const k = localStorage.getItem('aa_sel'); if (k === 'random' || CHARS[k]) selKey = k; } catch (e) { /* 무시 */ }
+const isLocked = k => k !== 'random' && !!CHARS[k].locked;
+function resolveMy() { myChar = selKey === 'random' || isLocked(selKey) ? CHAR_ORDER[Math.floor(Math.random() * CHAR_ORDER.length)] : selKey; }
+function renderInfo() {
+  const box = $('info'), k = selKey;
+  box.style.setProperty('--ic', k === 'random' ? '#ffd24a' : CHARS[k].color);
+  if (k === 'random') {
+    box.innerHTML = '<div class="h"><b>🎲 랜덤</b><span>시작할 때 탱커·전사·궁수·마법사 중 하나가 무작위로 정해져요</span></div><div class="na" style="color:#ffd24a">누를 때마다 다른 캐릭터로 시작!</div>';
+  } else if (CHARS[k].locked) {
+    box.innerHTML = '<div class="h"><b>' + CHARS[k].icon + ' ' + CHARS[k].name + '</b><span>' + CHARS[k].role + '</span></div><div class="na">아직 사용할 수 없어요</div>';
+  } else {
+    const c = CHARS[k];
+    box.innerHTML = '<div class="h"><b>' + c.icon + ' ' + c.name + '</b><span>' + c.role + '</span></div><div class="st"><span>기본 체력 ' + c.hp + '</span><span>공격력 ' + c.atk.dmg + '</span></div><ul>' +
+      c.skills.map(s => '<li><i>' + s.icon + '</i><b>' + s.name + '</b><span>' + s.desc + '</span><s>쿨 ' + s.cd + '초</s></li>').join('') + '</ul>';
+  }
+  $('btnStart').disabled = $('btnOnline').disabled = isLocked(k);
+}
+function setSel(k) {
+  selKey = k; try { localStorage.setItem('aa_sel', k); } catch (e) { /* 무시 */ }
+  $('chars').querySelectorAll('.ch').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === k ? 'true' : 'false'));
+  renderInfo();
+}
 function buildChars() {
   const box = $('chars'); box.innerHTML = '';
-  for (const id of CHAR_ORDER) {
-    const c = CHARS[id], el = document.createElement('button');
-    el.type = 'button'; el.className = 'ch'; el.dataset.id = id; el.style.setProperty('--c', c.color);
-    el.setAttribute('aria-pressed', id === myChar ? 'true' : 'false');
-    el.innerHTML = '<div class="ic">' + c.icon + '</div><div class="nm">' + c.name + '</div><div class="ro">' + c.role + '</div><div class="hp">체력 ' + c.hp + ' · 공격력 ' + c.atk.dmg + '</div><ul>' +
-      c.skills.map(s => '<li title="' + s.desc + '"><i>' + s.icon + '</i><b>' + s.name + '</b><s>' + s.cd + '초</s></li>').join('') + '</ul>';
-    el.onclick = () => { myChar = id; try { localStorage.setItem('aa_char', id); } catch (e) { /* 무시 */ } box.querySelectorAll('.ch').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === id ? 'true' : 'false')); };
+  for (const id of [...MENU_ORDER, 'random']) {
+    const c = id === 'random' ? { icon: '🎲', name: '랜덤', role: '무작위', color: '#ffd24a' } : CHARS[id], el = document.createElement('button');
+    el.type = 'button'; el.className = 'ch' + (c.locked ? ' lock' : ''); el.dataset.id = id; el.style.setProperty('--c', c.color);
+    el.innerHTML = '<div class="ic">' + c.icon + '</div><div class="nm">' + c.name + '</div><div class="ro">' + c.role + '</div>';
+    el.onclick = () => setSel(id);
     box.appendChild(el);
   }
+  setSel(selKey);
 }
 buildChars();
 function setDiff(d) {
@@ -675,12 +719,21 @@ function setupButtons() {
 }
 function startGame() {
   if (typeof net !== 'undefined' && net.role !== 'none') netLeave();
+  if (isLocked(selKey)) return;
+  if (scene === 'menu') resolveMy();
   const aiChar = oppKey === 'random' ? CHAR_ORDER[Math.floor(Math.random() * CHAR_ORDER.length)] : oppKey;
   game = new Game(myChar, aiChar, diffKey); scene = 'play'; lastPh = ''; floats = []; parts = [];
   setupButtons(); resetTouch(); setEndMode();
-  $('menu').hidden = true; $('end').hidden = true;
+  $('menu').hidden = true; $('vs').hidden = true; $('end').hidden = true;
 }
-$('btnStart').onclick = startGame;
+function openVs() {
+  if (isLocked(selKey)) return;
+  $('vsMe').textContent = selKey === 'random' ? '내 캐릭터: 🎲 랜덤 (시작할 때 정해져요)' : '내 캐릭터: ' + CHARS[selKey].icon + ' ' + CHARS[selKey].name;
+  $('menu').hidden = true; $('vs').hidden = false;
+}
+$('btnStart').onclick = openVs;
+$('btnVsGo').onclick = startGame;
+$('btnVsBack').onclick = () => { $('vs').hidden = true; $('menu').hidden = false; };
 $('btnAgain').onclick = () => {
   if (net.role === 'host') { net.hostRm = true; $('btnAgain').textContent = '상대 대기 중…'; if (net.guestRm) hostRematch(); return; }
   if (net.role === 'guest') { net.rmSent = true; if (isSA()) window.claude.sa.send({ t: 'rm' }); else net.m.presence({ rm: 1 }).catch(() => {}); $('btnAgain').textContent = isSA() ? '상대 대기 중…' : '방장 대기 중…'; return; }
@@ -991,7 +1044,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 27;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 28;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1024,7 +1077,7 @@ function checkUpdate() {
   if (nv > BUILD) {
     bar.hidden = false;
     let last = 0; try { last = Number(sessionStorage.getItem('aa_reload') || 0); } catch (e) { /* 무시 */ }
-    if (net.role === 'none' && scene === 'menu' && $('net').hidden && Date.now() - last > 60000) {      // 대전 중이 아니면 자동으로 새 버전 적용 (1분에 한 번만)
+    if (net.role === 'none' && scene === 'menu' && $('net').hidden && $('vs').hidden && Date.now() - last > 60000) {      // 대전 중이 아니면 자동으로 새 버전 적용 (1분에 한 번만)
       try { sessionStorage.setItem('aa_reload', String(Date.now())); } catch (e) { /* 무시 */ }
       setTimeout(() => location.reload(), 800);
     }
@@ -1042,6 +1095,8 @@ function renderRooms() {
   }
 }
 async function openNetPanel() {
+  if (isLocked(selKey)) return;
+  resolveMy();
   $('menu').hidden = true; $('net').hidden = false; $('netHost').hidden = true; $('netBtns').hidden = false; $('btnReload').hidden = true;
   netMsg('온라인에 연결하는 중…');
   const r = await netBoot();
