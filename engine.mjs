@@ -53,11 +53,11 @@ const CHARS = {
 CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: '🗡️', color: '#ff3b3b', role: '근접 · 암살', hp: 90, speed: 220, keep: 40,
   dashN: 2, dashCd: 6, empAtk: 5,
   passive: '대시 2회(둘 다 써야 6초 쿨타임이 돎) · 스킬을 쓰면 다음 기본공격 피해 +5(중첩 없음)',
-  atk: { type: 'melee', dmg: 12, cd: 0.5, range: 40, arc: 2.4 },
+  atk: { type: 'melee', dmg: 15, cd: 0.5, range: 40, arc: 2.4 },
   skills: [
     { name: '단검투척', icon: '🗡️', desc: '단검을 던져 적중하면 10 피해 + 그 적의 바로 뒤로 순간이동', cd: 6, proj: 1, ai: { use: 'attack', maxD: 360 }, fx: [{ t: 'proj', dmg: 10, speed: 760, r: 8, life: 0.5, tp: true, col: '#ff6b6b' }] },
-    { name: '반격', icon: '🤺', desc: '0.3초간 삼각형 범위로 오는 공격을 막고(제자리), 끝나면 범위 안의 적에게 피해: 막았으면 12 / 못 막았으면 6', cd: 12, ai: { use: 'block', maxD: 130 }, fx: [{ t: 'counter', len: 140, w: 70, block: 0.3, hit: 12, miss: 6, col: '#ff6b6b' }] },
-    { name: '은신', icon: '🫥', desc: '3초간 은신: 이동속도 1.2배, 상대에게 보이지 않고 기본공격 투사체에 맞지 않음. 공격·스킬을 쓰면 풀림(피해를 받아도 유지). 쿨타임 9초는 은신이 끝난 뒤부터', cd: 9, ai: { use: 'gapclose', minD: 220, maxD: 9999 }, fx: [{ t: 'stealth', dur: 3, speed: STL_MUL }] },
+    { name: '반격', icon: '🤺', desc: '0.5초간 삼각형 범위로 오는 공격을 막고(제자리), 끝나면 범위 안의 적에게 피해: 막았으면 20 / 못 막았으면 10', cd: 10, ai: { use: 'block', maxD: 130 }, fx: [{ t: 'counter', len: 140, w: 70, block: 0.5, hit: 20, miss: 10, col: '#ff6b6b' }] },
+    { name: '은신', icon: '🫥', desc: '5초간 은신: 이동속도 1.2배, 상대에게 보이지 않고 기본공격 투사체에 맞지 않음. 공격·스킬을 쓰면 풀림(피해를 받아도 유지). 쿨타임 9초는 은신이 끝난 뒤부터', cd: 9, ai: { use: 'gapclose', minD: 220, maxD: 9999 }, fx: [{ t: 'stealth', dur: 5, speed: STL_MUL }] },
   ] };
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
@@ -494,4 +494,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 35;
+export const BUILD = 36;
