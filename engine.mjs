@@ -4,6 +4,7 @@ const W = 960, H = 540, R = 20;
 const WIN = 3, COUNT_TIME = 3, ROUNDEND_TIME = 2.8, OT_START = 40;   // 전투 40초가 지나면 서든데스: 모든 피해 2배
 const OT_DMG_MUL = 2;
 const DASH = { cd: 5, time: 0.28, speed: 640 };   // 대시: 사용 중 무적, 쿨타임 5초
+const STL_MUL = 1.2;                               // 은신 중 이동속도 배수
 const ATK_BUFFER = 0.3;                            // 공격 버튼을 톡 눌렀을 때, 쿨타임이 끝날 때까지 기다려 주는 시간
 const WALLS = [
   { x: 450, y: 200, w: 60, h: 140 },
@@ -49,12 +50,18 @@ const CHARS = {
       { name: '순간이동', icon: '✨', desc: '드래그한 방향(탭하면 이동 방향, 없으면 뒤)으로 순간이동', cd: 10, ai: { use: 'escape', minD: 130 }, fx: [{ t: 'blink', dist: 147, dir: 'move', thru: true }] },
     ] },
 };
-CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: '🗡️', color: '#ff3b3b', role: '근접 · 암살', locked: true, hp: 0, speed: 230, keep: 64,
-  atk: { type: 'melee', dmg: 0, cd: 1, range: 60, arc: 2 },
-  skills: [{ name: '???', icon: '❔', desc: '준비 중', cd: 0, fx: [] }, { name: '???', icon: '❔', desc: '준비 중', cd: 0, fx: [] }, { name: '???', icon: '❔', desc: '준비 중', cd: 0, fx: [] }] };
-const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage'];      // 실제로 플레이할 수 있는 캐릭터 (암살자는 스킬 완성 후 추가)
+CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: '🗡️', color: '#ff3b3b', role: '근접 · 암살', hp: 90, speed: 220, keep: 40,
+  dashN: 2, dashCd: 6, empAtk: 5,
+  passive: '대시 2회(둘 다 써야 6초 쿨타임이 돎) · 스킬을 쓰면 다음 기본공격 피해 +5(중첩 없음)',
+  atk: { type: 'melee', dmg: 12, cd: 0.5, range: 40, arc: 2.4 },
+  skills: [
+    { name: '단검투척', icon: '🗡️', desc: '단검을 던져 적중하면 10 피해 + 그 적의 바로 뒤로 순간이동', cd: 6, proj: 1, ai: { use: 'attack', maxD: 360 }, fx: [{ t: 'proj', dmg: 10, speed: 760, r: 8, life: 0.5, tp: true, col: '#ff6b6b' }] },
+    { name: '반격', icon: '🤺', desc: '0.3초간 삼각형 범위로 오는 공격을 막고(제자리), 끝나면 범위 안의 적에게 피해: 막았으면 12 / 못 막았으면 6', cd: 12, ai: { use: 'block', maxD: 130 }, fx: [{ t: 'counter', len: 140, w: 70, block: 0.3, hit: 12, miss: 6, col: '#ff6b6b' }] },
+    { name: '은신', icon: '🫥', desc: '3초간 은신: 이동속도 1.2배, 상대에게 보이지 않고 기본공격 투사체에 맞지 않음. 공격·스킬을 쓰면 풀림(피해를 받아도 유지). 쿨타임 9초는 은신이 끝난 뒤부터', cd: 9, ai: { use: 'gapclose', minD: 220, maxD: 9999 }, fx: [{ t: 'stealth', dur: 3, speed: STL_MUL }] },
+  ] };
+const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
-for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink'].includes(f.t));
+for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter'].includes(f.t));
 
 const DIFFS = {
   easy:   { name: '쉬움',   react: 0.34, dodge: 0.10, skillP: 0.30 },
@@ -83,6 +90,11 @@ function stepMove(o, dx, dy) {
     o.x = clamp(o.x, R, W - R); o.y = clamp(o.y, R, H - R);
   }
 }
+// 반격 삼각형: 시전자 위치가 밑변(폭 w), 조준 방향 len 앞이 꼭지점. (x,y)가 안(여유 pad 포함)에 있는지
+function inTri(c, o, x, y, pad) {
+  const ca = Math.cos(c.a), sa = Math.sin(c.a), dx = x - o.x, dy = y - o.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
+  return along >= -pad && along <= c.len + pad && perp <= (c.w / 2) * (1 - Math.max(0, along) / c.len) + pad;
+}
 const isRoot = p => p.slowT > 0 && p.slowMul === 0;      // 속박: 이동·대시·이동기 불가, 공격·그 밖의 스킬은 가능
 const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge');
 // 돌진 경로: 벽에 닿으면 거기서 멈춤. 실제로 갈 수 있는 거리와 도착 지점을 돌려줌
@@ -102,7 +114,7 @@ function mkPlayer(idx, charId) {
   const ch = CHARS[charId];
   return { idx, ch, x: 0, y: 0, vx: 0, vy: 0, aim: 0, hp: ch.hp, maxHp: ch.hp, alive: true, atkCd: 0, skCd: [0, 0, 0],
     dashCd: 0, dashT: 0, dx: 1, dy: 0, inv: 0, stun: 0, slowT: 0, slowMul: 1, shield: 0, shieldMax: 0, shieldT: 0, dr: 0, drT: 0, haste: 0, hasteMul: 1, charge: null, guard: null,
-    atkHold: false, atkBuf: 0,
+    atkHold: false, atkBuf: 0, dashN: ch.dashN || 0, stl: 0, stlI: -1, emp: false, cnt: null, seenX: 0, seenY: 0,
     inp: { mx: 0, my: 0 }, want: freshWant(),
     think: 0, strafe: 1, strafeT: 0, stuckT: 0, lx: 0, ly: 0, unstick: 0, unstickAng: 0 };
 }
@@ -125,7 +137,7 @@ class Game {
     for (const p of this.players) {
       p.x = SPAWN[p.idx].x; p.y = SPAWN[p.idx].y; p.vx = p.vy = 0; p.aim = p.idx === 0 ? 0 : Math.PI;
       p.maxHp = p.ch.hp; p.hp = p.maxHp; p.alive = true; p.atkCd = 0.5;      // 함성 등으로 늘어난 최대 체력은 라운드가 끝나면 초기화
-      p.atkBuf = 0; p.skCd = [0, 0, 0]; p.dashCd = 0; p.dashT = 0; p.inv = 0; p.stun = 0;
+      p.atkBuf = 0; p.skCd = [0, 0, 0]; p.dashCd = 0; p.dashT = 0; p.inv = 0; p.stun = 0; p.dashN = p.ch.dashN || 0; p.stl = 0; p.stlI = -1; p.emp = false; p.cnt = null; p.seenX = p.x; p.seenY = p.y;
       p.slowT = 0; p.shield = 0; p.shieldT = 0; p.dr = 0; p.drT = 0; p.haste = 0; p.charge = null; p.guard = null; p.inp = { mx: 0, my: 0 }; p.want = freshWant();
       p.think = 0.4; p.stuckT = 0; p.lx = p.x; p.ly = p.y; p.unstick = 0;
     }
@@ -168,16 +180,25 @@ class Game {
 
   dealDamage(src, t, dmg, o) {
     if (!t.alive || t.dashT > 0 || t.inv > 0) return false;
+    if (t.cnt && src && src !== t && inTri(t.cnt, t, src.x, src.y, R)) { this.blockedBy(t); return false; }      // 반격: 삼각형 안에서 오는 피해를 막음
     let a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1);   // 서든데스 규칙: 모든 데미지 2배
     if (t.drT > 0) a *= 1 - t.dr;      // 받는 피해 감소 버프(전사의 함성)
     if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; }
     t.hp -= a;
-    if (o && o.stun) { t.stun = Math.max(t.stun, o.stun); t.charge = null; }
+    if (o && o.stun) { t.stun = Math.max(t.stun, o.stun); t.charge = null; t.cnt = null; }
     if (o && o.slowT) { t.slowT = Math.max(t.slowT, o.slowT); t.slowMul = o.slowMul != null ? o.slowMul : 0.5; }
     this.ev.push({ k: 'hit', x: t.x, y: t.y - 8, d: Math.round(dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1) * (t.drT > 0 ? 1 - t.dr : 1)), to: t.idx });
     return true;
   }
 
+  blockedBy(t) {
+    if (!t.cnt.blocked) this.ev.push({ k: 'text', x: t.x, y: t.y - 58, txt: '막음!', col: '#ffd24a' });
+    t.cnt.blocked = true;
+    this.fx.push({ k: 'ring', x: t.x, y: t.y, r: 34, life: 0.2, max: 0.2, col: '#ffffff' });
+  }
+  endStealth(p) {      // 은신이 끝나거나 풀리면 그때부터 스킬 쿨타임이 돎
+    if (p.stl > 0 || p.stlI >= 0) { p.stl = 0; if (p.stlI >= 0) p.skCd[p.stlI] = p.ch.skills[p.stlI].cd; p.stlI = -1; }
+  }
   fireProj(p, f, ang) {
     const base = typeof ang === 'number' ? ang : p.aim;
     const n = f.n || 1, sp = f.spread || 0;
@@ -185,7 +206,7 @@ class Game {
       const a = base + (k - (n - 1) / 2) * sp;
       this.bullets.push({ x: p.x + Math.cos(a) * (R + 4), y: p.y + Math.sin(a) * (R + 4), vx: Math.cos(a) * f.speed, vy: Math.sin(a) * f.speed,
         r: f.r || 5, dmg: f.dmg, owner: p.idx, pierce: !!f.pierce, aoe: f.aoe || 0, aoeDmg: f.aoeDmg, stun: f.stun || 0, slowT: f.slowT || 0, slowMul: f.slowMul != null ? f.slowMul : 1,
-        life: f.life || 1.4, col: f.col || null, hit: false });
+        life: f.life || 1.4, col: f.col || null, hit: false, basic: !!f.basic, tp: !!f.tp });
     }
   }
   explode(b, noDmg) {      // noDmg: 직격으로 이미 피해를 줬을 때는 폭발 효과만(피해 2번 방지)
@@ -225,6 +246,8 @@ class Game {
   }
   useSkill(p, i, angArg) {
     const sk = p.ch.skills[i], aimed = typeof angArg === 'number', ang = aimed ? angArg : p.aim;
+    if (p.stl > 0 && !sk.fx.some(f => f.t === 'stealth')) this.endStealth(p);      // 스킬을 쓰면 은신이 풀림
+    if (p.ch.empAtk) p.emp = true;      // 스킬을 쓰면 다음 기본공격 강화
     p.skCd[i] = sk.cd;                 // 시전하자마자 쿨타임이 돌기 시작
     this.ev.push({ k: 'skill', p: p.idx, i });
     const e = this.players[1 - p.idx];
@@ -243,6 +266,13 @@ class Game {
           this.zones.push({ owner: p.idx, x: p.x, y: p.y, a: ang, len: f.len, w: f.w, dmg: f.dmg, o: f, t: f.delay });
           this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: f.len, w: f.w, life: f.delay, max: f.delay, col: f.col || '#ff8a4a' });
         } else this.lineHit(p, f.len, f.w, f.dmg, f, ang);
+      }
+      else if (f.t === 'counter') {
+        p.cnt = { a: ang, t: f.block, len: f.len, w: f.w, hit: f.hit, miss: f.miss, blocked: false, col: f.col };
+        this.fx.push({ k: 'tri', x: p.x, y: p.y, a: ang, len: f.len, w: f.w, life: f.block, max: f.block, col: f.col || '#ff6b6b' });
+      } else if (f.t === 'stealth') {
+        p.stl = f.dur; p.stlI = i; p.stlMul = f.speed; p.skCd[i] = sk.cd + f.dur;      // 은신이 끝난 뒤부터 쿨타임
+        this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 44, life: 0.35, max: 0.35, col: '#9aa4b8' });
       }
       else if (f.t === 'shield') { p.shield = f.amount; p.shieldMax = f.amount; p.shieldT = f.dur; }
       else if (f.t === 'buff') {
@@ -274,17 +304,33 @@ class Game {
     }
   }
   basicAttack(p) {
-    const a = p.ch.atk;
-    if (a.type === 'melee') this.coneHit(p, a.range, a.arc, a.dmg, null);
-    else this.fireProj(p, { dmg: a.dmg, speed: a.speed, r: a.r });
+    const a = p.ch.atk, dmg = a.dmg + (p.emp && p.ch.empAtk ? p.ch.empAtk : 0);
+    if (p.stl > 0) this.endStealth(p);      // 공격하면 은신이 풀림
+    p.emp = false;
+    if (a.type === 'melee') this.coneHit(p, a.range, a.arc, dmg, null);
+    else this.fireProj(p, { dmg, speed: a.speed, r: a.r, basic: true });
     p.atkCd = a.cd;
   }
 
   stepPlayer(p, dt) {
     const e = this.players[1 - p.idx];
     p.atkCd -= dt; p.dashCd -= dt; p.inv -= dt;
+    if (p.ch.dashN && p.dashN === 0 && p.dashCd <= 0) p.dashN = p.ch.dashN;      // 대시를 모두 쓴 뒤 쿨타임이 끝나면 다시 충전
+    if (!(p.stl > 0)) { p.seenX = p.x; p.seenY = p.y; }      // 은신 직전 위치(상대가 마지막으로 본 곳)
     if (p.atkBuf > 0) p.atkBuf -= dt;
     for (let i = 0; i < 3; i++) p.skCd[i] = Math.max(0, p.skCd[i] - dt);
+    if (p.stl > 0) {
+      p.stl -= dt;
+      if (p.stl <= 0) this.endStealth(p); else p.skCd[p.stlI] = p.ch.skills[p.stlI].cd + p.stl;      // 은신 중엔 쿨타임이 멈춰 있다가 끝나면 9초부터
+    }
+    if (p.cnt) {
+      p.cnt.t -= dt;
+      if (p.cnt.t <= 0) {      // 막기가 끝남: 삼각형 안의 적에게 피해 (막았으면 12, 못 막았으면 6)
+        const c = p.cnt; p.cnt = null;
+        this.fx.push({ k: 'tri', x: p.x, y: p.y, a: c.a, len: c.len, w: c.w, life: 0.2, max: 0.2, col: c.blocked ? '#ffd24a' : c.col });
+        if (p.alive && e.alive && inTri(c, p, e.x, e.y, R)) this.dealDamage(p, e, c.blocked ? c.hit : c.miss, null);
+      }
+    }
     if (p.stun > 0) p.stun -= dt;
     if (p.slowT > 0) p.slowT -= dt;
     if (p.haste > 0) p.haste -= dt;
@@ -297,13 +343,14 @@ class Game {
       }
     }
     if (p.shieldT > 0) { p.shieldT -= dt; if (p.shieldT <= 0) p.shield = 0; }
-    if (p.alive && !p.charge) p.aim = Math.atan2(e.y - p.y, e.x - p.x);
+    if (p.alive && !p.charge) p.aim = e.stl > 0 ? Math.atan2(e.seenY - p.y, e.seenX - p.x) : Math.atan2(e.y - p.y, e.x - p.x);
 
-    if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0) {
-      if (p.want.dash && p.dashCd <= 0 && !isRoot(p)) {
+    if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0 && !p.cnt) {
+      if (p.want.dash && (p.ch.dashN ? p.dashN > 0 : p.dashCd <= 0) && !isRoot(p)) {
         const m = Math.hypot(p.inp.mx, p.inp.my);
         if (m > 0.2) { p.dx = p.inp.mx / m; p.dy = p.inp.my / m; } else { p.dx = -Math.cos(p.aim); p.dy = -Math.sin(p.aim); }
-        p.dashT = DASH.time; p.dashCd = DASH.cd;
+        p.dashT = DASH.time;
+        if (p.ch.dashN) { p.dashN--; if (p.dashN === 0) p.dashCd = p.ch.dashCd || DASH.cd; } else p.dashCd = DASH.cd;      // 암살자: 충전 대시를 모두 써야 쿨타임이 돎
         this.ev.push({ k: 'dash', p: p.idx });
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 28, life: 0.25, max: 0.25, col: '#6be08a' });
       } else {
@@ -316,10 +363,11 @@ class Game {
     if (!p.alive) { /* 정지 */ }
     else if (p.charge) { const c = p.charge; vx = c.dx * c.speed; vy = c.dy * c.speed; c.left -= dt; if (c.left <= 0) { p.charge = null; this.chargeEnd(p, c); } }
     else if (p.dashT > 0) { vx = p.dx * DASH.speed; vy = p.dy * DASH.speed; p.dashT -= dt; }
+    else if (p.cnt) { /* 반격 중에는 제자리 */ }
     else if (p.stun <= 0) {
       let mx = p.inp.mx, my = p.inp.my; const ml = Math.hypot(mx, my);
       if (ml > 1) { mx /= ml; my /= ml; }
-      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1);
+      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1) * (p.stl > 0 ? STL_MUL : 1);
       vx = mx * sp; vy = my * sp;
     }
     p.vx = vx; p.vy = vy;
@@ -332,7 +380,7 @@ class Game {
       this.dealDamage(p, e, c.dmg, c);
     }
     // 기본공격: 버튼을 톡 누르면 1회(사거리 상관없이), 꾹 누르면 사거리 안에서 자동 반복
-    if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0 && p.atkCd <= 0) {
+    if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0 && !p.cnt && p.atkCd <= 0) {
       const a = p.ch.atk;
       const inRange = a.type === 'melee' ? dist <= a.range + R : (dist <= a.range && this.clear(p.x, p.y, e.x, e.y));
       if (p.atkBuf > 0 || (p.atkHold && inRange)) { this.basicAttack(p); p.atkBuf = 0; }
@@ -350,8 +398,9 @@ class Game {
     if (p.strafeT <= 0) { p.strafe = Math.random() < 0.5 ? -1 : 1; p.strafeT = 0.6 + Math.random() * 1.2; }
     if (p.think > 0) return;
     p.think = d.react;
-    const dx = e.x - p.x, dy = e.y - p.y, dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist;
-    const los = this.clear(p.x, p.y, e.x, e.y), keep = p.ch.keep, melee = p.ch.atk.type === 'melee';
+    const hid = e.stl > 0, ex = hid ? e.seenX : e.x, ey = hid ? e.seenY : e.y;      // 은신한 상대는 마지막으로 본 위치만 알 수 있음
+    const dx = ex - p.x, dy = ey - p.y, dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist;
+    const los = this.clear(p.x, p.y, ex, ey), keep = p.ch.keep, melee = p.ch.atk.type === 'melee';
     let ap = dist > keep + 30 ? 1 : dist < keep - 30 ? -1 : 0;
     if (!los) ap = Math.max(ap, 0.8);
     let mx, my;
@@ -367,7 +416,7 @@ class Game {
         danger = true;
         const px = -b.vy / sp, py = b.vx / sp, side = (px * rx + py * ry) >= 0 ? 1 : -1;
         mx = px * side; my = py * side;
-        if (p.dashCd <= 0 && Math.random() < d.dodge) { p.want.dash = 1; dodged = true; }
+        if ((p.ch.dashN ? p.dashN > 0 : p.dashCd <= 0) && Math.random() < d.dodge) { p.want.dash = 1; dodged = true; }
         break;
       }
     }
@@ -401,6 +450,14 @@ class Game {
     }
   }
 
+  tpBehind(o, t, b) {
+    const sp = Math.hypot(b.vx, b.vy) || 1, d = 2 * R + 4;
+    this.fx.push({ k: 'ring', x: o.x, y: o.y, r: 30, life: 0.25, max: 0.25, col: o.ch.color });
+    o.x = clamp(t.x + b.vx / sp * d, R, W - R); o.y = clamp(t.y + b.vy / sp * d, R, H - R);
+    for (const w of WALLS) resolveCircleRect(o, R, w);
+    o.x = clamp(o.x, R, W - R); o.y = clamp(o.y, R, H - R);
+    this.fx.push({ k: 'ring', x: o.x, y: o.y, r: 30, life: 0.25, max: 0.25, col: o.ch.color });
+  }
   stepBullets(dt) {
     for (const b of this.bullets) {
       b.life -= dt; let dead = false, boom = false;
@@ -408,6 +465,9 @@ class Game {
       const t = this.players[1 - b.owner];
       if (b.life <= 0) { dead = true; boom = b.aoe > 0; }
       else if (b.x < b.r || b.x > W - b.r || b.y < b.r || b.y > H - b.r) { dead = true; boom = b.aoe > 0; }
+      if (!dead && t.cnt && inTri(t.cnt, t, b.x, b.y, b.r)) {      // 반격: 삼각형 안으로 들어온 투사체를 막음
+        dead = true; this.blockedBy(t);
+      }
       if (!dead && t.guard) {      // 가로베기 같은 막기: 부채꼴 안으로 들어온 투사체는 사라짐
         const gx = b.x - t.x, gy = b.y - t.y;
         if (Math.hypot(gx, gy) <= t.guard.r + b.r && Math.abs(normAng(Math.atan2(gy, gx) - t.guard.a)) <= t.guard.arc / 2) {
@@ -416,10 +476,11 @@ class Game {
       }
       if (!dead && !b.pierce) for (const w of WALLS) if (resolveCircleRect(b, b.r, w)) { dead = true; boom = b.aoe > 0; break; }
       if (!dead) {
-        if (t.alive && t.dashT <= 0 && t.inv <= 0 && !(b.pierce && b.hit)) {
+        if (t.alive && t.dashT <= 0 && t.inv <= 0 && !(b.pierce && b.hit) && !(t.stl > 0 && b.basic)) {      // 은신 중엔 기본공격 투사체에 맞지 않음
           const dx = t.x - b.x, dy = t.y - b.y, rr = R + b.r;
           if (dx * dx + dy * dy < rr * rr) {
-            this.dealDamage(this.players[b.owner], t, b.dmg, b); b.hit = true;      // 직격 피해
+            const ok = this.dealDamage(this.players[b.owner], t, b.dmg, b); b.hit = true;      // 직격 피해
+            if (ok && b.tp) this.tpBehind(this.players[b.owner], t, b);      // 단검투척: 맞힌 적의 바로 뒤로 순간이동
             if (b.aoe > 0) { dead = true; this.explode(b, true); }               // 폭발은 모양만, 추가 피해 없음
             else if (!b.pierce) dead = true;
           }
@@ -433,4 +494,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 34;
+export const BUILD = 35;
