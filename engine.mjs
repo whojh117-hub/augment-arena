@@ -74,6 +74,15 @@ function resolveCircleRect(o, r, w) {
   if (m === l) o.x = w.x - r; else if (m === rr) o.x = w.x + w.w + r; else if (m === t) o.y = w.y - r; else o.y = w.y + w.h + r;
   return true;
 }
+// 벽을 뚫고 지나가지 않도록 잘게 나눠서 이동 (프레임이 끊겨 한 번에 크게 움직여도 벽에서 멈춤)
+function stepMove(o, dx, dy) {
+  const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 8)), sx = dx / n, sy = dy / n;
+  for (let i = 0; i < n; i++) {
+    o.x = clamp(o.x + sx, R, W - R); o.y = clamp(o.y + sy, R, H - R);
+    for (const w of WALLS) resolveCircleRect(o, R, w);
+    o.x = clamp(o.x, R, W - R); o.y = clamp(o.y, R, H - R);
+  }
+}
 const freshWant = () => ({ dash: 0, sk: [0, 0, 0], angs: [null, null, null] });
 
 function mkPlayer(idx, charId) {
@@ -241,9 +250,7 @@ class Game {
         else if (f.dir === 'move' && m > 0.2) { dx = p.inp.mx / m; dy = p.inp.my / m; }
         else { dx = -Math.cos(p.aim); dy = -Math.sin(p.aim); }
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 30, life: 0.25, max: 0.25, col: p.ch.color });
-        p.x = clamp(p.x + dx * f.dist, R, W - R); p.y = clamp(p.y + dy * f.dist, R, H - R);
-        for (const w of WALLS) resolveCircleRect(p, R, w);
-        p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
+        stepMove(p, dx * f.dist, dy * f.dist);      // 순간이동도 벽은 통과하지 못하고 벽 앞에서 멈춤
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 30, life: 0.25, max: 0.25, col: p.ch.color });
       }
     }
@@ -298,9 +305,7 @@ class Game {
       vx = mx * sp; vy = my * sp;
     }
     p.vx = vx; p.vy = vy;
-    p.x = clamp(p.x + vx * dt, R, W - R); p.y = clamp(p.y + vy * dt, R, H - R);
-    for (const w of WALLS) resolveCircleRect(p, R, w);
-    p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
+    stepMove(p, vx * dt, vy * dt);
 
     const dist = Math.hypot(e.x - p.x, e.y - p.y);
     if (p.charge && !p.charge.hit && dist < p.charge.w / 2 + R) {      // 경로상 적 12 피해      // 지나가며 부딪힌 적에게 1회 피해 (돌진은 계속)
@@ -410,4 +415,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 28;
+export const BUILD = 29;

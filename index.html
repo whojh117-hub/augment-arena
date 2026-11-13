@@ -290,6 +290,15 @@ function resolveCircleRect(o, r, w) {
   if (m === l) o.x = w.x - r; else if (m === rr) o.x = w.x + w.w + r; else if (m === t) o.y = w.y - r; else o.y = w.y + w.h + r;
   return true;
 }
+// 벽을 뚫고 지나가지 않도록 잘게 나눠서 이동 (프레임이 끊겨 한 번에 크게 움직여도 벽에서 멈춤)
+function stepMove(o, dx, dy) {
+  const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 8)), sx = dx / n, sy = dy / n;
+  for (let i = 0; i < n; i++) {
+    o.x = clamp(o.x + sx, R, W - R); o.y = clamp(o.y + sy, R, H - R);
+    for (const w of WALLS) resolveCircleRect(o, R, w);
+    o.x = clamp(o.x, R, W - R); o.y = clamp(o.y, R, H - R);
+  }
+}
 const freshWant = () => ({ dash: 0, sk: [0, 0, 0], angs: [null, null, null] });
 
 function mkPlayer(idx, charId) {
@@ -457,9 +466,7 @@ class Game {
         else if (f.dir === 'move' && m > 0.2) { dx = p.inp.mx / m; dy = p.inp.my / m; }
         else { dx = -Math.cos(p.aim); dy = -Math.sin(p.aim); }
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 30, life: 0.25, max: 0.25, col: p.ch.color });
-        p.x = clamp(p.x + dx * f.dist, R, W - R); p.y = clamp(p.y + dy * f.dist, R, H - R);
-        for (const w of WALLS) resolveCircleRect(p, R, w);
-        p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
+        stepMove(p, dx * f.dist, dy * f.dist);      // 순간이동도 벽은 통과하지 못하고 벽 앞에서 멈춤
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 30, life: 0.25, max: 0.25, col: p.ch.color });
       }
     }
@@ -514,9 +521,7 @@ class Game {
       vx = mx * sp; vy = my * sp;
     }
     p.vx = vx; p.vy = vy;
-    p.x = clamp(p.x + vx * dt, R, W - R); p.y = clamp(p.y + vy * dt, R, H - R);
-    for (const w of WALLS) resolveCircleRect(p, R, w);
-    p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
+    stepMove(p, vx * dt, vy * dt);
 
     const dist = Math.hypot(e.x - p.x, e.y - p.y);
     if (p.charge && !p.charge.hit && dist < p.charge.w / 2 + R) {      // 경로상 적 12 피해      // 지나가며 부딪힌 적에게 1회 피해 (돌진은 계속)
@@ -1044,7 +1049,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 28;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 29;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1262,9 +1267,7 @@ function predictSkill(i, angArg, qid) {      // 스킬을 누르는 즉시 내 �
       else if (f.dir === 'move' && ml > 0.2) { dx = m[0] / ml; dy = m[1] / ml; }
       else { dx = -Math.cos(vp.aim); dy = -Math.sin(vp.aim); }
       predFx({ k: 'ring', x: vp.x, y: vp.y, r: 30, life: 0.25, max: 0.25, col: vp.ch.color });
-      vp.x = clamp(vp.x + dx * f.dist, R, W - R); vp.y = clamp(vp.y + dy * f.dist, R, H - R);
-      for (const w of WALLS) resolveCircleRect(vp, R, w);
-      vp.x = clamp(vp.x, R, W - R); vp.y = clamp(vp.y, R, H - R);
+      stepMove(vp, dx * f.dist, dy * f.dist);
       predFx({ k: 'ring', x: vp.x, y: vp.y, r: 30, life: 0.25, max: 0.25, col: vp.ch.color }); net.hold = { qid, t0: now };
     }
   }
@@ -1315,28 +1318,26 @@ function guestFrame(now, dt) {
     if (own && net.hold) { hold = now - net.hold.t0 < 1800 && ((s.a | 0) < net.hold.qid || d[15] > 0 || !!d[16]); if (!hold) net.hold = null; }
     if (own && net.pd) {      // 내 대시: 서버 응답을 기다리지 않고 바로 이동
       const pd = net.pd, st = Math.min(dt, pd.t); vp._init = 1;
-      const psp = pd.speed || DASH.speed; vp.x = clamp(vp.x + pd.dx * psp * st, R, W - R); vp.y = clamp(vp.y + pd.dy * psp * st, R, H - R);
-      for (const w of WALLS) resolveCircleRect(vp, R, w);
+      const psp = pd.speed || DASH.speed; stepMove(vp, pd.dx * psp * st, pd.dy * psp * st);
       pd.t -= dt; if (pd.t <= 0) net.pd = null;
     } else if (own && d[7] && d[8] <= 0 && (hold || (!d[16] && d[15] <= 0))) {      // 내 걷기: 내 화면에서 먼저 움직이고 서버 위치로 부드럽게 맞춤
       const m = readMove(); let mx = m[0], my = m[1]; const ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; }
       const sp = vp.ch.speed * (d[9] > 0 ? d[22] : 1) * (d[14] > 0 ? (vp.hasteMul || 1) : 1), er = Math.hypot(tx - vp.x, ty - vp.y);
       if (!vp._init || er > (hold ? 450 : 150)) { vp.x = tx; vp.y = ty; vp._init = 1; }
       else {
-        vp.x = clamp(vp.x + mx * sp * dt, R, W - R); vp.y = clamp(vp.y + my * sp * dt, R, H - R);
-        for (const w of WALLS) resolveCircleRect(vp, R, w);
+        stepMove(vp, mx * sp * dt, my * sp * dt);
         if (!hold) {
           if (ml > 0.05) {      // 움직이는 중엔 지연만큼의 차이는 허용
             const ex = tx - vp.x, ey = ty - vp.y, el = Math.hypot(ex, ey), free = 90;
-            if (el > free) { const k = Math.min(1, dt * 6) * (el - free) / el; vp.x += ex * k; vp.y += ey * k; }
+            if (el > free) { const k = Math.min(1, dt * 6) * (el - free) / el; stepMove(vp, ex * k, ey * k); }
           } else if (Math.hypot(d[2], d[3]) < 8) {      // 멈췄고 서버도 멈춘 뒤에만 서버 위치로 살짝 맞춤 (낡은 이동 정보로 흔들리지 않게)
             const rx = W - d[0], ry = d[1], ex = rx - vp.x, ey = ry - vp.y, el = Math.hypot(ex, ey);
-            if (el > 2.5) { const k = Math.min(1, dt * 8); vp.x += ex * k; vp.y += ey * k; }
+            if (el > 2.5) { const k = Math.min(1, dt * 8); stepMove(vp, ex * k, ey * k); }
           }
         }
       }
-    } else if (!vp._init || Math.hypot(tx - vp.x, ty - vp.y) > 140) { vp.x = tx; vp.y = ty; vp._init = 1; }
-    else { const k = Math.min(1, dt * 18); vp.x += (tx - vp.x) * k; vp.y += (ty - vp.y) * k; }
+    } else if (!vp._init || Math.hypot(tx - vp.x, ty - vp.y) > 100) { vp.x = tx; vp.y = ty; vp._init = 1; }
+    else { const k = Math.min(1, dt * 18); stepMove(vp, (tx - vp.x) * k, (ty - vp.y) * k); }
     if (own && net.pd) { vp.dashT = net.pd.t; }
     vp.vx = -d[2]; vp.vy = d[3]; vp.aim = Math.PI - d[4]; vp.hp = d[5]; vp.maxHp = d[6]; vp.alive = !!d[7]; vp.stun = d[8]; vp.slowT = d[9]; vp.shield = d[10]; vp.shieldMax = d[11]; vp.shieldT = d[12]; vp.drT = d[13]; vp.haste = d[14]; vp.dashT = d[15];
     vp.charge = d[16] ? { dx: -d[16][0], dy: d[16][1] } : null; vp.atkCd = Math.max(0, d[17] - age); vp.dashCd = Math.max(0, d[18] - age); vp.skCd = [d[19], d[20], d[21]].map(v => Math.max(0, v - age)); vp.slowMul = d[22];
