@@ -100,6 +100,14 @@
   .abtn .n { position: absolute; font-size: 26px; font-weight: 900; color: #fff; display: none; text-shadow: 0 0 6px #000; }
   .abtn.cd .n { display: block; } .abtn.cd .ic, .abtn.cd .lb { opacity: .45; }
   .abtn.hold { transform: scale(.92); filter: brightness(1.35); }
+  #cfgBar { position: fixed; left: 50%; top: max(8px, env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 60; width: min(94vw, 680px); display: flex; flex-direction: column; gap: 8px; align-items: center;
+    background: #0a0d13ee; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; pointer-events: auto; touch-action: manipulation; }
+  #cfgBar[hidden] { display: none; }
+  .cfgT { font-size: 13px; color: var(--dim); text-align: center; } .cfgT b { color: var(--fg); }
+  .cfgR { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .cfgR label { display: flex; gap: 8px; align-items: center; font-size: 13px; } .cfgR input[type=range] { width: 150px; }
+  #cfgBar .btn { padding: 8px 22px; font-size: 15px; }
+  .abtn.sel { outline: 4px solid var(--gold); outline-offset: 3px; }
   #cxl { position: absolute; right: calc(var(--gr) + 6px); top: max(18px, env(safe-area-inset-top, 0px)); width: 92px; height: 92px; border-radius: 50%; pointer-events: none;
     border: 3px dashed #ff8a8a; background: #2a0d12d9; color: #ffb3b3; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 700 13px var(--body); }
   #cxl b { font-size: 30px; line-height: 1; }
@@ -122,7 +130,7 @@
       <p class="tag">캐릭터를 고르고 대전 방식을 선택하세요</p>
       <div class="chars" id="chars"></div>
       <div class="info" id="info"></div>
-      <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button></div>
+      <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button><button class="btn ghost" id="btnCfg">🎮 조작 설정</button></div>
       <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심(손 떼면 정지) · <b>오른쪽</b> 큰 버튼은 공격(톡 누르면 1회, 꾹 누르면 자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(그냥 탭하면 상대 쪽) · 작은 초록 버튼은 대시(무적, 쿨타임 5초)<br>3라운드 먼저 이기면 승리 · 캐릭터를 고르거나 랜덤으로 정할 수 있어요</div>
       <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
     </div>
@@ -164,7 +172,13 @@
 
 <div id="updBar" hidden>새 버전이 나왔어요 <button id="btnUpd" type="button">지금 업데이트</button></div>
 <div id="ctl" hidden>
-  <div id="cxl" hidden><b>✕</b><span>취소</span></div>
+  <div id="cfgBar" hidden>
+  <div class="cfgT">🎮 조작 설정 · 버튼을 <b>끌어서 옮기고</b>, 눌러서 선택하면 <b>크기</b>를 바꿀 수 있어요</div>
+  <div class="cfgR"><label>선택한 버튼 크기 <input type="range" id="cfgSize" min="60" max="160" step="2" value="100"><span id="cfgSizeV">100%</span></label>
+  <label>버튼 투명도 <input type="range" id="cfgOp" min="35" max="100" step="5" value="93"><span id="cfgOpV">93%</span></label></div>
+  <div class="cfgR"><button type="button" class="btn ghost" id="cfgReset">처음 위치로</button><button type="button" class="btn" id="cfgDone">완료</button></div>
+</div>
+<div id="cxl" hidden><b>✕</b><span>취소</span></div>
   <div id="hintL" aria-label="이동 안내">이동<br>왼쪽 화면을<br>터치</div>
   <div id="stkL" hidden><i></i></div>
   <button class="abtn" id="bS0" data-act="s0" type="button"><span class="ic"></span><span class="lb"></span><span class="n"></span></button>
@@ -800,12 +814,58 @@ function setOpp(o) {      // 상대 캐릭터: 랜덤(기본) 또는 직접 선�
   setOpp(oppKey);
 })();
 
+// ── 조작 설정: 버튼 위치/크기/투명도를 직접 바꾸고 기기에 저장 ──
+const CTL_IDS = ['bAtk', 'bS0', 'bS1', 'bS2', 'bDash'], CTL_BASE = { bAtk: 100, bS0: 76, bS1: 76, bS2: 76, bDash: 64 };
+let ctlCfg = { b: {}, op: 93 };      // b[id] = { x, y (버튼 중심, 화면 비율 0~1), s (크기 %) }
+try { const j = JSON.parse(localStorage.getItem('aa_ctl') || 'null'); if (j && j.b) { ctlCfg = { b: j.b, op: j.op || 93 }; } } catch (e) { /* 무시 */ }
+const cfg = { on: false, sel: 'bAtk', drag: null };
+function saveCtl() { try { localStorage.setItem('aa_ctl', JSON.stringify(ctlCfg)); } catch (e) { /* 무시 */ } }
+function applyLayout() {
+  for (const id of CTL_IDS) {
+    const el = $(id), c = ctlCfg.b[id], base = CTL_BASE[id];
+    if (!c) { ['left', 'top', 'right', 'bottom', 'width', 'height', 'transform'].forEach(k => { el.style[k] = ''; }); continue; }
+    const sz = base * (c.s || 100) / 100;
+    el.style.width = el.style.height = sz + 'px'; el.style.right = el.style.bottom = 'auto';
+    el.style.left = Math.round(clamp(c.x, 0.03, 0.97) * innerWidth - sz / 2) + 'px'; el.style.top = Math.round(clamp(c.y, 0.05, 0.97) * innerHeight - sz / 2) + 'px';
+  }
+  ctl.style.setProperty('--ctlop', ctlCfg.op / 100);
+  for (const id of CTL_IDS) $(id).style.opacity = ctlCfg.op / 100;
+}
+addEventListener('resize', applyLayout);
+function cfgSelect(id) {
+  cfg.sel = id; CTL_IDS.forEach(k => $(k).classList.toggle('sel', k === id));
+  const v = (ctlCfg.b[id] && ctlCfg.b[id].s) || 100; $('cfgSize').value = v; $('cfgSizeV').textContent = v + '%';
+}
+function cfgOpen() {
+  cfg.on = true; setupButtons(); $('menu').hidden = true; ctl.hidden = false; $('cfgBar').hidden = false; $('hintL').style.visibility = 'visible';
+  $('cfgOp').value = ctlCfg.op; $('cfgOpV').textContent = ctlCfg.op + '%'; cfgSelect(cfg.sel);
+  document.querySelectorAll('.abtn').forEach(b => { b.querySelector('.n').textContent = ''; b.classList.remove('cd'); b.style.setProperty('--cd', '0%'); });
+}
+function cfgClose() { cfg.on = false; cfg.drag = null; $('cfgBar').hidden = true; ctl.hidden = true; CTL_IDS.forEach(k => $(k).classList.remove('sel')); $('menu').hidden = false; saveCtl(); }
+$('btnCfg').onclick = cfgOpen; $('cfgDone').onclick = cfgClose;
+$('cfgReset').onclick = () => { ctlCfg = { b: {}, op: 93 }; saveCtl(); applyLayout(); $('cfgOp').value = 93; $('cfgOpV').textContent = '93%'; cfgSelect(cfg.sel); };
+$('cfgSize').oninput = e => { const id = cfg.sel, el = $(id), r = el.getBoundingClientRect(), c = ctlCfg.b[id] || { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight, s: 100 }; c.s = Number(e.target.value); ctlCfg.b[id] = c; $('cfgSizeV').textContent = c.s + '%'; applyLayout(); saveCtl(); };
+$('cfgOp').oninput = e => { ctlCfg.op = Number(e.target.value); $('cfgOpV').textContent = ctlCfg.op + '%'; applyLayout(); saveCtl(); };
+function cfgStart(src, id, x, y, target) {
+  if (isDup(src, x, y)) return true;
+  if (target && target.closest && target.closest('#cfgBar')) return false;
+  const b = target && target.closest ? target.closest('[data-act]') : null; if (!b) return true;
+  const r = b.getBoundingClientRect(); cfgSelect(b.id);
+  cfg.drag = { key: src + id, id: b.id, dx: x - (r.left + r.width / 2), dy: y - (r.top + r.height / 2) };
+  return true;
+}
+function cfgMove(src, id, x, y) {
+  const d = cfg.drag; if (!d || d.key !== src + id) return;
+  const c = ctlCfg.b[d.id] || { s: 100 }; c.x = clamp((x - d.dx) / innerWidth, 0.03, 0.97); c.y = clamp((y - d.dy) / innerHeight, 0.05, 0.97); ctlCfg.b[d.id] = c; applyLayout();
+}
+function cfgEnd(src, id) { if (cfg.drag && cfg.drag.key === src + id) { cfg.drag = null; saveCtl(); } }
 function setupButtons() {
   const c = CHARS[myChar];
   ['bS0', 'bS1', 'bS2'].forEach((id, i) => {
     const b = $(id); b.querySelector('.ic').textContent = c.skills[i].icon; b.querySelector('.lb').textContent = c.skills[i].name; b.style.setProperty('--bc', c.color);
   });
   $('bAtk').querySelector('.ic').textContent = c.atkIcon;
+  applyLayout();
 }
 function startGame() {
   if (typeof net !== 'undefined' && net.role !== 'none') netLeave();
@@ -862,6 +922,7 @@ function isDup(src, x, y) {
   return false;
 }
 function inStart(src, id, x, y, target) {
+  if (cfg.on) return cfgStart(src, id, x, y, target);
   if (ctl.hidden) return false;
   if (isDup(src, x, y)) return true;
   const key = src + id;
@@ -887,6 +948,7 @@ function inStart(src, id, x, y, target) {
   return true;
 }
 function inMove(src, id, x, y) {
+  if (cfg.on) { cfgMove(src, id, x, y); return; }
   const key = src + id;
   if (stick.key === key) { stick.dx = x - stick.ox; stick.dy = y - stick.oy; stkDraw(); }
   const r = roles.get(key);
@@ -898,6 +960,7 @@ function overCancel(x, y) {      // 오른쪽 위 취소 버튼 위인지
   return Math.hypot(x - cx, y - cy) < b.width * 0.7;
 }
 function inEnd(src, id, cancel) {
+  if (cfg.on) { cfgEnd(src, id); return; }
   const key = src + id;
   if (stick.key === key) { stick.key = null; stick.dx = stick.dy = 0; stkDraw(); }
   const r = roles.get(key);
@@ -916,21 +979,22 @@ addEventListener('pointermove', e => { inMove('p', e.pointerId, e.clientX, e.cli
 addEventListener('pointerup', e => { inEnd('p', e.pointerId, false); });
 addEventListener('pointercancel', e => { inEnd('p', e.pointerId, true); });
 // 터치 이벤트
+const onBar = e => cfg.on && !cfg.drag && e.target && e.target.closest && e.target.closest('#cfgBar');      // 조작 설정창의 슬라이더/버튼은 기본 동작 유지
 addEventListener('touchstart', e => {
   touchMode = true; diag.t++; updateDiag();
-  if (ctl.hidden) return;
+  if (ctl.hidden || onBar(e)) return;
   for (const t of e.changedTouches) inStart('t', t.identifier, t.clientX, t.clientY, t.target);
   e.preventDefault();
 }, { passive: false });
 addEventListener('touchmove', e => {
-  if (ctl.hidden) return;
+  if (ctl.hidden || onBar(e)) return;
   for (const t of e.changedTouches) inMove('t', t.identifier, t.clientX, t.clientY);
   e.preventDefault();
 }, { passive: false });
 function tEnd(e, cancel) {
   for (const t of e.changedTouches) inEnd('t', t.identifier, cancel);
   if (!e.touches.length) resetTouch();       // 손가락을 모두 떼면 전부 초기화(스틱이 걸려 남는 것 방지)
-  if (!ctl.hidden) e.preventDefault();
+  if (!ctl.hidden && !onBar(e)) e.preventDefault();
 }
 addEventListener('touchend', e => tEnd(e, false), { passive: false });
 addEventListener('touchcancel', e => tEnd(e, true), { passive: false });
@@ -1212,7 +1276,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 36;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 37;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
