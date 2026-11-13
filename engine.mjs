@@ -498,4 +498,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 38;
+export const BUILD = 39;

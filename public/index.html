@@ -132,6 +132,7 @@
       <div class="info" id="info"></div>
       <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button><button class="btn ghost" id="btnCfg">🎮 조작 설정</button></div>
       <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심(손 떼면 정지) · <b>오른쪽</b> 큰 버튼은 공격(톡 누르면 1회, 꾹 누르면 자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(그냥 탭하면 상대 쪽) · 작은 초록 버튼은 대시(무적, 쿨타임 5초)<br>3라운드 먼저 이기면 승리 · 캐릭터를 고르거나 랜덤으로 정할 수 있어요</div>
+      <div class="note" id="verTag" style="font-size:11px;opacity:.7"></div>
       <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
     </div>
 
@@ -1280,7 +1281,8 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 38;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 39;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+{ const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
