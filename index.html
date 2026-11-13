@@ -1081,7 +1081,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 32;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 33;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1246,6 +1246,7 @@ function guestPeers() {
 function onSnap(s) {
   if (!s || s.n === net.lastN || !net.m || (net.role !== 'guest' && net.role !== 'host')) return;
   if (isSA() && net.role === 'host') { net.role = 'guest'; lobbyPresence({ o: null }); }
+  { const t = performance.now(); if (net.snapT) { (net.gaps = net.gaps || []).push([t, t - net.snapT]); while (net.gaps.length && t - net.gaps[0][0] > 3000) net.gaps.shift(); } }      // 상태 도착 간격 기록(진단용)
   net.lastN = s.n; net.snap = s; net.snapT = performance.now(); net.lastRx = net.snapT;
   if (net.qt) { const t0 = net.qt[s.a]; if (t0) { const smp = (net.snapT - t0) / 1000; if (smp > 0 && smp < 1.5) net.rtt = Math.min(0.4, Math.max(0.04, net.rtt * 0.8 + smp * 0.2)); } for (const k of Object.keys(net.qt)) if (Number(k) <= s.a) delete net.qt[k]; }
   net.q = net.q.filter(q => q[0] > s.a);
@@ -1332,7 +1333,12 @@ function ingestEvents(s) {
 function pingTag(show, ms) {
   let el = document.getElementById("pingTag");
   if (!el) { if (!show) return; el = document.createElement("div"); el.id = "pingTag"; el.style.cssText = "position:fixed;right:8px;bottom:6px;z-index:5;font:600 12px system-ui,sans-serif;color:#9fb0cc;background:rgba(10,14,24,.55);padding:2px 8px;border-radius:10px;pointer-events:none"; document.body.appendChild(el); }
-  el.hidden = !show; if (show) el.textContent = "핑 " + ms + "ms";
+  el.hidden = !show;
+  if (show) {
+    const g = net.gaps || []; let st = '';
+    if (g.length > 5) { let sum = 0, mx = 0; for (const x of g) { sum += x[1]; if (x[1] > mx) mx = x[1]; } st = ' · 갱신 ' + Math.round(sum / g.length) + '/' + Math.round(mx) + 'ms'; }      // 평균/최대 간격
+    el.textContent = "핑 " + ms + "ms" + st;
+  }
 }
 function extrap(x, y, vx, vy, r, t, pierce) {      // 투사체를 t초 앞으로 옮기되 벽(관통 아닌 경우)에서 멈춤. 화면 좌표 기준
   const L = Math.hypot(vx, vy) * t; if (L < 1) return [x, y];
