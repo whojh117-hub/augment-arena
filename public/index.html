@@ -99,6 +99,10 @@
   .abtn .n { position: absolute; font-size: 26px; font-weight: 900; color: #fff; display: none; text-shadow: 0 0 6px #000; }
   .abtn.cd .n { display: block; } .abtn.cd .ic, .abtn.cd .lb { opacity: .45; }
   .abtn.hold { transform: scale(.92); filter: brightness(1.35); }
+  #cxl { position: absolute; right: calc(var(--gr) + 6px); top: max(18px, env(safe-area-inset-top, 0px)); width: 92px; height: 92px; border-radius: 50%; pointer-events: none;
+    border: 3px dashed #ff8a8a; background: #2a0d12d9; color: #ffb3b3; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 700 13px var(--body); }
+  #cxl b { font-size: 30px; line-height: 1; }
+  #cxl.on { background: #ff4d5dee; border-style: solid; border-color: #fff; color: #fff; transform: scale(1.12); }
   #bAtk { right: var(--gr); bottom: 40px; width: 100px; height: 100px; --bc: #ff5d6c; }
   #bAtk .ic { font-size: 38px; } #bAtk .lb { font-size: 12px; }
   #bS0 { right: calc(var(--gr) + 116px); bottom: 40px; width: 76px; height: 76px; }
@@ -159,6 +163,7 @@
 
 <div id="updBar" hidden>새 버전이 나왔어요 <button id="btnUpd" type="button">지금 업데이트</button></div>
 <div id="ctl" hidden>
+  <div id="cxl" hidden><b>✕</b><span>취소</span></div>
   <div id="hintL" aria-label="이동 안내">이동<br>왼쪽 화면을<br>터치</div>
   <div id="stkL" hidden><i></i></div>
   <button class="abtn" id="bS0" data-act="s0" type="button"><span class="ic"></span><span class="lb"></span><span class="n"></span></button>
@@ -240,7 +245,7 @@ const CHARS = {
     atk: { type: 'melee', dmg: 8, cd: 0.8, range: 68, arc: 2.4 },
     skills: [
       { name: '방패', icon: '🛡️', desc: '3초간 내구도 30의 방패(체력 아래 파란 바)', cd: 8, ai: { use: 'defend' }, fx: [{ t: 'shield', amount: 30, dur: 3 }] },
-      { name: '돌진', icon: '🐗', desc: '돌진 경로와 도착 지점 원형 범위의 적에게 12 피해(1회), 끝까지 돌진하면 원형 범위 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 12, endR: 100, endStun: 0.8, col: '#5b8def' }] },
+      { name: '돌진', icon: '🐗', desc: '돌진하다 벽에 닿거나 사거리 끝에 이르면 그 자리에 원형 범위가 터져 12 피해(1회) + 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 12, endR: 100, endStun: 0.8, col: '#5b8def' }] },
       { name: '대지 강타', icon: '💥', desc: '주변 20 피해 + 2초간 50% 둔화', cd: 6, ai: { use: 'attack', maxD: 120 }, fx: [{ t: 'aoe', radius: 132, dmg: 20, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
     ] },
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
@@ -251,10 +256,10 @@ const CHARS = {
       { name: '가로베기', icon: '🌙', desc: '0.6초간 120° 부채꼴로 투사체를 막고, 끝나면 범위 안의 적에게 15 피해', cd: 10, ai: { use: 'block', maxD: 125 }, fx: [{ t: 'cone', range: 128, arc: 2.094, dmg: 15, guard: 0.6, col: '#ff8a4a' }] },
     ] },
   archer: { id: 'archer', name: '궁수', icon: '🏹', atkIcon: '🏹', color: '#6be08a', role: '원거리 · 빠른 연사', hp: 90, speed: 235, keep: 300,
-    atk: { type: 'ranged', dmg: 8, cd: 0.55, range: 560, speed: 620, r: 5 },
+    atk: { type: 'ranged', dmg: 8, cd: 0.3, range: 560, speed: 620, r: 5 },
     skills: [
       { name: '삼연사', icon: '🎯', desc: '화살 3발 부채꼴 발사', cd: 6, proj: 1, ai: { use: 'attack', maxD: 450 }, fx: [{ t: 'proj', n: 3, spread: 0.22, dmg: 9, speed: 640, r: 5 }] },
-      { name: '후퇴 사격', icon: '↩️', desc: '뒤로 물러나며 화살 발사, 맞으면 2초간 둔화', cd: 10, proj: 1, ai: { use: 'escape', minD: 150 }, fx: [{ t: 'blink', dist: 150, dir: 'away' }, { t: 'proj', dmg: 14, speed: 700, r: 10, slowT: 2, slowMul: 0.6 }] },
+      { name: '후퇴 사격', icon: '↩️', desc: '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박(이동·대시 불가, 공격은 가능)', cd: 10, proj: 1, ai: { use: 'escape', minD: 150 }, fx: [{ t: 'blink', dist: 150, dir: 'away' }, { t: 'proj', dmg: 14, speed: 520, r: 14, slowT: 1, slowMul: 0 }] },
       { name: '관통 화살', icon: '➳', desc: '적과 벽을 꿰뚫는 강한 화살', cd: 8, proj: 1, ai: { use: 'attack', maxD: 520 }, fx: [{ t: 'proj', dmg: 30, speed: 950, r: 8, pierce: true, life: 1.0, col: '#4cff7a' }] },
     ] },
   mage: { id: 'mage', name: '마법사', icon: '🔮', atkIcon: '🔮', color: '#c36bff', role: '원거리 · 범위 마법', hp: 95, speed: 225, keep: 280,
@@ -298,6 +303,19 @@ function stepMove(o, dx, dy) {
     for (const w of WALLS) resolveCircleRect(o, R, w);
     o.x = clamp(o.x, R, W - R); o.y = clamp(o.y, R, H - R);
   }
+}
+const isRoot = p => p.slowT > 0 && p.slowMul === 0;      // 속박: 이동·대시·이동기 불가, 공격·그 밖의 스킬은 가능
+const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge');
+// 돌진 경로: 벽에 닿으면 거기서 멈춤. 실제로 갈 수 있는 거리와 도착 지점을 돌려줌
+function chargePath(p, ang, dist) {
+  const o = { x: p.x, y: p.y }, ux = Math.cos(ang), uy = Math.sin(ang); let tr = 0;
+  while (tr < dist) {
+    const st = Math.min(8, dist - tr), px = o.x, py = o.y;
+    stepMove(o, ux * st, uy * st);
+    const mv = Math.hypot(o.x - px, o.y - py); tr += mv;
+    if (mv < st - 0.5) break;
+  }
+  return { d: Math.min(tr, dist), x: o.x, y: o.y };
 }
 const freshWant = () => ({ dash: 0, sk: [0, 0, 0], angs: [null, null, null] });
 
@@ -376,7 +394,7 @@ class Game {
     if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; }
     t.hp -= a;
     if (o && o.stun) { t.stun = Math.max(t.stun, o.stun); t.charge = null; }
-    if (o && o.slowT) { t.slowT = Math.max(t.slowT, o.slowT); t.slowMul = o.slowMul || 0.5; }
+    if (o && o.slowT) { t.slowT = Math.max(t.slowT, o.slowT); t.slowMul = o.slowMul != null ? o.slowMul : 0.5; }
     this.ev.push({ k: 'hit', x: t.x, y: t.y - 8, d: Math.round(dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1) * (t.drT > 0 ? 1 - t.dr : 1)), to: t.idx });
     return true;
   }
@@ -387,7 +405,7 @@ class Game {
     for (let k = 0; k < n; k++) {
       const a = base + (k - (n - 1) / 2) * sp;
       this.bullets.push({ x: p.x + Math.cos(a) * (R + 4), y: p.y + Math.sin(a) * (R + 4), vx: Math.cos(a) * f.speed, vy: Math.sin(a) * f.speed,
-        r: f.r || 5, dmg: f.dmg, owner: p.idx, pierce: !!f.pierce, aoe: f.aoe || 0, aoeDmg: f.aoeDmg, stun: f.stun || 0, slowT: f.slowT || 0, slowMul: f.slowMul || 1,
+        r: f.r || 5, dmg: f.dmg, owner: p.idx, pierce: !!f.pierce, aoe: f.aoe || 0, aoeDmg: f.aoeDmg, stun: f.stun || 0, slowT: f.slowT || 0, slowMul: f.slowMul != null ? f.slowMul : 1,
         life: f.life || 1.4, col: f.col || null, hit: false });
     }
   }
@@ -454,10 +472,11 @@ class Game {
         if (f.maxHp) { p.maxHp += f.maxHp; p.hp += f.maxHp; this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '최대 체력 +' + f.maxHp, col: '#ffd24a' }); }
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 60, life: 0.4, max: 0.4, col: f.col || '#ffd24a' });
       } else if (f.t === 'charge') {
-        p.charge = { dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed, left: f.dist / f.speed, dmg: f.dmg, stun: f.stun || 0, w: f.w || 52, endR: f.endR || 0, endStun: f.endStun || 0, hit: false, col: f.col };
-        const T = f.dist / f.speed + 0.1;      // 돌진하는 동안 경로(사각)와 도착 원을 모두에게 보여줌
-        this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: f.dist, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
-        if (f.endR) this.fx.push({ k: 'teleC', x: p.x + Math.cos(ang) * f.dist, y: p.y + Math.sin(ang) * f.dist, r: f.endR, life: T, max: T, col: f.col || '#5b8def' });
+        const cp = chargePath(p, ang, f.dist);      // 벽이 있으면 거기까지만 돌진
+        p.charge = { dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed, left: cp.d / f.speed, dmg: f.dmg, stun: f.stun || 0, w: f.w || 52, endR: f.endR || 0, endStun: f.endStun || 0, hit: false, col: f.col };
+        const T = cp.d / f.speed + 0.1;      // 돌진하는 동안 경로(사각)와 도착 원을 모두에게 보여줌
+        this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: cp.d, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
+        if (f.endR) this.fx.push({ k: 'teleC', x: cp.x, y: cp.y, r: f.endR, life: T, max: T, col: f.col || '#5b8def' });
       }
       else if (f.t === 'blink') {
         let dx, dy; const m = Math.hypot(p.inp.mx, p.inp.my);
@@ -502,14 +521,14 @@ class Game {
     if (p.alive && !p.charge) p.aim = Math.atan2(e.y - p.y, e.x - p.x);
 
     if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0) {
-      if (p.want.dash && p.dashCd <= 0) {
+      if (p.want.dash && p.dashCd <= 0 && !isRoot(p)) {
         const m = Math.hypot(p.inp.mx, p.inp.my);
         if (m > 0.2) { p.dx = p.inp.mx / m; p.dy = p.inp.my / m; } else { p.dx = -Math.cos(p.aim); p.dy = -Math.sin(p.aim); }
         p.dashT = DASH.time; p.dashCd = DASH.cd;
         this.ev.push({ k: 'dash', p: p.idx });
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 28, life: 0.25, max: 0.25, col: '#6be08a' });
       } else {
-        for (let i = 0; i < 3; i++) if (p.want.sk[i] && p.skCd[i] <= 0) { this.useSkill(p, i, p.want.angs[i]); break; }
+        for (let i = 0; i < 3; i++) if (p.want.sk[i] && p.skCd[i] <= 0 && !(isRoot(p) && moveSkill(p.ch.skills[i]))) { this.useSkill(p, i, p.want.angs[i]); break; }
       }
     }
     p.want = freshWant();
@@ -791,7 +810,10 @@ function inStart(src, id, x, y, target) {
     else if (act === 'dash') { roles.set(key, { type: 'btn', btn: b }); if (game) game.pressDash(); }
     else {
       const i = Number(act[1]);
-      if (game && game.players[0].ch.skills[i].aimed) roles.set(key, { type: 'skill', btn: b, i, ox: x, oy: y, dx: 0, dy: 0 });
+      if (game && game.players[0].ch.skills[i].aimed) {
+        if (game.players[0].skCd[i] > 0.05) roles.set(key, { type: 'btn', btn: b });      // 이미 쓴(쿨타임 중인) 스킬은 조준할 수 없음
+        else roles.set(key, { type: 'skill', btn: b, i, ox: x, oy: y, dx: 0, dy: 0, cx: false });
+      }
       else { roles.set(key, { type: 'btn', btn: b }); if (game) game.pressSkill(i); }
     }
     return true;
@@ -806,14 +828,19 @@ function inMove(src, id, x, y) {
   const key = src + id;
   if (stick.key === key) { stick.dx = x - stick.ox; stick.dy = y - stick.oy; stkDraw(); }
   const r = roles.get(key);
-  if (r && r.type === 'skill') { r.dx = x - r.ox; r.dy = y - r.oy; }
+  if (r && r.type === 'skill') { r.dx = x - r.ox; r.dy = y - r.oy; r.cx = overCancel(x, y); }
+}
+function overCancel(x, y) {      // 오른쪽 위 취소 버튼 위인지
+  const el = $('cxl'); if (el.hidden) return false;
+  const b = el.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+  return Math.hypot(x - cx, y - cy) < b.width * 0.7;
 }
 function inEnd(src, id, cancel) {
   const key = src + id;
   if (stick.key === key) { stick.key = null; stick.dx = stick.dy = 0; stkDraw(); }
   const r = roles.get(key);
   if (r) {
-    if (r.type === 'skill' && !cancel && game) game.pressSkill(r.i, Math.hypot(r.dx, r.dy) > DRAG_MIN ? Math.atan2(r.dy, r.dx) : undefined);
+    if (r.type === 'skill' && !cancel && !r.cx && game) game.pressSkill(r.i, Math.hypot(r.dx, r.dy) > DRAG_MIN ? Math.atan2(r.dy, r.dx) : undefined);
     r.btn.classList.remove('hold'); roles.delete(key);
   }
 }
@@ -955,7 +982,7 @@ function drawAimPreview() {
     if (f.t === 'cone' || f.t === 'line' || f.t === 'charge') ctx.translate(ox, oy);
     if (f.t === 'cone') { ctx.fillStyle = '#ffffff26'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, f.range, a - f.arc / 2, a + f.arc / 2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     else if (f.t === 'line') { ctx.rotate(a); ctx.fillStyle = '#ffffff26'; ctx.fillRect(0, -f.w / 2, f.len, f.w); ctx.strokeRect(0, -f.w / 2, f.len, f.w); }
-    else if (f.t === 'charge') { ctx.rotate(a); ctx.fillStyle = '#ffffff26'; ctx.fillRect(0, -f.w / 2, f.dist, f.w); ctx.strokeRect(0, -f.w / 2, f.dist, f.w); if (f.endR) { ctx.beginPath(); ctx.arc(f.dist, 0, f.endR, 0, 6.283); ctx.fill(); ctx.stroke(); } }
+    else if (f.t === 'charge') { const cd = chargePath(p, a, f.dist).d; ctx.rotate(a); ctx.fillStyle = '#ffffff26'; ctx.fillRect(0, -f.w / 2, cd, f.w); ctx.strokeRect(0, -f.w / 2, cd, f.w); if (f.endR) { ctx.beginPath(); ctx.arc(cd, 0, f.endR, 0, 6.283); ctx.fill(); ctx.stroke(); } }
     else if (f.t === 'proj') {
       const n = f.n || 1, sp = f.spread || 0, r = f.r || 5, maxLen = f.speed * (f.life || 1.4);
       for (let k = 0; k < n; k++) {
@@ -988,7 +1015,8 @@ function drawPlayer(p, now) {
   ctx.shadowColor = p.ch.color; ctx.shadowBlur = 14; ctx.fillStyle = p.ch.color; ctx.beginPath(); ctx.arc(0, 0, R, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
   ctx.strokeStyle = ring; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, R, 0, 6.283); ctx.stroke();
   ctx.font = '22px ' + EMOJI; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText(p.ch.icon, 0, 1); ctx.textBaseline = 'alphabetic';
-  if (p.slowT > 0) { ctx.strokeStyle = '#a9e6ff'; ctx.setLineDash([4, 4]); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, R + 10, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
+  if (isRoot(p)) { ctx.strokeStyle = '#6be08a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, R + 10, 0, 6.283); ctx.stroke(); ctx.font = '16px ' + EMOJI; ctx.textAlign = 'center'; ctx.fillText('⛓️', 0, R + 26); }
+  else if (p.slowT > 0) { ctx.strokeStyle = '#a9e6ff'; ctx.setLineDash([4, 4]); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, R + 10, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
   ctx.restore(); ctx.globalAlpha = 1;
   if (p.alive) {
     const w = 56, x = p.x - w / 2, y = p.y - R - 16;
@@ -1053,7 +1081,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 30;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 31;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1233,7 +1261,7 @@ function startOnlineGuest(s) {
   game.pressDash = () => {
     qpush([++net.qid, 'd']);
     const vp = game.players[0], now = performance.now();      // 대시는 누르는 즉시 내 화면에서 먼저 움직임 (예측)
-    if (net.snap && net.snap.ph === 'fight' && vp.alive && vp.dashCd <= 0 && vp.stun <= 0 && !vp.charge && !net.pd) {
+    if (net.snap && net.snap.ph === 'fight' && vp.alive && vp.dashCd <= 0 && vp.stun <= 0 && !vp.charge && !net.pd && !isRoot(vp)) {
       const m = readMove(), ml = Math.hypot(m[0], m[1]); let dx, dy;
       if (ml > 0.2) { dx = m[0] / ml; dy = m[1] / ml; } else { dx = -Math.cos(vp.aim); dy = -Math.sin(vp.aim); }
       net.pd = { t: DASH.time, dx, dy }; net.cdo.d = { v: DASH.cd, t: now }; net.hold = { qid: net.qid, t0: now };
@@ -1243,7 +1271,7 @@ function startOnlineGuest(s) {
   game.pressAttack = () => { qpush([++net.qid, 'a']); if (net.snap && net.snap.ph === 'fight') net.atkBuf = ATK_BUFFER; };
   game.pressSkill = (i, ang) => {
     qpush([++net.qid, 's', i, typeof ang === 'number' ? r2(Math.PI - ang) : null]);
-    const vp = game.players[0]; if (net.snap && net.snap.ph === 'fight' && vp.alive && vp.stun <= 0 && vp.skCd[i] <= 0 && !net.pd) { net.cdo['s' + i] = { v: vp.ch.skills[i].cd, t: performance.now() }; predictSkill(i, ang, net.qid); }      // 쿨타임·효과는 누르는 즉시 내 화면에 먼저 표시
+    const vp = game.players[0]; if (net.snap && net.snap.ph === 'fight' && vp.alive && vp.stun <= 0 && vp.skCd[i] <= 0 && !net.pd && !(isRoot(vp) && moveSkill(vp.ch.skills[i]))) { net.cdo['s' + i] = { v: vp.ch.skills[i].cd, t: performance.now() }; predictSkill(i, ang, net.qid); }      // 쿨타임·효과는 누르는 즉시 내 화면에 먼저 표시
   };
   scene = 'play'; lastPh = ''; floats = []; parts = []; net.lastRx = performance.now(); net.snapT = performance.now();
   setupButtons(); resetTouch(); $('menu').hidden = true; $('net').hidden = true; $('end').hidden = true; setEndMode();
@@ -1260,10 +1288,10 @@ function predictSkill(i, angArg, qid) {      // 스킬을 누르는 즉시 내 �
     else if (f.t === 'shield') { predFx({ k: 'ring', x: vp.x, y: vp.y, r: 50, life: 0.35, max: 0.35, col: f.col || '#6ec1ff' }); net.sh = { a: f.amount, d: f.dur, t: now }; }
     else if (f.t === 'buff') predFx({ k: 'ring', x: vp.x, y: vp.y, r: 60, life: 0.4, max: 0.4, col: f.col || '#ffd24a' });
     else if (f.t === 'charge') {
-      const T = f.dist / f.speed + 0.1 + L;
-      predFx({ k: 'tele', x: vp.x, y: vp.y, a: ang, len: f.dist, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
-      if (f.endR) predFx({ k: 'teleC', x: vp.x + Math.cos(ang) * f.dist, y: vp.y + Math.sin(ang) * f.dist, r: f.endR, life: T, max: T, col: f.col || '#5b8def' });
-      net.pd = { t: f.dist / f.speed, dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed }; net.hold = { qid, t0: now };
+      const cp = chargePath(vp, ang, f.dist), T = cp.d / f.speed + 0.1 + L;
+      predFx({ k: 'tele', x: vp.x, y: vp.y, a: ang, len: cp.d, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
+      if (f.endR) predFx({ k: 'teleC', x: cp.x, y: cp.y, r: f.endR, life: T, max: T, col: f.col || '#5b8def' });
+      net.pd = { t: cp.d / f.speed, dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed }; net.hold = { qid, t0: now };
     } else if (f.t === 'blink') {
       let dx, dy; const m = readMove(), ml = Math.hypot(m[0], m[1]);
       if (aimed) { const sgn = f.dir === 'away' ? -1 : 1; dx = Math.cos(ang) * sgn; dy = Math.sin(ang) * sgn; }
@@ -1405,7 +1433,9 @@ function frame(now) {
   ctx.setTransform(cv.width / CW, 0, 0, cv.height / CH, 0, 0); ctx.clearRect(0, 0, CW, CH);
   if (scene !== 'play' || !game) { ctx.save(); ctx.translate(0, OY); drawArena(); ctx.restore(); return; }
   aimPrev = null;
-  for (const r of roles.values()) if (r.type === 'skill' && Math.hypot(r.dx, r.dy) > DRAG_MIN) aimPrev = { i: r.i, ang: Math.atan2(r.dy, r.dx) };
+  let aimingAny = false, cxOn = false;
+  for (const r of roles.values()) if (r.type === 'skill') { aimingAny = true; if (r.cx) cxOn = true; else if (Math.hypot(r.dx, r.dy) > DRAG_MIN) aimPrev = { i: r.i, ang: Math.atan2(r.dy, r.dx) }; }
+  { const cxl = $('cxl'); cxl.hidden = !aimingAny; cxl.classList.toggle('on', cxOn); }
   acc += dt;
   if (net.role !== 'guest' && net.pingT) { net.pingT = 0; pingTag(false); }
   if (net.role === 'guest') { guestFrame(now, dt); acc = 0; }

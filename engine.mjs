@@ -24,7 +24,7 @@ const CHARS = {
     atk: { type: 'melee', dmg: 8, cd: 0.8, range: 68, arc: 2.4 },
     skills: [
       { name: '방패', icon: '🛡️', desc: '3초간 내구도 30의 방패(체력 아래 파란 바)', cd: 8, ai: { use: 'defend' }, fx: [{ t: 'shield', amount: 30, dur: 3 }] },
-      { name: '돌진', icon: '🐗', desc: '돌진 경로와 도착 지점 원형 범위의 적에게 12 피해(1회), 끝까지 돌진하면 원형 범위 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 12, endR: 100, endStun: 0.8, col: '#5b8def' }] },
+      { name: '돌진', icon: '🐗', desc: '돌진하다 벽에 닿거나 사거리 끝에 이르면 그 자리에 원형 범위가 터져 12 피해(1회) + 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 12, endR: 100, endStun: 0.8, col: '#5b8def' }] },
       { name: '대지 강타', icon: '💥', desc: '주변 20 피해 + 2초간 50% 둔화', cd: 6, ai: { use: 'attack', maxD: 120 }, fx: [{ t: 'aoe', radius: 132, dmg: 20, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
     ] },
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
@@ -35,10 +35,10 @@ const CHARS = {
       { name: '가로베기', icon: '🌙', desc: '0.6초간 120° 부채꼴로 투사체를 막고, 끝나면 범위 안의 적에게 15 피해', cd: 10, ai: { use: 'block', maxD: 125 }, fx: [{ t: 'cone', range: 128, arc: 2.094, dmg: 15, guard: 0.6, col: '#ff8a4a' }] },
     ] },
   archer: { id: 'archer', name: '궁수', icon: '🏹', atkIcon: '🏹', color: '#6be08a', role: '원거리 · 빠른 연사', hp: 90, speed: 235, keep: 300,
-    atk: { type: 'ranged', dmg: 8, cd: 0.55, range: 560, speed: 620, r: 5 },
+    atk: { type: 'ranged', dmg: 8, cd: 0.3, range: 560, speed: 620, r: 5 },
     skills: [
       { name: '삼연사', icon: '🎯', desc: '화살 3발 부채꼴 발사', cd: 6, proj: 1, ai: { use: 'attack', maxD: 450 }, fx: [{ t: 'proj', n: 3, spread: 0.22, dmg: 9, speed: 640, r: 5 }] },
-      { name: '후퇴 사격', icon: '↩️', desc: '뒤로 물러나며 화살 발사, 맞으면 2초간 둔화', cd: 10, proj: 1, ai: { use: 'escape', minD: 150 }, fx: [{ t: 'blink', dist: 150, dir: 'away' }, { t: 'proj', dmg: 14, speed: 700, r: 10, slowT: 2, slowMul: 0.6 }] },
+      { name: '후퇴 사격', icon: '↩️', desc: '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박(이동·대시 불가, 공격은 가능)', cd: 10, proj: 1, ai: { use: 'escape', minD: 150 }, fx: [{ t: 'blink', dist: 150, dir: 'away' }, { t: 'proj', dmg: 14, speed: 520, r: 14, slowT: 1, slowMul: 0 }] },
       { name: '관통 화살', icon: '➳', desc: '적과 벽을 꿰뚫는 강한 화살', cd: 8, proj: 1, ai: { use: 'attack', maxD: 520 }, fx: [{ t: 'proj', dmg: 30, speed: 950, r: 8, pierce: true, life: 1.0, col: '#4cff7a' }] },
     ] },
   mage: { id: 'mage', name: '마법사', icon: '🔮', atkIcon: '🔮', color: '#c36bff', role: '원거리 · 범위 마법', hp: 95, speed: 225, keep: 280,
@@ -82,6 +82,19 @@ function stepMove(o, dx, dy) {
     for (const w of WALLS) resolveCircleRect(o, R, w);
     o.x = clamp(o.x, R, W - R); o.y = clamp(o.y, R, H - R);
   }
+}
+const isRoot = p => p.slowT > 0 && p.slowMul === 0;      // 속박: 이동·대시·이동기 불가, 공격·그 밖의 스킬은 가능
+const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge');
+// 돌진 경로: 벽에 닿으면 거기서 멈춤. 실제로 갈 수 있는 거리와 도착 지점을 돌려줌
+function chargePath(p, ang, dist) {
+  const o = { x: p.x, y: p.y }, ux = Math.cos(ang), uy = Math.sin(ang); let tr = 0;
+  while (tr < dist) {
+    const st = Math.min(8, dist - tr), px = o.x, py = o.y;
+    stepMove(o, ux * st, uy * st);
+    const mv = Math.hypot(o.x - px, o.y - py); tr += mv;
+    if (mv < st - 0.5) break;
+  }
+  return { d: Math.min(tr, dist), x: o.x, y: o.y };
 }
 const freshWant = () => ({ dash: 0, sk: [0, 0, 0], angs: [null, null, null] });
 
@@ -160,7 +173,7 @@ class Game {
     if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; }
     t.hp -= a;
     if (o && o.stun) { t.stun = Math.max(t.stun, o.stun); t.charge = null; }
-    if (o && o.slowT) { t.slowT = Math.max(t.slowT, o.slowT); t.slowMul = o.slowMul || 0.5; }
+    if (o && o.slowT) { t.slowT = Math.max(t.slowT, o.slowT); t.slowMul = o.slowMul != null ? o.slowMul : 0.5; }
     this.ev.push({ k: 'hit', x: t.x, y: t.y - 8, d: Math.round(dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1) * (t.drT > 0 ? 1 - t.dr : 1)), to: t.idx });
     return true;
   }
@@ -171,7 +184,7 @@ class Game {
     for (let k = 0; k < n; k++) {
       const a = base + (k - (n - 1) / 2) * sp;
       this.bullets.push({ x: p.x + Math.cos(a) * (R + 4), y: p.y + Math.sin(a) * (R + 4), vx: Math.cos(a) * f.speed, vy: Math.sin(a) * f.speed,
-        r: f.r || 5, dmg: f.dmg, owner: p.idx, pierce: !!f.pierce, aoe: f.aoe || 0, aoeDmg: f.aoeDmg, stun: f.stun || 0, slowT: f.slowT || 0, slowMul: f.slowMul || 1,
+        r: f.r || 5, dmg: f.dmg, owner: p.idx, pierce: !!f.pierce, aoe: f.aoe || 0, aoeDmg: f.aoeDmg, stun: f.stun || 0, slowT: f.slowT || 0, slowMul: f.slowMul != null ? f.slowMul : 1,
         life: f.life || 1.4, col: f.col || null, hit: false });
     }
   }
@@ -238,10 +251,11 @@ class Game {
         if (f.maxHp) { p.maxHp += f.maxHp; p.hp += f.maxHp; this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '최대 체력 +' + f.maxHp, col: '#ffd24a' }); }
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 60, life: 0.4, max: 0.4, col: f.col || '#ffd24a' });
       } else if (f.t === 'charge') {
-        p.charge = { dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed, left: f.dist / f.speed, dmg: f.dmg, stun: f.stun || 0, w: f.w || 52, endR: f.endR || 0, endStun: f.endStun || 0, hit: false, col: f.col };
-        const T = f.dist / f.speed + 0.1;      // 돌진하는 동안 경로(사각)와 도착 원을 모두에게 보여줌
-        this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: f.dist, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
-        if (f.endR) this.fx.push({ k: 'teleC', x: p.x + Math.cos(ang) * f.dist, y: p.y + Math.sin(ang) * f.dist, r: f.endR, life: T, max: T, col: f.col || '#5b8def' });
+        const cp = chargePath(p, ang, f.dist);      // 벽이 있으면 거기까지만 돌진
+        p.charge = { dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed, left: cp.d / f.speed, dmg: f.dmg, stun: f.stun || 0, w: f.w || 52, endR: f.endR || 0, endStun: f.endStun || 0, hit: false, col: f.col };
+        const T = cp.d / f.speed + 0.1;      // 돌진하는 동안 경로(사각)와 도착 원을 모두에게 보여줌
+        this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: cp.d, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
+        if (f.endR) this.fx.push({ k: 'teleC', x: cp.x, y: cp.y, r: f.endR, life: T, max: T, col: f.col || '#5b8def' });
       }
       else if (f.t === 'blink') {
         let dx, dy; const m = Math.hypot(p.inp.mx, p.inp.my);
@@ -286,14 +300,14 @@ class Game {
     if (p.alive && !p.charge) p.aim = Math.atan2(e.y - p.y, e.x - p.x);
 
     if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0) {
-      if (p.want.dash && p.dashCd <= 0) {
+      if (p.want.dash && p.dashCd <= 0 && !isRoot(p)) {
         const m = Math.hypot(p.inp.mx, p.inp.my);
         if (m > 0.2) { p.dx = p.inp.mx / m; p.dy = p.inp.my / m; } else { p.dx = -Math.cos(p.aim); p.dy = -Math.sin(p.aim); }
         p.dashT = DASH.time; p.dashCd = DASH.cd;
         this.ev.push({ k: 'dash', p: p.idx });
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 28, life: 0.25, max: 0.25, col: '#6be08a' });
       } else {
-        for (let i = 0; i < 3; i++) if (p.want.sk[i] && p.skCd[i] <= 0) { this.useSkill(p, i, p.want.angs[i]); break; }
+        for (let i = 0; i < 3; i++) if (p.want.sk[i] && p.skCd[i] <= 0 && !(isRoot(p) && moveSkill(p.ch.skills[i]))) { this.useSkill(p, i, p.want.angs[i]); break; }
       }
     }
     p.want = freshWant();
@@ -419,4 +433,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 30;
+export const BUILD = 31;
