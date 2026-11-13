@@ -262,7 +262,7 @@ const CHARS = {
     skills: [
       { name: '화염구', icon: '🔥', desc: '직격 30 피해, 직격하지 못하고 터지면 범위 20 피해', cd: 5, proj: 1, ai: { use: 'attack', maxD: 480 }, fx: [{ t: 'proj', dmg: 30, aoeDmg: 20, speed: 540, r: 14, aoe: 96, life: 1.4, col: '#ff8a4a' }] },
       { name: '빙결', icon: '❄️', desc: '맞으면 2초간 둔화', cd: 8, proj: 1, ai: { use: 'attack', maxD: 480 }, fx: [{ t: 'proj', dmg: 10, speed: 720, r: 15, life: 1.1, slowT: 2, slowMul: 0.5, col: '#8fd8ff' }] },
-      { name: '순간이동', icon: '✨', desc: '드래그한 방향(탭하면 이동 방향, 없으면 뒤)으로 순간이동', cd: 10, ai: { use: 'escape', minD: 130 }, fx: [{ t: 'blink', dist: 220, dir: 'move' }] },
+      { name: '순간이동', icon: '✨', desc: '드래그한 방향(탭하면 이동 방향, 없으면 뒤)으로 순간이동', cd: 10, ai: { use: 'escape', minD: 130 }, fx: [{ t: 'blink', dist: 147, dir: 'move', thru: true }] },
     ] },
 };
 CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: '🗡️', color: '#ff3b3b', role: '근접 · 암살', locked: true, hp: 0, speed: 230, keep: 64,
@@ -466,7 +466,11 @@ class Game {
         else if (f.dir === 'move' && m > 0.2) { dx = p.inp.mx / m; dy = p.inp.my / m; }
         else { dx = -Math.cos(p.aim); dy = -Math.sin(p.aim); }
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 30, life: 0.25, max: 0.25, col: p.ch.color });
-        stepMove(p, dx * f.dist, dy * f.dist);      // 순간이동도 벽은 통과하지 못하고 벽 앞에서 멈춤
+        if (f.thru) {      // 마법사 순간이동: 벽을 관통 (도착 지점이 벽 안이면 밖으로 밀어냄)
+          p.x = clamp(p.x + dx * f.dist, R, W - R); p.y = clamp(p.y + dy * f.dist, R, H - R);
+          for (const w of WALLS) resolveCircleRect(p, R, w);
+          p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
+        } else stepMove(p, dx * f.dist, dy * f.dist);      // 후퇴 사격 등은 벽 앞에서 멈춤
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 30, life: 0.25, max: 0.25, col: p.ch.color });
       }
     }
@@ -1049,7 +1053,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 29;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 30;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1267,7 +1271,11 @@ function predictSkill(i, angArg, qid) {      // 스킬을 누르는 즉시 내 �
       else if (f.dir === 'move' && ml > 0.2) { dx = m[0] / ml; dy = m[1] / ml; }
       else { dx = -Math.cos(vp.aim); dy = -Math.sin(vp.aim); }
       predFx({ k: 'ring', x: vp.x, y: vp.y, r: 30, life: 0.25, max: 0.25, col: vp.ch.color });
-      stepMove(vp, dx * f.dist, dy * f.dist);
+      if (f.thru) {
+        vp.x = clamp(vp.x + dx * f.dist, R, W - R); vp.y = clamp(vp.y + dy * f.dist, R, H - R);
+        for (const w of WALLS) resolveCircleRect(vp, R, w);
+        vp.x = clamp(vp.x, R, W - R); vp.y = clamp(vp.y, R, H - R);
+      } else stepMove(vp, dx * f.dist, dy * f.dist);
       predFx({ k: 'ring', x: vp.x, y: vp.y, r: 30, life: 0.25, max: 0.25, col: vp.ch.color }); net.hold = { qid, t0: now };
     }
   }

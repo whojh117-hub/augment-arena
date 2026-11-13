@@ -46,7 +46,7 @@ const CHARS = {
     skills: [
       { name: '화염구', icon: '🔥', desc: '직격 30 피해, 직격하지 못하고 터지면 범위 20 피해', cd: 5, proj: 1, ai: { use: 'attack', maxD: 480 }, fx: [{ t: 'proj', dmg: 30, aoeDmg: 20, speed: 540, r: 14, aoe: 96, life: 1.4, col: '#ff8a4a' }] },
       { name: '빙결', icon: '❄️', desc: '맞으면 2초간 둔화', cd: 8, proj: 1, ai: { use: 'attack', maxD: 480 }, fx: [{ t: 'proj', dmg: 10, speed: 720, r: 15, life: 1.1, slowT: 2, slowMul: 0.5, col: '#8fd8ff' }] },
-      { name: '순간이동', icon: '✨', desc: '드래그한 방향(탭하면 이동 방향, 없으면 뒤)으로 순간이동', cd: 10, ai: { use: 'escape', minD: 130 }, fx: [{ t: 'blink', dist: 220, dir: 'move' }] },
+      { name: '순간이동', icon: '✨', desc: '드래그한 방향(탭하면 이동 방향, 없으면 뒤)으로 순간이동', cd: 10, ai: { use: 'escape', minD: 130 }, fx: [{ t: 'blink', dist: 147, dir: 'move', thru: true }] },
     ] },
 };
 CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: '🗡️', color: '#ff3b3b', role: '근접 · 암살', locked: true, hp: 0, speed: 230, keep: 64,
@@ -250,7 +250,11 @@ class Game {
         else if (f.dir === 'move' && m > 0.2) { dx = p.inp.mx / m; dy = p.inp.my / m; }
         else { dx = -Math.cos(p.aim); dy = -Math.sin(p.aim); }
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 30, life: 0.25, max: 0.25, col: p.ch.color });
-        stepMove(p, dx * f.dist, dy * f.dist);      // 순간이동도 벽은 통과하지 못하고 벽 앞에서 멈춤
+        if (f.thru) {      // 마법사 순간이동: 벽을 관통 (도착 지점이 벽 안이면 밖으로 밀어냄)
+          p.x = clamp(p.x + dx * f.dist, R, W - R); p.y = clamp(p.y + dy * f.dist, R, H - R);
+          for (const w of WALLS) resolveCircleRect(p, R, w);
+          p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
+        } else stepMove(p, dx * f.dist, dy * f.dist);      // 후퇴 사격 등은 벽 앞에서 멈춤
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 30, life: 0.25, max: 0.25, col: p.ch.color });
       }
     }
@@ -415,4 +419,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 29;
+export const BUILD = 30;
