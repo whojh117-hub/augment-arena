@@ -41,6 +41,7 @@ export default {
     if (url.pathname === '/favicon.ico') return new Response(null, { status: 204 });
     const res = await env.ASSETS.fetch(request);
     const h = new Headers(res.headers);
+    if (/\.html?$/.test(url.pathname) || url.pathname.endsWith('/')) h.set('content-type', 'text/html; charset=utf-8');      // 한글이 깨지지 않게 인코딩 명시
     h.set('cache-control', 'no-store');      // 업데이트(git push)가 바로 반영되도록 캐시하지 않음
     return new Response(res.body, { status: res.status, headers: h });
   },
