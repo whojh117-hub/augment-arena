@@ -19,6 +19,7 @@ export function attach(hub, ws) {
 export class GameHub {
   constructor(state, env) { this.hub = new Hub({}); }
   async fetch(request) {
+    if (new URL(request.url).pathname === '/where') return new Response(await this.where());
     if (request.headers.get('Upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
     if (this.hub.conns.size >= 400) return new Response('full', { status: 503 });
     const pair = new WebSocketPair();
@@ -41,7 +42,7 @@ export default {
     }
     if (url.pathname === '/where') {
       const stub = env.HUB.get(env.HUB.idFromName('main'));
-      const doColo = await stub.where();
+      const doColo = await (await stub.fetch(new Request(url.origin + '/where'))).text();
       return new Response('내 쪽 Cloudflare 접속 도시: ' + ((request.cf && request.cf.colo) || '?') + '\n게임 서버가 있는 도시: ' + doColo + '\n(ICN=서울 NRT=도쿄 KIX=오사카 HKG=홍콩 SIN=싱가포르 LAX=미국 서부)\n', { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
     }
     if (url.pathname === '/health') return new Response('ok', { headers: { 'content-type': 'text/plain' } });
