@@ -3,7 +3,7 @@ services:
     name: augment-arena
     runtime: node
     plan: free
-    buildCommand: echo "no build"
+    buildCommand: node tools/build.mjs
     startCommand: node server.js
     healthCheckPath: /health
     autoDeploy: true

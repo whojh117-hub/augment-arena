@@ -1,0 +1,9 @@
+{
+  "name": "augment-arena",
+  "main": "worker.mjs",
+  "compatibility_date": "2025-09-01",
+  "build": { "command": "node tools/build.mjs" },
+  "assets": { "directory": "./public", "binding": "ASSETS", "not_found_handling": "none" },
+  "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "GameHub" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GameHub"] }]
+}

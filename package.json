@@ -4,6 +4,13 @@
   "private": true,
   "description": "증강 아레나 온라인 대전 서버",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=18" }
+  "scripts": {
+    "start": "node server.js",
+    "build": "node tools/build.mjs",
+    "check": "node tools/build.mjs --check"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "type": "module"
 }
