@@ -35,7 +35,7 @@ const CHARS = {
       { name: '가로베기', icon: '🌙', desc: '0.6초간 120° 부채꼴로 투사체를 막고, 끝나면 범위 안의 적에게 15 피해', cd: 10, ai: { use: 'block', maxD: 125 }, fx: [{ t: 'cone', range: 128, arc: 2.094, dmg: 15, guard: 0.6, col: '#ff8a4a' }] },
     ] },
   archer: { id: 'archer', name: '궁수', icon: '🏹', atkIcon: '🏹', color: '#6be08a', role: '원거리 · 빠른 연사', hp: 90, speed: 235, keep: 300,
-    atk: { type: 'ranged', dmg: 8, cd: 0.3, range: 560, speed: 620, r: 5 },
+    atk: { type: 'ranged', dmg: 8, cd: 0.4, range: 560, speed: 620, r: 5 },
     skills: [
       { name: '삼연사', icon: '🎯', desc: '화살 3발 부채꼴 발사', cd: 6, proj: 1, ai: { use: 'attack', maxD: 450 }, fx: [{ t: 'proj', n: 3, spread: 0.22, dmg: 9, speed: 640, r: 5 }] },
       { name: '후퇴 사격', icon: '↩️', desc: '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박(이동·대시 불가, 공격은 가능)', cd: 10, proj: 1, ai: { use: 'escape', minD: 150 }, fx: [{ t: 'blink', dist: 150, dir: 'away' }, { t: 'proj', dmg: 14, speed: 520, r: 14, slowT: 1, slowMul: 0 }] },
@@ -88,11 +88,11 @@ const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge');
 // 돌진 경로: 벽에 닿으면 거기서 멈춤. 실제로 갈 수 있는 거리와 도착 지점을 돌려줌
 function chargePath(p, ang, dist) {
   const o = { x: p.x, y: p.y }, ux = Math.cos(ang), uy = Math.sin(ang); let tr = 0;
-  while (tr < dist) {
+  for (let it = 0; it < 80 && tr < dist; it++) {      // 반복 횟수 제한(무한 반복 방지)
     const st = Math.min(8, dist - tr), px = o.x, py = o.y;
     stepMove(o, ux * st, uy * st);
     const mv = Math.hypot(o.x - px, o.y - py); tr += mv;
-    if (mv < st - 0.5) break;
+    if (mv < st * 0.9) break;      // 벽에 닿음
   }
   return { d: Math.min(tr, dist), x: o.x, y: o.y };
 }
@@ -433,4 +433,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 31;
+export const BUILD = 32;
