@@ -27,7 +27,9 @@ export class GameHub {
     attach(this.hub, server);
     return new Response(null, { status: 101, webSocket: client });
   }
-  async health() { return 'ok ' + this.hub.conns.size; }
+  async where() {      // 이 서버(Durable Object)가 실제로 돌고 있는 Cloudflare 도시 코드 (ICN=서울, NRT=도쿄, SIN=싱가포르, HKG=홍콩 ...)
+    try { const t = await (await fetch('https://www.cloudflare.com/cdn-cgi/trace')).text(); return (t.match(/colo=(\w+)/) || [])[1] || '?'; } catch (e) { return '?'; }
+  }
 }
 
 export default {
@@ -36,6 +38,11 @@ export default {
     if (url.pathname === '/ws') {
       const stub = env.HUB.get(env.HUB.idFromName('main'));
       return stub.fetch(request);
+    }
+    if (url.pathname === '/where') {
+      const stub = env.HUB.get(env.HUB.idFromName('main'));
+      const doColo = await stub.where();
+      return new Response('내 쪽 Cloudflare 접속 도시: ' + ((request.cf && request.cf.colo) || '?') + '\n게임 서버가 있는 도시: ' + doColo + '\n(ICN=서울 NRT=도쿄 KIX=오사카 HKG=홍콩 SIN=싱가포르 LAX=미국 서부)\n', { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
     }
     if (url.pathname === '/health') return new Response('ok', { headers: { 'content-type': 'text/plain' } });
     if (url.pathname === '/favicon.ico') return new Response(null, { status: 204 });
