@@ -988,7 +988,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 26;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 27;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
@@ -1237,6 +1237,12 @@ function pingTag(show, ms) {
   if (!el) { if (!show) return; el = document.createElement("div"); el.id = "pingTag"; el.style.cssText = "position:fixed;right:8px;bottom:6px;z-index:5;font:600 12px system-ui,sans-serif;color:#9fb0cc;background:rgba(10,14,24,.55);padding:2px 8px;border-radius:10px;pointer-events:none"; document.body.appendChild(el); }
   el.hidden = !show; if (show) el.textContent = "핑 " + ms + "ms";
 }
+function extrap(x, y, vx, vy, r, t, pierce) {      // 투사체를 t초 앞으로 옮기되 벽(관통 아닌 경우)에서 멈춤. 화면 좌표 기준
+  const L = Math.hypot(vx, vy) * t; if (L < 1) return [x, y];
+  const n = Math.max(1, Math.ceil(L / 6)), sx = vx * t / n, sy = vy * t / n, o = { x, y };
+  for (let i = 0; i < n; i++) { const px = o.x, py = o.y; o.x += sx; o.y += sy; if (!pierce) for (const w of WALLS) if (resolveCircleRect({ x: o.x, y: o.y }, r, w)) return [px, py]; }
+  return [clamp(o.x, 0, W), clamp(o.y, 0, H)];
+}
 function guestFrame(now, dt) {
   const g = game, s = net.snap; if (!s) return;
   if (now - (net.pingT || 0) > 500) { net.pingT = now; if (isSA()) { net.pingAt = net.pingAt || {}; const id = (net.pid = (net.pid || 0) + 1); net.pingAt[id] = now; for (const k of Object.keys(net.pingAt)) if (now - net.pingAt[k] > 5000) delete net.pingAt[k]; window.claude.sa.send({ t: 'ping', id }); } pingTag(true, Math.round(net.pong || (net.rtt || 0.15) * 1000)); }
@@ -1245,7 +1251,7 @@ function guestFrame(now, dt) {
   g.ph = s.ph; g.round = s.rd; g.score = [s.sc[1], s.sc[0]]; g.res = s.rs == null ? null : { w: s.rs < 0 ? s.rs : 1 - s.rs }; g.matchWinner = s.mw < 0 ? -1 : 1 - s.mw;
   g.timer = s.tm - age; g.fightT = s.ft + (s.ph === 'fight' ? age : 0);
   for (let j = 0; j < 2; j++) {
-    const d = s.p[j], vp = g.players[1 - j], ea = j === 0 ? age + lead : age, tx = clamp(W - (d[0] + d[2] * ea), R, W - R), ty = clamp(d[1] + d[3] * ea, R, H - R);
+    const d = s.p[j], vp = g.players[1 - j], ea = j === 0 ? age + lead : age, ex0 = clamp(W - (d[0] + d[2] * ea), R, W - R), ey0 = clamp(d[1] + d[3] * ea, R, H - R), tp = { x: ex0, y: ey0 }; for (const w of WALLS) resolveCircleRect(tp, R, w); const tx = tp.x, ty = tp.y;
     const own = j === 1 && s.ph === 'fight';
     let hold = false;
     if (own && net.hold) { hold = now - net.hold.t0 < 1800 && ((s.a | 0) < net.hold.qid || d[15] > 0 || !!d[16]); if (!hold) net.hold = null; }
@@ -1285,7 +1291,7 @@ function guestFrame(now, dt) {
       for (let i = 0; i < 3; i++) { const c = co['s' + i]; if (c) { if (now - c.t > 700) co['s' + i] = null; else vp.skCd[i] = Math.max(vp.skCd[i], c.v - (now - c.t) / 1000); } }
     }
   }
-  g.bullets = s.b.map(b => ({ x: clamp(W - (b[1] + b[3] * (age + lead)), 0, W), y: clamp(b[2] + b[4] * (age + lead), 0, H), r: b[5], owner: 1 - b[6], col: b[7] || null }));
+  g.bullets = s.b.map(b => { const e = extrap(W - b[1], b[2], -b[3], b[4], b[5], age + lead, b[8]); return { x: e[0], y: e[1], r: b[5], owner: 1 - b[6], col: b[7] || null, pierce: !!b[8] }; });
   net.pfx = net.pfx.filter(p => now - p.t < 1200);
   if (net.pbSn !== s.n) {
     net.pbSn = s.n; const cur = new Set(); let fresh = 0;
