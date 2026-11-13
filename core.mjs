@@ -25,7 +25,7 @@ class Session {
   constructor(hub, room, ca, cb, charA, charB) {
     this.hub = hub; this.room = room; this.c = [ca, cb]; this.game = new eng.Game(charA, charB, 'normal'); this.game.remote = true;
     this.inp = [{ mx: 0, my: 0, h: 0 }, { mx: 0, my: 0, h: 0 }]; this.lastQ = [0, 0]; this.ackQ = [0, 0]; this.rx = [Date.now(), Date.now()]; this.rm = [0, 0];
-    this.bid = 0; this.fid = 0; this.eid = 0; this.evBuf = []; this.n = 0; this.acc = 0; this.last = performance.now(); this.sent = 0;
+    this.gaps = []; this.bid = 0; this.fid = 0; this.eid = 0; this.evBuf = []; this.n = 0; this.acc = 0; this.last = performance.now(); this.sent = 0;
     ca.sess = { s: this, k: 0 }; cb.sess = { s: this, k: 1 };
     this.timer = setInterval(() => this.tick(), 8);
   }
@@ -39,6 +39,11 @@ class Session {
       else if (q[1] === 's') g.pressSkillP(k, q[2] | 0, typeof q[3] === 'number' ? (k === 0 ? Math.PI - q[3] : q[3]) : undefined);
     }
   }
+  stat() {      // 진단: 최근 3초 상태 전송 간격 (평균/최대, ms)
+    const g = this.gaps; if (g.length < 5) return null;
+    let sum = 0, mx = 0; for (const x of g) { sum += x[1]; if (x[1] > mx) mx = x[1]; }
+    return [Math.round(sum / g.length), Math.round(mx)];
+  }
   wantRematch(k) { this.rm[k] = 1; if (this.rm[0] && this.rm[1] && this.game.ph === 'over') { this.game.startMatch(); this.rm = [0, 0]; this.evBuf = []; } }
   tick() {
     const now = performance.now(), g = this.game;
@@ -51,7 +56,10 @@ class Session {
       g.ev = [];
     }
     this.evBuf = this.evBuf.filter(x => now - x.t < 1200);
-    if (now - this.sent >= 16 || now < this.sent) { this.sent = now; this.send(); }
+    if (now - this.sent >= 16 || now < this.sent) {
+      if (this.sent) { this.gaps.push([now, now - this.sent]); while (this.gaps.length && now - this.gaps[0][0] > 3000) this.gaps.shift(); }
+      this.sent = now; this.send();
+    }
   }
   send() {
     const g = this.game, P = g.players;
@@ -134,7 +142,7 @@ export class Hub {
       if (c.sess && msg.i && typeof msg.i === 'object') { const s = c.sess.s, k = c.sess.k, i = msg.i; if (this.lat) setTimeout(() => { if (c.sess) s.input(k, i); }, this.lat); else s.input(k, i); }
     } else if (msg.t === 'dbg') {
       if (this.debug && c.sess) { const g = c.sess.s.game; if (msg.fin && g.ph === 'fight') { g.players[1].hp = 1; g.players[0].x = g.players[1].x - 40; g.players[0].y = g.players[1].y; } }      // 테스트 전용
-    } else if (msg.t === 'ping') c.send({ t: 'pong', id: msg.id });
+    } else if (msg.t === 'ping') c.send({ t: 'pong', id: msg.id, sv: c.sess ? c.sess.s.stat() : null });
     else if (msg.t === 'rm') { if (c.sess) c.sess.s.wantRematch(c.sess.k); }
   }
 }
