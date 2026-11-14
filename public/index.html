@@ -107,6 +107,7 @@
   .cfgR { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center; }
   .cfgR label { display: flex; gap: 8px; align-items: center; font-size: 13px; } .cfgR input[type=range] { width: 150px; }
   #cfgBar .btn { padding: 8px 22px; font-size: 15px; }
+  #hintL.sel { outline: 4px solid var(--gold); outline-offset: 3px; }
   .abtn.sel { outline: 4px solid var(--gold); outline-offset: 3px; }
   #cxl { position: absolute; right: calc(var(--gr) + 6px); top: max(18px, env(safe-area-inset-top, 0px)); width: 92px; height: 92px; border-radius: 50%; pointer-events: none;
     border: 3px dashed #ff8a8a; background: #2a0d12d9; color: #ffb3b3; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 700 13px var(--body); }
@@ -174,7 +175,7 @@
 <div id="updBar" hidden>새 버전이 나왔어요 <button id="btnUpd" type="button">지금 업데이트</button></div>
 <div id="ctl" hidden>
   <div id="cfgBar" hidden>
-  <div class="cfgT">🎮 조작 설정 · 버튼을 <b>끌어서 옮기고</b>, 눌러서 선택하면 <b>크기</b>를 바꿀 수 있어요</div>
+  <div class="cfgT">🎮 조작 설정 · 버튼을 <b>끌어서 옮기고</b>, 눌러서 선택하면 <b>크기</b>를 바꿀 수 있어요(왼쪽 <b>이동 원</b>도 눌러서 크기 조절)</div>
   <div class="cfgR"><label>선택한 버튼 크기 <input type="range" id="cfgSize" min="60" max="160" step="2" value="100"><span id="cfgSizeV">100%</span></label>
   <label>버튼 투명도 <input type="range" id="cfgOp" min="35" max="100" step="5" value="93"><span id="cfgOpV">93%</span></label></div>
   <div class="cfgR"><button type="button" class="btn ghost" id="cfgReset">처음 위치로</button><button type="button" class="btn" id="cfgDone">완료</button></div>
@@ -824,8 +825,8 @@ function setOpp(o) {      // 상대 캐릭터: 랜덤(기본) 또는 직접 선�
 
 // ── 조작 설정: 버튼 위치/크기/투명도를 직접 바꾸고 기기에 저장 ──
 const CTL_IDS = ['bAtk', 'bS0', 'bS1', 'bS2', 'bDash'], CTL_BASE = { bAtk: 100, bS0: 76, bS1: 76, bS2: 76, bDash: 64 };
-let ctlCfg = { b: {}, op: 93 };      // b[id] = { x, y (버튼 중심, 화면 비율 0~1), s (크기 %) }
-try { const j = JSON.parse(localStorage.getItem('aa_ctl') || 'null'); if (j && j.b) { ctlCfg = { b: j.b, op: j.op || 93 }; } } catch (e) { /* 무시 */ }
+let ctlCfg = { b: {}, op: 93, st: 100 };      // b[id] = { x, y (버튼 중심, 화면 비율 0~1), s (크기 %) }
+try { const j = JSON.parse(localStorage.getItem('aa_ctl') || 'null'); if (j && j.b) { ctlCfg = { b: j.b, op: j.op || 93, st: j.st || 100 }; } } catch (e) { /* 무시 */ }
 const cfg = { on: false, sel: 'bAtk', drag: null };
 function saveCtl() { try { localStorage.setItem('aa_ctl', JSON.stringify(ctlCfg)); } catch (e) { /* 무시 */ } }
 function applyLayout() {
@@ -836,27 +837,31 @@ function applyLayout() {
     el.style.width = el.style.height = sz + 'px'; el.style.right = el.style.bottom = 'auto';
     el.style.left = Math.round(clamp(c.x, 0.03, 0.97) * innerWidth - sz / 2) + 'px'; el.style.top = Math.round(clamp(c.y, 0.05, 0.97) * innerHeight - sz / 2) + 'px';
   }
+  { const k = (ctlCfg.st || 100) / 100, hs = Math.round(150 * k), ks = Math.round(66 * k);      // 이동 스틱 크기
+    STK_R = 64 * k; for (const id of ['hintL', 'stkL']) { const el = $(id); el.style.width = el.style.height = hs + 'px'; }
+    $('stkL').style.margin = (-hs / 2) + 'px 0 0 ' + (-hs / 2) + 'px'; const kn = $('stkL').firstElementChild; kn.style.width = kn.style.height = ks + 'px'; kn.style.margin = (-ks / 2) + 'px 0 0 ' + (-ks / 2) + 'px'; }
   ctl.style.setProperty('--ctlop', ctlCfg.op / 100);
   for (const id of CTL_IDS) $(id).style.opacity = ctlCfg.op / 100;
 }
 addEventListener('resize', applyLayout);
 function cfgSelect(id) {
-  cfg.sel = id; CTL_IDS.forEach(k => $(k).classList.toggle('sel', k === id));
-  const v = (ctlCfg.b[id] && ctlCfg.b[id].s) || 100; $('cfgSize').value = v; $('cfgSizeV').textContent = v + '%';
+  cfg.sel = id; CTL_IDS.concat('hintL').forEach(k => $(k).classList.toggle('sel', k === id));
+  const v = id === 'hintL' ? (ctlCfg.st || 100) : ((ctlCfg.b[id] && ctlCfg.b[id].s) || 100); $('cfgSize').value = v; $('cfgSizeV').textContent = v + '%';
 }
 function cfgOpen() {
   cfg.on = true; setupButtons(); $('menu').hidden = true; ctl.hidden = false; $('cfgBar').hidden = false; $('hintL').style.visibility = 'visible';
   $('cfgOp').value = ctlCfg.op; $('cfgOpV').textContent = ctlCfg.op + '%'; cfgSelect(cfg.sel);
-  document.querySelectorAll('.abtn').forEach(b => { b.querySelector('.n').textContent = ''; b.classList.remove('cd'); b.style.setProperty('--cd', '0%'); });
+  document.querySelectorAll('.abtn').forEach(b => { b.querySelector('.n').textContent = ''; b.classList.remove('cd'); b.style.setProperty('--cd', '0%'); }); $('hintL').style.pointerEvents = 'auto';
 }
-function cfgClose() { cfg.on = false; cfg.drag = null; $('cfgBar').hidden = true; ctl.hidden = true; CTL_IDS.forEach(k => $(k).classList.remove('sel')); $('menu').hidden = false; saveCtl(); }
+function cfgClose() { cfg.on = false; cfg.drag = null; $('cfgBar').hidden = true; ctl.hidden = true; CTL_IDS.concat('hintL').forEach(k => $(k).classList.remove('sel')); $('hintL').style.pointerEvents = ''; $('menu').hidden = false; saveCtl(); }
 $('btnCfg').onclick = cfgOpen; $('cfgDone').onclick = cfgClose;
-$('cfgReset').onclick = () => { ctlCfg = { b: {}, op: 93 }; saveCtl(); applyLayout(); $('cfgOp').value = 93; $('cfgOpV').textContent = '93%'; cfgSelect(cfg.sel); };
-$('cfgSize').oninput = e => { const id = cfg.sel, el = $(id), r = el.getBoundingClientRect(), c = ctlCfg.b[id] || { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight, s: 100 }; c.s = Number(e.target.value); ctlCfg.b[id] = c; $('cfgSizeV').textContent = c.s + '%'; applyLayout(); saveCtl(); };
+$('cfgReset').onclick = () => { ctlCfg = { b: {}, op: 93, st: 100 }; saveCtl(); applyLayout(); $('cfgOp').value = 93; $('cfgOpV').textContent = '93%'; cfgSelect(cfg.sel); };
+$('cfgSize').oninput = e => { if (cfg.sel === 'hintL') { ctlCfg.st = Number(e.target.value); $('cfgSizeV').textContent = ctlCfg.st + '%'; applyLayout(); saveCtl(); return; } const id = cfg.sel, el = $(id), r = el.getBoundingClientRect(), c = ctlCfg.b[id] || { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight, s: 100 }; c.s = Number(e.target.value); ctlCfg.b[id] = c; $('cfgSizeV').textContent = c.s + '%'; applyLayout(); saveCtl(); };
 $('cfgOp').oninput = e => { ctlCfg.op = Number(e.target.value); $('cfgOpV').textContent = ctlCfg.op + '%'; applyLayout(); saveCtl(); };
 function cfgStart(src, id, x, y, target) {
   if (isDup(src, x, y)) return true;
   if (target && target.closest && target.closest('#cfgBar')) return false;
+  if (target && target.closest && target.closest('#hintL')) { cfgSelect('hintL'); return true; }
   const b = target && target.closest ? target.closest('[data-act]') : null; if (!b) return true;
   const r = b.getBoundingClientRect(); cfgSelect(b.id);
   cfg.drag = { key: src + id, id: b.id, dx: x - (r.left + r.width / 2), dy: y - (r.top + r.height / 2) };
@@ -914,7 +919,7 @@ $('btnMenu').onclick = () => { if (net.role !== 'none') netLeave(); setEndMode()
 // 입력: 조이스틱과 화면 버튼만 사용 (키보드 조작 없음: 방 코드 입력과 충돌하지 않도록)
 // 입력: 터치/펜/마우스. 포인터 이벤트와 터치 이벤트를 둘 다 받아서(기기에 따라 한쪽만 오는 경우 대비) 같은 손가락의 중복 입력은 걸러냄.
 // 왼쪽 = 이동 스틱(손 떼면 정지), 오른쪽 = 공격/스킬/대시 버튼. 스킬은 누른 채 드래그하면 그 방향으로 시전.
-const STK_R = 64, DRAG_MIN = 14;
+let STK_R = 64; const DRAG_MIN = 14;
 const stick = { key: null, ox: 0, oy: 0, dx: 0, dy: 0 };
 const roles = new Map();       // 입력 키(출처+id) → { type: 'atk'|'btn'|'skill', btn, i, ox, oy, dx, dy }
 const recent = [];             // 최근 시작 입력(같은 손가락이 두 방식으로 들어온 것을 판별)
@@ -1306,7 +1311,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 41;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 42;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -1657,7 +1662,7 @@ function guestFrame(now, dt) {
       const a0 = vp0.ch.atk, dist0 = Math.hypot(e0.x - vp0.x, e0.y - vp0.y), inR = a0.type === 'melee' ? dist0 <= a0.range + R : (dist0 <= a0.range && g.clear(vp0.x, vp0.y, e0.x, e0.y));
       if (net.atkBuf > 0 || (hold && inR)) { predictAttack(); net.atkBuf = 0; }
     } }
-  const i = { mx: r2(net.mv[0]), my: r2(net.mv[1]), h: hold ? 1 : 0, q: net.q.slice(-8) }, key = JSON.stringify(i);
+  const i = { mx: r2(net.mv[0]), my: r2(net.mv[1]), h: hold ? 1 : 0, q: net.q.slice(-8) }, key = JSON.stringify(i); i.sn = net.lastN;      // sn: 마지막으로 받은 상태 번호(서버가 느린 회선에는 덜 보내도록)
   if (net.m && (key !== net.lastIn || now - net.inT > 250) && now - net.inT >= 22) { net.inT = now; net.lastIn = key; if (isSA()) window.claude.sa.send({ t: 'in', i }); else net.m.presence({ i }).catch(() => {}); }
 }
 function opponentLeft() {
@@ -1717,6 +1722,7 @@ function frame(now) {
   }
   ctx.restore();
   drawHUD(now);
+  if (net.role === 'guest' && net.started && !net.ended && game.ph !== 'over' && now - net.lastRx > 700) { ctx.save(); ctx.font = 'bold 18px ' + FONT; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4; const t = '⚠ 네트워크가 불안정해요 (' + ((now - net.lastRx) / 1000).toFixed(1) + '초)'; ctx.strokeText(t, CW / 2, 92); ctx.fillText(t, CW / 2, 92); ctx.restore(); }
 }
 requestAnimationFrame(frame);
 </script>

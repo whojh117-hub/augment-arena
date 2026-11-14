@@ -26,7 +26,7 @@ class Session {
     this.hub = hub; this.room = room; this.c = [ca, cb]; this.game = new eng.Game(charA, charB, 'normal'); this.game.remote = true;
     this.inp = [{ mx: 0, my: 0, h: 0 }, { mx: 0, my: 0, h: 0 }]; this.lastQ = [0, 0]; this.ackQ = [0, 0]; this.rx = [Date.now(), Date.now()]; this.rm = [0, 0]; this.rmc = [null, null];
     this.gaps = []; this.bid = 0; this.fid = 0; this.eid = 0; this.evBuf = []; this.n = 0; this.acc = 0; this.last = performance.now(); this.sent = 0;
-    ca.sess = { s: this, k: 0 }; cb.sess = { s: this, k: 1 };
+    ca.sess = { s: this, k: 0 }; cb.sess = { s: this, k: 1 }; ca.ackN = cb.ackN = 0;
     this.timer = setInterval(() => this.tick(), 8);
   }
   input(k, i) {
@@ -76,7 +76,10 @@ class Session {
     const fl = g.fx.slice(0, 10).map(f => { if (!f._i) f._i = ++this.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; if (f.fist) o.fi = 1; return o; });
     const s = { n: ++this.n, ph: g.ph, tm: r2(g.timer), ft: r2(g.fightT), rd: g.round, sc: g.score, rs: g.res ? g.res.w : null, mw: g.matchWinner, ch: [cid(P[0].ch), cid(P[1].ch)], a: 0, p: pl, b: bl, f: fl, e: this.evBuf.slice(-10).map(x => x.a) };
     const sB = Object.assign({}, s, { a: this.ackQ[1] }), sA = mirrorSnap(Object.assign({}, s, { a: this.ackQ[0] }));
-    const go = () => { this.c[0].send({ t: 'snap', s: sA }); this.c[1].send({ t: 'snap', s: sB }); };
+    const go = () => {      // 흐름 제어: 상대가 받았다고 알려온 번호보다 너무 앞서 있으면(회선이 느려 쌓이는 중) 드물게만 보내 지연이 수 초로 불어나는 걸 막음
+      const S = [sA, sB];
+      for (let k = 0; k < 2; k++) { const c = this.c[k], lag = this.n - (c.ackN || 0); if (lag > 48 && this.n % (lag > 150 ? 30 : 8) !== 0) { this.skipped = (this.skipped || 0) + 1; continue; } c.send({ t: 'snap', s: S[k] }); }
+    };
     if (this.hub.lat) setTimeout(go, this.hub.lat); else go();
   }
   end(except) { clearInterval(this.timer); this.hub.sessions.delete(this.room); for (const c of this.c) { c.sess = null; if (c !== except && c.alive) c.send({ t: 'left' }); } }
@@ -146,7 +149,7 @@ export class Hub {
       if (JSON.stringify(p).length > MAX_PRES) return;
       m.set(c, p); this.broadcast(room, c, { t: 'u', room, id: c.id, p }); this.checkSession(room);
     } else if (msg.t === 'in') {
-      if (c.sess && msg.i && typeof msg.i === 'object') { const s = c.sess.s, k = c.sess.k, i = msg.i; if (this.lat) setTimeout(() => { if (c.sess) s.input(k, i); }, this.lat); else s.input(k, i); }
+      if (c.sess && msg.i && typeof msg.i === 'object') { const s = c.sess.s, k = c.sess.k, i = msg.i; if (typeof i.sn === 'number' && i.sn > (c.ackN || 0)) c.ackN = i.sn; if (this.lat) setTimeout(() => { if (c.sess) s.input(k, i); }, this.lat); else s.input(k, i); }
     } else if (msg.t === 'dbg') {
       if (this.debug && c.sess) { const g = c.sess.s.game; if (msg.fin && g.ph === 'fight') { g.players[1].hp = 1; g.players[0].x = g.players[1].x - 40; g.players[0].y = g.players[1].y; } }      // 테스트 전용
     } else if (msg.t === 'ping') c.send({ t: 'pong', id: msg.id, sv: c.sess ? c.sess.s.stat() : null });
