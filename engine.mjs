@@ -40,7 +40,7 @@ const CHARS = {
     skills: [
       { name: '방패', icon: '🛡️', desc: '3초간 내구도 40의 방패(체력 아래 파란 바)', cd: 8, ai: { use: 'defend' }, fx: [{ t: 'shield', amount: 40, dur: 3 }] },
       { name: '돌진', icon: '🐗', desc: '돌진하다 벽에 닿거나 사거리 끝에 이르면 그 자리에 원형 범위가 터져 15 피해(1회) + 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 15, endR: 100, endStun: 0.8, col: '#5b8def' }] },
-      { name: '대지 강타', icon: '💥', desc: '주변 15 피해 + 2초간 50% 둔화 (분노 상태면 분노의 강타: 25 피해)', cd: 6, ai: { use: 'attack', maxD: 120 }, fx: [{ t: 'aoe', radius: 132, dmg: 15, rageDmg: 25, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
+      { name: '대지 강타', icon: '💥', desc: '주변 15 피해 + 2초간 50% 둔화 (분노 상태면 분노의 강타: 25 피해)', cd: 6, ai: { use: 'attack', maxD: 100 }, fx: [{ t: 'aoe', radius: 90, dmg: 15, rageDmg: 25, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
     ] },
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
     atk: { type: 'melee', dmg: 10, cd: 0.6, range: 72, arc: 2.2 },
@@ -584,4 +584,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER };
-export const BUILD = 45;
+export const BUILD = 46;
