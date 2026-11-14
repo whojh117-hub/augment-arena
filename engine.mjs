@@ -22,11 +22,12 @@ const SPAWN = [{ x: 90, y: 270 }, { x: 870, y: 270 }];
 // ─────────────────────────────────────────────────────────────
 const CHARS = {
   tank: { id: 'tank', name: '탱커', icon: '🛡️', atkIcon: '👊', color: '#5b8def', role: '근접 · 단단한 방어', hp: 140, speed: 190, keep: 64,
-    atk: { type: 'melee', dmg: 8, cd: 0.8, range: 68, arc: 2.4 },
+    atk: { type: 'melee', dmg: 8, cd: 0.8, range: 68, arc: 2.4, fist: true },
+    rageAt: 50, passive: '합계 50 피해를 받으면(보호막 포함) 다음 대지 강타가 분노의 강타로 변해 피해 30 · 쓰면 원래대로(라운드마다 초기화)',
     skills: [
-      { name: '방패', icon: '🛡️', desc: '3초간 내구도 30의 방패(체력 아래 파란 바)', cd: 8, ai: { use: 'defend' }, fx: [{ t: 'shield', amount: 30, dur: 3 }] },
+      { name: '방패', icon: '🛡️', desc: '3초간 내구도 40의 방패(체력 아래 파란 바)', cd: 8, ai: { use: 'defend' }, fx: [{ t: 'shield', amount: 40, dur: 3 }] },
       { name: '돌진', icon: '🐗', desc: '돌진하다 벽에 닿거나 사거리 끝에 이르면 그 자리에 원형 범위가 터져 12 피해(1회) + 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 12, endR: 100, endStun: 0.8, col: '#5b8def' }] },
-      { name: '대지 강타', icon: '💥', desc: '주변 20 피해 + 2초간 50% 둔화', cd: 6, ai: { use: 'attack', maxD: 120 }, fx: [{ t: 'aoe', radius: 132, dmg: 20, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
+      { name: '대지 강타', icon: '💥', desc: '주변 20 피해 + 2초간 50% 둔화 (분노 상태면 분노의 강타: 30 피해)', cd: 6, ai: { use: 'attack', maxD: 120 }, fx: [{ t: 'aoe', radius: 132, dmg: 20, rageDmg: 30, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
     ] },
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
     atk: { type: 'melee', dmg: 10, cd: 0.6, range: 72, arc: 2.2 },
@@ -39,8 +40,8 @@ const CHARS = {
     atk: { type: 'ranged', dmg: 8, cd: 0.4, range: 560, speed: 620, r: 5 },
     skills: [
       { name: '삼연사', icon: '🎯', desc: '화살 3발 부채꼴 발사', cd: 6, proj: 1, ai: { use: 'attack', maxD: 450 }, fx: [{ t: 'proj', n: 3, spread: 0.22, dmg: 9, speed: 640, r: 5 }] },
-      { name: '후퇴 사격', icon: '↩️', desc: '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박(이동·대시 불가, 공격은 가능)', cd: 10, proj: 1, ai: { use: 'escape', minD: 150 }, fx: [{ t: 'blink', dist: 150, dir: 'away' }, { t: 'proj', dmg: 14, speed: 520, r: 14, slowT: 1, slowMul: 0 }] },
-      { name: '관통 화살', icon: '➳', desc: '적과 벽을 꿰뚫는 강한 화살', cd: 8, proj: 1, ai: { use: 'attack', maxD: 520 }, fx: [{ t: 'proj', dmg: 30, speed: 950, r: 8, pierce: true, life: 1.0, col: '#4cff7a' }] },
+      { name: '후퇴 사격', icon: '↩️', desc: '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박(이동·대시 불가, 공격은 가능)', cd: 10, proj: 1, ai: { use: 'escape', minD: 150 }, fx: [{ t: 'blink', dist: 150, dir: 'away' }, { t: 'proj', dmg: 10, speed: 520, r: 14, slowT: 1, slowMul: 0 }] },
+      { name: '관통 화살', icon: '➳', desc: '적과 벽을 꿰뚫는 강한 화살', cd: 7, proj: 1, ai: { use: 'attack', maxD: 520 }, fx: [{ t: 'proj', dmg: 20, speed: 950, r: 8, pierce: true, life: 1.0, col: '#4cff7a' }] },
     ] },
   mage: { id: 'mage', name: '마법사', icon: '🔮', atkIcon: '🔮', color: '#c36bff', role: '원거리 · 범위 마법', hp: 95, speed: 225, keep: 280,
     atk: { type: 'ranged', dmg: 11, cd: 0.7, range: 520, speed: 540, r: 8 },
@@ -115,7 +116,7 @@ function mkPlayer(idx, charId) {
   return { idx, ch, x: 0, y: 0, vx: 0, vy: 0, aim: 0, hp: ch.hp, maxHp: ch.hp, alive: true, atkCd: 0, skCd: [0, 0, 0],
     dashCd: 0, dashT: 0, dx: 1, dy: 0, inv: 0, stun: 0, slowT: 0, slowMul: 1, shield: 0, shieldMax: 0, shieldT: 0, dr: 0, drT: 0, haste: 0, hasteMul: 1, charge: null, guard: null,
     atkHold: false, atkBuf: 0, dashN: ch.dashN || 0, stl: 0, stlI: -1, emp: false, cnt: null, seenX: 0, seenY: 0,
-    inp: { mx: 0, my: 0 }, want: freshWant(),
+    inp: { mx: 0, my: 0 }, want: freshWant(), taken: 0, rage: false,
     think: 0, strafe: 1, strafeT: 0, stuckT: 0, lx: 0, ly: 0, unstick: 0, unstickAng: 0 };
 }
 
@@ -137,7 +138,7 @@ class Game {
     for (const p of this.players) {
       p.x = SPAWN[p.idx].x; p.y = SPAWN[p.idx].y; p.vx = p.vy = 0; p.aim = p.idx === 0 ? 0 : Math.PI;
       p.maxHp = p.ch.hp; p.hp = p.maxHp; p.alive = true; p.atkCd = 0.5;      // 함성 등으로 늘어난 최대 체력은 라운드가 끝나면 초기화
-      p.atkBuf = 0; p.skCd = [0, 0, 0]; p.dashCd = 0; p.dashT = 0; p.inv = 0; p.stun = 0; p.dashN = p.ch.dashN || 0; p.stl = 0; p.stlI = -1; p.emp = false; p.cnt = null; p.seenX = p.x; p.seenY = p.y;
+      p.atkBuf = 0; p.skCd = [0, 0, 0]; p.dashCd = 0; p.dashT = 0; p.inv = 0; p.stun = 0; p.dashN = p.ch.dashN || 0; p.stl = 0; p.stlI = -1; p.emp = false; p.cnt = null; p.taken = 0; p.rage = false; p.seenX = p.x; p.seenY = p.y;
       p.slowT = 0; p.shield = 0; p.shieldT = 0; p.dr = 0; p.drT = 0; p.haste = 0; p.charge = null; p.guard = null; p.inp = { mx: 0, my: 0 }; p.want = freshWant();
       p.think = 0.4; p.stuckT = 0; p.lx = p.x; p.ly = p.y; p.unstick = 0;
     }
@@ -183,6 +184,7 @@ class Game {
     if (t.cnt && src && src !== t && inTri(t.cnt, t, src.x, src.y, R)) { this.blockedBy(t); return false; }      // 반격: 삼각형 안에서 오는 피해를 막음
     let a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1);   // 서든데스 규칙: 모든 데미지 2배
     if (t.drT > 0) a *= 1 - t.dr;      // 받는 피해 감소 버프(전사의 함성)
+    if (t.ch.rageAt && !t.rage) { t.taken += a; if (t.taken >= t.ch.rageAt) { t.rage = true; t.taken = 0; this.ev.push({ k: 'text', x: t.x, y: t.y - 36, txt: '분노!', col: '#ffd24a' }); } }      // 탱커: 받은 피해(보호막이 막은 양 포함)가 쌓이면 분노
     if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; }
     t.hp -= a;
     if (o && o.stun) { t.stun = Math.max(t.stun, o.stun); t.charge = null; t.cnt = null; }
@@ -225,7 +227,7 @@ class Game {
   }
   coneHit(p, range, arc, dmg, o, ang) {
     const A = typeof ang === 'number' ? ang : p.aim, e = this.players[1 - p.idx], life = (o && o.guard) || 0.2;
-    this.fx.push({ k: 'cone', x: p.x, y: p.y, a: A, arc, r: range, life, max: life, col: (o && o.col) || '#e8edf7', follow: o && o.guard ? p.idx : -1 });
+    this.fx.push({ k: 'cone', x: p.x, y: p.y, a: A, arc, r: range, life, max: life, col: (o && o.col) || '#e8edf7', follow: o && o.guard ? p.idx : -1, fist: !o && !!p.ch.atk.fist });
     const d = Math.hypot(e.x - p.x, e.y - p.y);
     if (d <= range + R && Math.abs(normAng(Math.atan2(e.y - p.y, e.x - p.x) - A)) <= arc / 2) this.dealDamage(p, e, dmg, o);
   }
@@ -254,8 +256,9 @@ class Game {
     for (const f of sk.fx) {
       if (f.t === 'proj') this.fireProj(p, f, ang);
       else if (f.t === 'aoe') {
-        this.fx.push({ k: 'ring', x: p.x, y: p.y, r: f.radius, life: 0.3, max: 0.3, col: f.col || '#ffffff' });
-        if (Math.hypot(e.x - p.x, e.y - p.y) <= f.radius + R) this.dealDamage(p, e, f.dmg, f);
+        const rg = !!(f.rageDmg && p.rage); if (rg) { p.rage = false; p.taken = 0; }      // 분노의 강타: 한 번 쓰면 원래대로
+        this.fx.push({ k: 'ring', x: p.x, y: p.y, r: f.radius * (rg ? 1.1 : 1), life: rg ? 0.45 : 0.3, max: rg ? 0.45 : 0.3, col: rg ? '#ffd24a' : (f.col || '#ffffff') });
+        if (Math.hypot(e.x - p.x, e.y - p.y) <= f.radius * (rg ? 1.1 : 1) + R) this.dealDamage(p, e, rg ? f.rageDmg : f.dmg, f);
       } else if (f.t === 'cone') {
         if (f.guard) {      // 막기 먼저, 피해는 막기가 끝난 뒤(stepPlayer)에 범위 안의 적에게
           this.fx.push({ k: 'cone', x: p.x, y: p.y, a: ang, arc: f.arc, r: f.range, life: f.guard, max: f.guard, col: f.col || '#e8edf7', follow: p.idx });
@@ -498,4 +501,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 39;
+export const BUILD = 41;

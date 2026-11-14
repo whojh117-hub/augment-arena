@@ -24,7 +24,7 @@ export const mirrorSnap = s => {
 class Session {
   constructor(hub, room, ca, cb, charA, charB) {
     this.hub = hub; this.room = room; this.c = [ca, cb]; this.game = new eng.Game(charA, charB, 'normal'); this.game.remote = true;
-    this.inp = [{ mx: 0, my: 0, h: 0 }, { mx: 0, my: 0, h: 0 }]; this.lastQ = [0, 0]; this.ackQ = [0, 0]; this.rx = [Date.now(), Date.now()]; this.rm = [0, 0];
+    this.inp = [{ mx: 0, my: 0, h: 0 }, { mx: 0, my: 0, h: 0 }]; this.lastQ = [0, 0]; this.ackQ = [0, 0]; this.rx = [Date.now(), Date.now()]; this.rm = [0, 0]; this.rmc = [null, null];
     this.gaps = []; this.bid = 0; this.fid = 0; this.eid = 0; this.evBuf = []; this.n = 0; this.acc = 0; this.last = performance.now(); this.sent = 0;
     ca.sess = { s: this, k: 0 }; cb.sess = { s: this, k: 1 };
     this.timer = setInterval(() => this.tick(), 8);
@@ -44,7 +44,14 @@ class Session {
     let sum = 0, mx = 0; for (const x of g) { sum += x[1]; if (x[1] > mx) mx = x[1]; }
     return [Math.round(sum / g.length), Math.round(mx)];
   }
-  wantRematch(k) { this.rm[k] = 1; if (this.rm[0] && this.rm[1] && this.game.ph === 'over') { this.game.startMatch(); this.rm = [0, 0]; this.evBuf = []; } }
+  wantRematch(k, ch) {      // 다시하기: 각자 같은 캐릭터 또는 새로 뽑은(랜덤) 캐릭터를 골라서 보냄
+    this.rm[k] = 1; if (eng.CHAR_ORDER.includes(ch)) this.rmc[k] = ch;
+    if (this.rm[0] && this.rm[1] && this.game.ph === 'over') {
+      const P = this.game.players, a = this.rmc[0] || cid(P[0].ch), b = this.rmc[1] || cid(P[1].ch);
+      if (a !== cid(P[0].ch) || b !== cid(P[1].ch)) { this.game = new eng.Game(a, b, 'normal'); this.game.remote = true; } else this.game.startMatch();
+      this.rm = [0, 0]; this.rmc = [null, null]; this.evBuf = [];
+    }
+  }
   tick() {
     const now = performance.now(), g = this.game;
     let dt = (now - this.last) / 1000; if (!(dt > 0)) dt = 0.008;      // 시계가 멈춰 있어도(일부 서버 환경) 진행되도록 기본 간격 사용
@@ -64,9 +71,9 @@ class Session {
   send() {
     const g = this.game, P = g.players;
     const pl = P.map(p => [r1(p.x), r1(p.y), r1(p.vx), r1(p.vy), r2(p.aim), r1(p.hp), p.maxHp, p.alive ? 1 : 0, r2(p.stun), r2(p.slowT), r1(p.shield), p.shieldMax, r2(p.shieldT), r2(p.drT), r2(p.haste), r2(p.dashT),
-      p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0]);      // 23~26: 대시 충전, 은신 남은 시간, 기본공격 강화, 반격 남은 시간
+      p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0, p.rage ? 1 : 0]);      // 23~26: 대시 충전, 은신 남은 시간, 기본공격 강화, 반격 남은 시간
     const bl = g.bullets.slice(0, 18).map(b => [b._i || (b._i = ++this.bid), r1(b.x), r1(b.y), r1(b.vx), r1(b.vy), b.r, b.owner, b.col || 0, b.pierce ? 1 : 0]);
-    const fl = g.fx.slice(0, 10).map(f => { if (!f._i) f._i = ++this.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; return o; });
+    const fl = g.fx.slice(0, 10).map(f => { if (!f._i) f._i = ++this.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; if (f.fist) o.fi = 1; return o; });
     const s = { n: ++this.n, ph: g.ph, tm: r2(g.timer), ft: r2(g.fightT), rd: g.round, sc: g.score, rs: g.res ? g.res.w : null, mw: g.matchWinner, ch: [cid(P[0].ch), cid(P[1].ch)], a: 0, p: pl, b: bl, f: fl, e: this.evBuf.slice(-10).map(x => x.a) };
     const sB = Object.assign({}, s, { a: this.ackQ[1] }), sA = mirrorSnap(Object.assign({}, s, { a: this.ackQ[0] }));
     const go = () => { this.c[0].send({ t: 'snap', s: sA }); this.c[1].send({ t: 'snap', s: sB }); };
@@ -143,6 +150,6 @@ export class Hub {
     } else if (msg.t === 'dbg') {
       if (this.debug && c.sess) { const g = c.sess.s.game; if (msg.fin && g.ph === 'fight') { g.players[1].hp = 1; g.players[0].x = g.players[1].x - 40; g.players[0].y = g.players[1].y; } }      // 테스트 전용
     } else if (msg.t === 'ping') c.send({ t: 'pong', id: msg.id, sv: c.sess ? c.sess.s.stat() : null });
-    else if (msg.t === 'rm') { if (c.sess) c.sess.s.wantRematch(c.sess.k); }
+    else if (msg.t === 'rm') { if (c.sess) c.sess.s.wantRematch(c.sess.k, msg.c); }
   }
 }
