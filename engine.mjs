@@ -186,6 +186,41 @@ class Game {
     }
   }
 
+  clearR(x1, y1, x2, y2, r) {      // 반지름 r짜리 몸이 벽에 안 걸리고 갈 수 있는 직선인지
+    const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.ceil(d / 8));
+    for (let i = 0; i <= n; i++) {
+      const x = x1 + (x2 - x1) * i / n, y = y1 + (y2 - y1) * i / n;
+      for (const w of WALLS) { const cx = clamp(x, w.x, w.x + w.w), cy = clamp(y, w.y, w.y + w.h); if (Math.hypot(x - cx, y - cy) < r) return false; }
+    }
+    return true;
+  }
+  navDir(p, tx, ty) {      // 목표 쪽으로 갈 방향(단위벡터). 벽에 막히면 격자 길찾기(BFS)로 돌아가는 길을 찾음
+    const dx = tx - p.x, dy = ty - p.y, dd = Math.hypot(dx, dy) || 1, S = 20, C = Math.ceil(W / S), Rw = Math.ceil(H / S), rr0 = R + 3;
+    if (this.clearR(p.x, p.y, tx, ty, rr0)) return [dx / dd, dy / dd];
+    if (this._gw !== this.walls) {
+      this._gw = this.walls; const g = new Uint8Array(C * Rw);
+      for (let j = 0; j < Rw; j++) for (let i = 0; i < C; i++) { const x = i * S + S / 2, y = j * S + S / 2; let b = x < R || x > W - R || y < R || y > H - R; if (!b) for (const w of this.walls) { const cx = clamp(x, w.x, w.x + w.w), cy = clamp(y, w.y, w.y + w.h); if (Math.hypot(x - cx, y - cy) < rr0) { b = true; break; } } g[j * C + i] = b ? 1 : 0; }
+      this._g = g;
+    }
+    const g = this._g, si = clamp(Math.floor(p.x / S), 0, C - 1), sj = clamp(Math.floor(p.y / S), 0, Rw - 1), prev = new Int32Array(C * Rw).fill(-2), q = [sj * C + si]; prev[q[0]] = -1;
+    let goal = -1;
+    for (let h = 0; h < q.length; h++) {
+      const c = q[h], ci = c % C, cj = (c - ci) / C;
+      if (Math.hypot(ci * S + S / 2 - tx, cj * S + S / 2 - ty) < S * 1.6 && (g[c] === 0 || h === 0)) { goal = c; break; }
+      for (let k = 0; k < 8; k++) {
+        const ox = [1, -1, 0, 0, 1, 1, -1, -1][k], oy = [0, 0, 1, -1, 1, -1, 1, -1][k], ni = ci + ox, nj = cj + oy;
+        if (ni < 0 || nj < 0 || ni >= C || nj >= Rw) continue; const nc = nj * C + ni; if (prev[nc] !== -2 || g[nc]) continue;
+        if (k >= 4 && (g[cj * C + ni] || g[nj * C + ci])) continue;      // 모서리 가로지르기 금지
+        prev[nc] = c; q.push(nc);
+      }
+    }
+    if (goal < 0) return [dx / dd, dy / dd];
+    const path = []; for (let c = goal; c >= 0; c = prev[c]) path.push(c); path.reverse();      // 시작 → 목표
+    let pick = path[Math.min(path.length - 1, 3)];      // 몇 칸 앞 지점을 향해 감(바로 앞 모서리에 걸리지 않게)
+    for (let k = Math.min(path.length - 1, 7); k >= 1; k--) { const c = path[k], x = (c % C) * S + S / 2, y = Math.floor(c / C) * S + S / 2; if (this.clearR(p.x, p.y, x, y, rr0 - 1)) { pick = c; break; } }
+    const wx = (pick % C) * S + S / 2 - p.x, wy = Math.floor(pick / C) * S + S / 2 - p.y, wl = Math.hypot(wx, wy) || 1;
+    return [wx / wl, wy / wl];
+  }
   clear(x1, y1, x2, y2) {
     const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.ceil(d / 10));
     for (let i = 1; i < n; i++) {
@@ -427,10 +462,12 @@ class Game {
     let ap = dist > keep + 30 ? 1 : dist < keep - 30 ? -1 : 0;
     if (!los) ap = Math.max(ap, 0.8);
     let mx, my;
+    const nv = p.unstick > 0 ? null : this.navDir(p, ex, ey), around = nv && !this.clearR(p.x, p.y, ex, ey, R + 3);      // 벽에 막혀 있으면 돌아가는 길로
     if (p.unstick > 0) { mx = Math.cos(p.unstickAng); my = Math.sin(p.unstickAng); }
+    else if (around) { mx = nv[0]; my = nv[1]; }
     else { const sw = melee ? 0.35 : 0.8; mx = ux * ap - uy * p.strafe * sw; my = uy * ap + ux * p.strafe * sw; }
     if (this.map.bolt) for (const bt of this.bolts) { const rx = p.x - bt.x, ry = p.y - bt.y, rd = Math.hypot(rx, ry) || 1; if (rd < this.map.bolt.r + R + 30) { mx = rx / rd; my = ry / rd; break; } }      // 번개 경고 원에서 벗어남
-    if (this.ess && this.ess.up && p.hp <= p.maxHp - 6) { const de = Math.hypot(p.x - W / 2, p.y - H / 2), dp = Math.hypot(e.x - W / 2, e.y - H / 2); if (de < dp + 120 || p.hp < p.maxHp * 0.6) { mx = (W / 2 - p.x) / (de || 1); my = (H / 2 - p.y) / (de || 1); } }      // 정수 먹으러 감
+    if (this.ess && this.ess.up && p.hp <= p.maxHp - 6) { const de = Math.hypot(p.x - W / 2, p.y - H / 2), dp = Math.hypot(e.x - W / 2, e.y - H / 2); if (de < dp + 120 || p.hp < p.maxHp * 0.6) { const nv2 = this.navDir(p, W / 2, H / 2); mx = nv2[0]; my = nv2[1]; } }      // 정수 먹으러 감
     let danger = false, dodged = false;
     for (const b of this.bullets) {
       if (b.owner === p.idx) continue;
@@ -474,9 +511,9 @@ class Game {
       }
       this.bolts = this.bolts.filter(b => !b.done);
     }
-    if (m.heat) {      // 체력에서 바로 깎음: 피해 감소·보호막·무적(대시)의 영향을 받지 않음
+    if (m.heat) {      // 은신 중엔 숫자를 띄우지 않음(위치가 들통나므로) · 체력에서 바로 깎음: 피해 감소·보호막·무적(대시)의 영향을 받지 않음
       this.heatT -= dt;
-      if (this.heatT <= 0) { this.heatT += m.heat.every; for (const p of P) if (p.alive) { p.hp -= m.heat.dmg; this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '-' + m.heat.dmg, col: '#ff8a4a' }); } }
+      if (this.heatT <= 0) { this.heatT += m.heat.every; for (const p of P) if (p.alive) { p.hp -= m.heat.dmg; if (!(p.stl > 0)) this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '-' + m.heat.dmg, col: '#ff8a4a' }); } }
     }
     if (this.ess) {
       const E = m.ess, e = this.ess;
@@ -547,4 +584,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER };
-export const BUILD = 43;
+export const BUILD = 44;

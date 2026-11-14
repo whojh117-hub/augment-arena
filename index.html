@@ -112,6 +112,8 @@
   #cxl { position: absolute; right: calc(var(--gr) + 6px); top: max(18px, env(safe-area-inset-top, 0px)); width: 92px; height: 92px; border-radius: 50%; pointer-events: none;
     border: 3px dashed #ff8a8a; background: #2a0d12d9; color: #ffb3b3; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 700 13px var(--body); }
   #cxl b { font-size: 30px; line-height: 1; }
+  #cxl.cfg { pointer-events: auto; touch-action: none; }
+  #cxl.sel { outline: 4px solid var(--gold); outline-offset: 3px; }
   #cxl.on { background: #ff4d5dee; border-style: solid; border-color: #fff; color: #fff; transform: scale(1.12); }
   #bAtk { right: var(--gr); bottom: 40px; width: 100px; height: 100px; --bc: #ff5d6c; }
   #bAtk .ic { font-size: 38px; } #bAtk .lb { font-size: 12px; }
@@ -177,12 +179,12 @@
 <div id="updBar" hidden>새 버전이 나왔어요 <button id="btnUpd" type="button">지금 업데이트</button></div>
 <div id="ctl" hidden>
   <div id="cfgBar" hidden>
-  <div class="cfgT">🎮 조작 설정 · 버튼을 <b>끌어서 옮기고</b>, 눌러서 선택하면 <b>크기</b>를 바꿀 수 있어요(왼쪽 <b>이동 원</b>도 눌러서 크기 조절)</div>
+  <div class="cfgT">🎮 조작 설정 · (스킬 취소 버튼 포함) 버튼을 <b>끌어서 옮기고</b>, 눌러서 선택하면 <b>크기</b>를 바꿀 수 있어요(왼쪽 <b>이동 원</b>도 눌러서 크기 조절)</div>
   <div class="cfgR"><label>선택한 버튼 크기 <input type="range" id="cfgSize" min="60" max="160" step="2" value="100"><span id="cfgSizeV">100%</span></label>
   <label>버튼 투명도 <input type="range" id="cfgOp" min="35" max="100" step="5" value="93"><span id="cfgOpV">93%</span></label></div>
   <div class="cfgR"><button type="button" class="btn ghost" id="cfgReset">처음 위치로</button><button type="button" class="btn" id="cfgDone">완료</button></div>
 </div>
-<div id="cxl" hidden><b>✕</b><span>취소</span></div>
+<div id="cxl" hidden data-cfgbtn="1"><b>✕</b><span>취소</span></div>
   <div id="hintL" aria-label="이동 안내">이동<br>왼쪽 화면을<br>터치</div>
   <div id="stkL" hidden><i></i></div>
   <button class="abtn" id="bS0" data-act="s0" type="button"><span class="ic"></span><span class="lb"></span><span class="n"></span></button>
@@ -426,6 +428,41 @@ class Game {
     }
   }
 
+  clearR(x1, y1, x2, y2, r) {      // 반지름 r짜리 몸이 벽에 안 걸리고 갈 수 있는 직선인지
+    const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.ceil(d / 8));
+    for (let i = 0; i <= n; i++) {
+      const x = x1 + (x2 - x1) * i / n, y = y1 + (y2 - y1) * i / n;
+      for (const w of WALLS) { const cx = clamp(x, w.x, w.x + w.w), cy = clamp(y, w.y, w.y + w.h); if (Math.hypot(x - cx, y - cy) < r) return false; }
+    }
+    return true;
+  }
+  navDir(p, tx, ty) {      // 목표 쪽으로 갈 방향(단위벡터). 벽에 막히면 격자 길찾기(BFS)로 돌아가는 길을 찾음
+    const dx = tx - p.x, dy = ty - p.y, dd = Math.hypot(dx, dy) || 1, S = 20, C = Math.ceil(W / S), Rw = Math.ceil(H / S), rr0 = R + 3;
+    if (this.clearR(p.x, p.y, tx, ty, rr0)) return [dx / dd, dy / dd];
+    if (this._gw !== this.walls) {
+      this._gw = this.walls; const g = new Uint8Array(C * Rw);
+      for (let j = 0; j < Rw; j++) for (let i = 0; i < C; i++) { const x = i * S + S / 2, y = j * S + S / 2; let b = x < R || x > W - R || y < R || y > H - R; if (!b) for (const w of this.walls) { const cx = clamp(x, w.x, w.x + w.w), cy = clamp(y, w.y, w.y + w.h); if (Math.hypot(x - cx, y - cy) < rr0) { b = true; break; } } g[j * C + i] = b ? 1 : 0; }
+      this._g = g;
+    }
+    const g = this._g, si = clamp(Math.floor(p.x / S), 0, C - 1), sj = clamp(Math.floor(p.y / S), 0, Rw - 1), prev = new Int32Array(C * Rw).fill(-2), q = [sj * C + si]; prev[q[0]] = -1;
+    let goal = -1;
+    for (let h = 0; h < q.length; h++) {
+      const c = q[h], ci = c % C, cj = (c - ci) / C;
+      if (Math.hypot(ci * S + S / 2 - tx, cj * S + S / 2 - ty) < S * 1.6 && (g[c] === 0 || h === 0)) { goal = c; break; }
+      for (let k = 0; k < 8; k++) {
+        const ox = [1, -1, 0, 0, 1, 1, -1, -1][k], oy = [0, 0, 1, -1, 1, -1, 1, -1][k], ni = ci + ox, nj = cj + oy;
+        if (ni < 0 || nj < 0 || ni >= C || nj >= Rw) continue; const nc = nj * C + ni; if (prev[nc] !== -2 || g[nc]) continue;
+        if (k >= 4 && (g[cj * C + ni] || g[nj * C + ci])) continue;      // 모서리 가로지르기 금지
+        prev[nc] = c; q.push(nc);
+      }
+    }
+    if (goal < 0) return [dx / dd, dy / dd];
+    const path = []; for (let c = goal; c >= 0; c = prev[c]) path.push(c); path.reverse();      // 시작 → 목표
+    let pick = path[Math.min(path.length - 1, 3)];      // 몇 칸 앞 지점을 향해 감(바로 앞 모서리에 걸리지 않게)
+    for (let k = Math.min(path.length - 1, 7); k >= 1; k--) { const c = path[k], x = (c % C) * S + S / 2, y = Math.floor(c / C) * S + S / 2; if (this.clearR(p.x, p.y, x, y, rr0 - 1)) { pick = c; break; } }
+    const wx = (pick % C) * S + S / 2 - p.x, wy = Math.floor(pick / C) * S + S / 2 - p.y, wl = Math.hypot(wx, wy) || 1;
+    return [wx / wl, wy / wl];
+  }
   clear(x1, y1, x2, y2) {
     const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.ceil(d / 10));
     for (let i = 1; i < n; i++) {
@@ -667,10 +704,12 @@ class Game {
     let ap = dist > keep + 30 ? 1 : dist < keep - 30 ? -1 : 0;
     if (!los) ap = Math.max(ap, 0.8);
     let mx, my;
+    const nv = p.unstick > 0 ? null : this.navDir(p, ex, ey), around = nv && !this.clearR(p.x, p.y, ex, ey, R + 3);      // 벽에 막혀 있으면 돌아가는 길로
     if (p.unstick > 0) { mx = Math.cos(p.unstickAng); my = Math.sin(p.unstickAng); }
+    else if (around) { mx = nv[0]; my = nv[1]; }
     else { const sw = melee ? 0.35 : 0.8; mx = ux * ap - uy * p.strafe * sw; my = uy * ap + ux * p.strafe * sw; }
     if (this.map.bolt) for (const bt of this.bolts) { const rx = p.x - bt.x, ry = p.y - bt.y, rd = Math.hypot(rx, ry) || 1; if (rd < this.map.bolt.r + R + 30) { mx = rx / rd; my = ry / rd; break; } }      // 번개 경고 원에서 벗어남
-    if (this.ess && this.ess.up && p.hp <= p.maxHp - 6) { const de = Math.hypot(p.x - W / 2, p.y - H / 2), dp = Math.hypot(e.x - W / 2, e.y - H / 2); if (de < dp + 120 || p.hp < p.maxHp * 0.6) { mx = (W / 2 - p.x) / (de || 1); my = (H / 2 - p.y) / (de || 1); } }      // 정수 먹으러 감
+    if (this.ess && this.ess.up && p.hp <= p.maxHp - 6) { const de = Math.hypot(p.x - W / 2, p.y - H / 2), dp = Math.hypot(e.x - W / 2, e.y - H / 2); if (de < dp + 120 || p.hp < p.maxHp * 0.6) { const nv2 = this.navDir(p, W / 2, H / 2); mx = nv2[0]; my = nv2[1]; } }      // 정수 먹으러 감
     let danger = false, dodged = false;
     for (const b of this.bullets) {
       if (b.owner === p.idx) continue;
@@ -714,9 +753,9 @@ class Game {
       }
       this.bolts = this.bolts.filter(b => !b.done);
     }
-    if (m.heat) {      // 체력에서 바로 깎음: 피해 감소·보호막·무적(대시)의 영향을 받지 않음
+    if (m.heat) {      // 은신 중엔 숫자를 띄우지 않음(위치가 들통나므로) · 체력에서 바로 깎음: 피해 감소·보호막·무적(대시)의 영향을 받지 않음
       this.heatT -= dt;
-      if (this.heatT <= 0) { this.heatT += m.heat.every; for (const p of P) if (p.alive) { p.hp -= m.heat.dmg; this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '-' + m.heat.dmg, col: '#ff8a4a' }); } }
+      if (this.heatT <= 0) { this.heatT += m.heat.every; for (const p of P) if (p.alive) { p.hp -= m.heat.dmg; if (!(p.stl > 0)) this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '-' + m.heat.dmg, col: '#ff8a4a' }); } }
     }
     if (this.ess) {
       const E = m.ess, e = this.ess;
@@ -885,7 +924,7 @@ function setOpp(o) {      // 상대 캐릭터: 랜덤(기본) 또는 직접 선�
 })();
 
 // ── 조작 설정: 버튼 위치/크기/투명도를 직접 바꾸고 기기에 저장 ──
-const CTL_IDS = ['bAtk', 'bS0', 'bS1', 'bS2', 'bDash'], CTL_BASE = { bAtk: 100, bS0: 76, bS1: 76, bS2: 76, bDash: 64 };
+const CTL_IDS = ['bAtk', 'bS0', 'bS1', 'bS2', 'bDash', 'cxl'], CTL_BASE = { bAtk: 100, bS0: 76, bS1: 76, bS2: 76, bDash: 64, cxl: 92 };
 let ctlCfg = { b: {}, op: 93, st: 100 };      // b[id] = { x, y (버튼 중심, 화면 비율 0~1), s (크기 %) }
 try { const j = JSON.parse(localStorage.getItem('aa_ctl') || 'null'); if (j && j.b) { ctlCfg = { b: j.b, op: j.op || 93, st: j.st || 100 }; } } catch (e) { /* 무시 */ }
 const cfg = { on: false, sel: 'bAtk', drag: null };
@@ -910,11 +949,11 @@ function cfgSelect(id) {
   const v = id === 'hintL' ? (ctlCfg.st || 100) : ((ctlCfg.b[id] && ctlCfg.b[id].s) || 100); $('cfgSize').value = v; $('cfgSizeV').textContent = v + '%';
 }
 function cfgOpen() {
-  cfg.on = true; setupButtons(); $('menu').hidden = true; ctl.hidden = false; $('cfgBar').hidden = false; $('hintL').style.visibility = 'visible';
+  cfg.on = true; setupButtons(); $('cxl').hidden = false; $('cxl').classList.add('cfg'); $('menu').hidden = true; ctl.hidden = false; $('cfgBar').hidden = false; $('hintL').style.visibility = 'visible';
   $('cfgOp').value = ctlCfg.op; $('cfgOpV').textContent = ctlCfg.op + '%'; cfgSelect(cfg.sel);
   document.querySelectorAll('.abtn').forEach(b => { b.querySelector('.n').textContent = ''; b.classList.remove('cd'); b.style.setProperty('--cd', '0%'); }); $('hintL').style.pointerEvents = 'auto';
 }
-function cfgClose() { cfg.on = false; cfg.drag = null; $('cfgBar').hidden = true; ctl.hidden = true; CTL_IDS.concat('hintL').forEach(k => $(k).classList.remove('sel')); $('hintL').style.pointerEvents = ''; $('menu').hidden = false; saveCtl(); }
+function cfgClose() { cfg.on = false; cfg.drag = null; $('cxl').hidden = true; $('cxl').classList.remove('cfg', 'on'); $('cfgBar').hidden = true; ctl.hidden = true; CTL_IDS.concat('hintL').forEach(k => $(k).classList.remove('sel')); $('hintL').style.pointerEvents = ''; $('menu').hidden = false; saveCtl(); }
 $('btnCfg').onclick = cfgOpen; $('cfgDone').onclick = cfgClose;
 $('cfgReset').onclick = () => { ctlCfg = { b: {}, op: 93, st: 100 }; saveCtl(); applyLayout(); $('cfgOp').value = 93; $('cfgOpV').textContent = '93%'; cfgSelect(cfg.sel); };
 $('cfgSize').oninput = e => { if (cfg.sel === 'hintL') { ctlCfg.st = Number(e.target.value); $('cfgSizeV').textContent = ctlCfg.st + '%'; applyLayout(); saveCtl(); return; } const id = cfg.sel, el = $(id), r = el.getBoundingClientRect(), c = ctlCfg.b[id] || { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight, s: 100 }; c.s = Number(e.target.value); ctlCfg.b[id] = c; $('cfgSizeV').textContent = c.s + '%'; applyLayout(); saveCtl(); };
@@ -923,7 +962,7 @@ function cfgStart(src, id, x, y, target) {
   if (isDup(src, x, y)) return true;
   if (target && target.closest && target.closest('#cfgBar')) return false;
   if (target && target.closest && target.closest('#hintL')) { cfgSelect('hintL'); return true; }
-  const b = target && target.closest ? target.closest('[data-act]') : null; if (!b) return true;
+  const b = target && target.closest ? target.closest('[data-act],[data-cfgbtn]') : null; if (!b) return true;
   const r = b.getBoundingClientRect(); cfgSelect(b.id);
   cfg.drag = { key: src + id, id: b.id, dx: x - (r.left + r.width / 2), dy: y - (r.top + r.height / 2) };
   return true;
@@ -1024,7 +1063,7 @@ function inStart(src, id, x, y, target) {
         if (game.players[0].skCd[i] > 0.05) roles.set(key, { type: 'btn', btn: b });      // 이미 쓴(쿨타임 중인) 스킬은 조준할 수 없음
         else roles.set(key, { type: 'skill', btn: b, i, ox: x, oy: y, dx: 0, dy: 0, cx: false });
       }
-      else { roles.set(key, { type: 'btn', btn: b }); if (game) game.pressSkill(i); }
+      else { roles.set(key, { type: 'btn', btn: b }); if (game) pressSk(i); }
     }
     return true;
   }
@@ -1041,6 +1080,13 @@ function inMove(src, id, x, y) {
   const r = roles.get(key);
   if (r && r.type === 'skill') { r.dx = x - r.ox; r.dy = y - r.oy; r.cx = overCancel(x, y); }
 }
+let notice = { t: 0, txt: '' };
+function showNotice(txt) { notice = { t: performance.now(), txt }; }
+function pressSk(i, ang) {      // 스킬 버튼 누름. 돌진 중에 방패를 쓰려 하면 안내 문구만 띄움
+  const p = game && game.players[0];
+  if (p && p.alive && game.ph === 'fight' && p.ch.skills[i] && p.ch.skills[i].fx.some(f => f.t === 'shield') && (p.charge || (typeof net !== 'undefined' && net.pd && net.pd.speed))) { showNotice('돌진시에는 방패를 사용할 수 없음'); return; }
+  game.pressSkill(i, ang);
+}
 function overCancel(x, y) {      // 오른쪽 위 취소 버튼 위인지
   const el = $('cxl'); if (el.hidden) return false;
   const b = el.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2;
@@ -1052,7 +1098,7 @@ function inEnd(src, id, cancel) {
   if (stick.key === key) { stick.key = null; stick.dx = stick.dy = 0; stkDraw(); }
   const r = roles.get(key);
   if (r) {
-    if (r.type === 'skill' && !cancel && !r.cx && game) game.pressSkill(r.i, Math.hypot(r.dx, r.dy) > DRAG_MIN ? Math.atan2(r.dy, r.dx) : undefined);
+    if (r.type === 'skill' && !cancel && !r.cx && game) pressSk(r.i, Math.hypot(r.dx, r.dy) > DRAG_MIN ? Math.atan2(r.dy, r.dx) : undefined);
     r.btn.classList.remove('hold'); roles.delete(key);
   }
 }
@@ -1396,7 +1442,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 43;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 44;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -1779,7 +1825,7 @@ function frame(now) {
   aimPrev = null;
   let aimingAny = false, cxOn = false;
   for (const r of roles.values()) if (r.type === 'skill') { aimingAny = true; if (r.cx) cxOn = true; else if (Math.hypot(r.dx, r.dy) > DRAG_MIN) aimPrev = { i: r.i, ang: Math.atan2(r.dy, r.dx) }; }
-  { const cxl = $('cxl'); cxl.hidden = !aimingAny; cxl.classList.toggle('on', cxOn); }
+  if (!cfg.on) { const cxl = $('cxl'); cxl.hidden = !aimingAny; cxl.classList.toggle('on', cxOn); }
   acc += dt;
   if (net.role !== 'guest' && net.pingT) { net.pingT = 0; pingTag(false); }
   if (net.role === 'guest') { guestFrame(now, dt); acc = 0; }
@@ -1799,6 +1845,10 @@ function frame(now) {
   let sx = 0, sy = 0; if (shake > 0.3) { sx = (Math.random() - 0.5) * shake; sy = (Math.random() - 0.5) * shake; shake *= 0.85; } else shake = 0;
   ctx.translate(sx, OY + sy); ctx.beginPath(); ctx.rect(-4, -4, W + 8, H + 8); ctx.clip();
   drawArena(); drawFx(); drawAimPreview(); drawBullets(); drawPlayer(game.players[1], now); drawPlayer(game.players[0], now); drawEffects(dt); drawStealthBar();
+  { const na = performance.now() - notice.t; if (notice.txt && na < 1800) {      // 화면 위 안내 문구
+      ctx.save(); ctx.globalAlpha = Math.min(1, (1800 - na) / 400); ctx.font = 'bold 22px ' + FONT; const tw = ctx.measureText(notice.txt).width + 36;
+      ctx.fillStyle = '#1a0d10ee'; ctx.strokeStyle = '#ff8a8a'; ctx.lineWidth = 2; rr(W / 2 - tw / 2, 24, tw, 42, 21); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffd6d6'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(notice.txt, W / 2, 46); ctx.restore(); } }
   if (game.ph === 'count') {
     const mp = game.map || MAPS.basic; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000c';
     ctx.font = 'bold 30px ' + FONT; ctx.lineWidth = 6; ctx.strokeText(mp.icon + ' ' + mp.name + ' 맵', W / 2, 112); ctx.fillStyle = '#ffd24a'; ctx.fillText(mp.icon + ' ' + mp.name + ' 맵', W / 2, 112);
