@@ -461,6 +461,11 @@ class Game {
     const los = this.clear(p.x, p.y, ex, ey), keep = p.ch.keep, melee = p.ch.atk.type === 'melee';
     let ap = dist > keep + 30 ? 1 : dist < keep - 30 ? -1 : 0;
     if (!los) ap = Math.max(ap, 0.8);
+    let threat = false;
+    if (this.smart && !melee) {      // 똑똑한 원거리 AI(시험용 옵션): 상대 스킬 시전·돌진·근접 접근에 반응해 후퇴 사격/순간이동
+      const sc = e.skCd, pv = p._esc || [0, 0, 0]; let cast = false; for (let i = 0; i < 3; i++) if (sc[i] > pv[i] + 0.5) cast = true; p._esc = sc.slice();
+      threat = (cast && dist < 340) || !!e.charge || (e.dashT > 0 && dist < 220) || (dist < 140 && e.ch.atk.type === 'melee');
+    }
     let mx, my;
     const nv = p.unstick > 0 ? null : this.navDir(p, ex, ey), around = nv && !this.clearR(p.x, p.y, ex, ey, R + 3);      // 벽에 막혀 있으면 돌아가는 길로
     if (p.unstick > 0) { mx = Math.cos(p.unstickAng); my = Math.sin(p.unstickAng); }
@@ -489,7 +494,14 @@ class Game {
       const h = sk.ai || {}; let use = false;
       if (h.use === 'attack') use = dist <= h.maxD && dist >= (h.minD || 0) && (!sk.proj || los);
       else if (h.use === 'defend') use = danger || (p.hp < p.maxHp * 0.75 && dist < 260);
-      else if (h.use === 'escape') use = dist < (h.minD || 110);
+      else if (h.use === 'escape') {
+        use = dist < (h.minD || 110) || (threat && dist < 340);
+        if (use && sk.fx.some(f => f.t === 'blink' && f.thru)) {      // 순간이동: 상대 반대편(벽에 안 몰리는 쪽)으로
+          const base = Math.atan2(p.y - ey, p.x - ex); let best = base, bs = -1e9;
+          for (const off of [0, 0.6, -0.6, 1.2, -1.2]) { const a = base + off, nx = p.x + Math.cos(a) * 147, ny = p.y + Math.sin(a) * 147; if (nx < R || nx > W - R || ny < R || ny > H - R) continue; const sc2 = Math.hypot(nx - ex, ny - ey) - Math.abs(off) * 20; if (sc2 > bs) { bs = sc2; best = a; } }
+          p.want.angs[i] = best;
+        }
+      }
       else if (h.use === 'block') use = danger || dist <= h.maxD;
       else if (h.use === 'gapclose') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999);
       if (use) p.want.sk[i] = 1;
