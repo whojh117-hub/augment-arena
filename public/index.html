@@ -276,13 +276,13 @@ const SPAWN = [{ x: 90, y: 270 }, { x: 870, y: 270 }];
 //  skills[].ai : AI 사용 힌트. attack / defend / escape / block / gapclose
 // ─────────────────────────────────────────────────────────────
 const CHARS = {
-  tank: { id: 'tank', name: '탱커', icon: '🛡️', atkIcon: '👊', color: '#5b8def', role: '근접 · 단단한 방어', hp: 140, speed: 190, keep: 64,
+  tank: { id: 'tank', name: '탱커', icon: '🛡️', atkIcon: '👊', color: '#5b8def', role: '근접 · 단단한 방어', hp: 150, speed: 190, keep: 64,
     atk: { type: 'melee', dmg: 8, cd: 0.8, range: 68, arc: 2.4, fist: true },
-    rageAt: 50, passive: '합계 50 피해를 받으면(보호막 포함) 다음 대지 강타가 분노의 강타로 변해 피해 30 · 쓰면 원래대로(라운드마다 초기화)',
+    rageAt: 70, passive: '합계 70 피해를 받으면(보호막 포함) 다음 대지 강타가 분노의 강타로 변해 피해 25 · 쓰면 원래대로(라운드마다 초기화)',
     skills: [
       { name: '방패', icon: '🛡️', desc: '3초간 내구도 40의 방패(체력 아래 파란 바)', cd: 8, ai: { use: 'defend' }, fx: [{ t: 'shield', amount: 40, dur: 3 }] },
-      { name: '돌진', icon: '🐗', desc: '돌진하다 벽에 닿거나 사거리 끝에 이르면 그 자리에 원형 범위가 터져 12 피해(1회) + 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 12, endR: 100, endStun: 0.8, col: '#5b8def' }] },
-      { name: '대지 강타', icon: '💥', desc: '주변 20 피해 + 2초간 50% 둔화 (분노 상태면 분노의 강타: 30 피해)', cd: 6, ai: { use: 'attack', maxD: 120 }, fx: [{ t: 'aoe', radius: 132, dmg: 20, rageDmg: 30, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
+      { name: '돌진', icon: '🐗', desc: '돌진하다 벽에 닿거나 사거리 끝에 이르면 그 자리에 원형 범위가 터져 15 피해(1회) + 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 15, endR: 100, endStun: 0.8, col: '#5b8def' }] },
+      { name: '대지 강타', icon: '💥', desc: '주변 15 피해 + 2초간 50% 둔화 (분노 상태면 분노의 강타: 25 피해)', cd: 6, ai: { use: 'attack', maxD: 120 }, fx: [{ t: 'aoe', radius: 132, dmg: 15, rageDmg: 25, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
     ] },
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
     atk: { type: 'melee', dmg: 10, cd: 0.6, range: 72, arc: 2.2 },
@@ -317,7 +317,7 @@ CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: 
   ] };
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
-for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter'].includes(f.t));
+for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe'].includes(f.t));
 
 const DIFFS = {
   easy:   { name: '쉬움',   react: 0.34, dodge: 0.10, skillP: 0.30 },
@@ -1303,6 +1303,7 @@ function drawAimPreview() {
     if (f.t === 'cone') { ctx.fillStyle = '#ffffff26'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, f.range, a - f.arc / 2, a + f.arc / 2); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     else if (f.t === 'line') { ctx.rotate(a); ctx.fillStyle = '#ffffff26'; ctx.fillRect(0, -f.w / 2, f.len, f.w); ctx.strokeRect(0, -f.w / 2, f.len, f.w); }
     else if (f.t === 'charge') { const cd = chargePath(p, a, f.dist).d; ctx.rotate(a); ctx.fillStyle = '#ffffff26'; ctx.fillRect(0, -f.w / 2, cd, f.w); ctx.strokeRect(0, -f.w / 2, cd, f.w); if (f.endR) { ctx.beginPath(); ctx.arc(cd, 0, f.endR, 0, 6.283); ctx.fill(); ctx.stroke(); } }
+    else if (f.t === 'aoe') { const rg = !!(f.rageDmg && p.rage), rad = f.radius * (rg ? 1.1 : 1); ctx.fillStyle = rg ? '#ffd24a26' : '#ffffff22'; ctx.strokeStyle = rg ? '#ffd24a' : '#ffffffd0'; ctx.beginPath(); ctx.arc(ox, oy, rad, 0, 6.283); ctx.fill(); ctx.stroke(); }
     else if (f.t === 'proj') {
       const n = f.n || 1, sp = f.spread || 0, r = f.r || 5, maxLen = f.speed * (f.life || 1.4);
       for (let k = 0; k < n; k++) {
@@ -1442,7 +1443,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 44;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 45;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -1736,7 +1737,8 @@ function guestFrame(now, dt) {
   WALLS = g.walls; g.ess = s.es ? { up: !!s.es[0], t: Math.max(0, s.es[1] - (s.ph === 'fight' ? age : 0)) } : null;
   g.timer = s.tm - age; g.fightT = s.ft + (s.ph === 'fight' ? age : 0);
   for (let j = 0; j < 2; j++) {
-    const d = s.p[j], vp = g.players[1 - j], ea = j === 0 ? age + lead : age, ex0 = clamp(W - (d[0] + d[2] * ea), R, W - R), ey0 = clamp(d[1] + d[3] * ea, R, H - R), tp = { x: ex0, y: ey0 }; for (const w of WALLS) resolveCircleRect(tp, R, w); const tx = tp.x, ty = tp.y;
+    const d = s.p[j], vp = g.players[1 - j], ea = j === 0 ? age + lead : age, tp = { x: clamp(W - d[0], R, W - R), y: clamp(d[1], R, H - R) }; stepMove(tp, -d[2] * ea, d[3] * ea);      // 서버 위치에서 잘게 나눠 앞질러 그림(얇은 벽을 건너뛰어 벽 뒤에 있는 것처럼 보이던 문제 방지)
+    const tx = tp.x, ty = tp.y;
     const own = j === 1 && s.ph === 'fight';
     let hold = false;
     if (own && net.hold) { hold = now - net.hold.t0 < 1800 && ((s.a | 0) < net.hold.qid || d[15] > 0 || !!d[16]); if (!hold) net.hold = null; }

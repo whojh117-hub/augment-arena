@@ -34,13 +34,13 @@ const SPAWN = [{ x: 90, y: 270 }, { x: 870, y: 270 }];
 //  skills[].ai : AI 사용 힌트. attack / defend / escape / block / gapclose
 // ─────────────────────────────────────────────────────────────
 const CHARS = {
-  tank: { id: 'tank', name: '탱커', icon: '🛡️', atkIcon: '👊', color: '#5b8def', role: '근접 · 단단한 방어', hp: 140, speed: 190, keep: 64,
+  tank: { id: 'tank', name: '탱커', icon: '🛡️', atkIcon: '👊', color: '#5b8def', role: '근접 · 단단한 방어', hp: 150, speed: 190, keep: 64,
     atk: { type: 'melee', dmg: 8, cd: 0.8, range: 68, arc: 2.4, fist: true },
-    rageAt: 50, passive: '합계 50 피해를 받으면(보호막 포함) 다음 대지 강타가 분노의 강타로 변해 피해 30 · 쓰면 원래대로(라운드마다 초기화)',
+    rageAt: 70, passive: '합계 70 피해를 받으면(보호막 포함) 다음 대지 강타가 분노의 강타로 변해 피해 25 · 쓰면 원래대로(라운드마다 초기화)',
     skills: [
       { name: '방패', icon: '🛡️', desc: '3초간 내구도 40의 방패(체력 아래 파란 바)', cd: 8, ai: { use: 'defend' }, fx: [{ t: 'shield', amount: 40, dur: 3 }] },
-      { name: '돌진', icon: '🐗', desc: '돌진하다 벽에 닿거나 사거리 끝에 이르면 그 자리에 원형 범위가 터져 12 피해(1회) + 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 12, endR: 100, endStun: 0.8, col: '#5b8def' }] },
-      { name: '대지 강타', icon: '💥', desc: '주변 20 피해 + 2초간 50% 둔화 (분노 상태면 분노의 강타: 30 피해)', cd: 6, ai: { use: 'attack', maxD: 120 }, fx: [{ t: 'aoe', radius: 132, dmg: 20, rageDmg: 30, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
+      { name: '돌진', icon: '🐗', desc: '돌진하다 벽에 닿거나 사거리 끝에 이르면 그 자리에 원형 범위가 터져 15 피해(1회) + 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 15, endR: 100, endStun: 0.8, col: '#5b8def' }] },
+      { name: '대지 강타', icon: '💥', desc: '주변 15 피해 + 2초간 50% 둔화 (분노 상태면 분노의 강타: 25 피해)', cd: 6, ai: { use: 'attack', maxD: 120 }, fx: [{ t: 'aoe', radius: 132, dmg: 15, rageDmg: 25, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
     ] },
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
     atk: { type: 'melee', dmg: 10, cd: 0.6, range: 72, arc: 2.2 },
@@ -75,7 +75,7 @@ CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: 
   ] };
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
-for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter'].includes(f.t));
+for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe'].includes(f.t));
 
 const DIFFS = {
   easy:   { name: '쉬움',   react: 0.34, dodge: 0.10, skillP: 0.30 },
@@ -584,4 +584,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER };
-export const BUILD = 44;
+export const BUILD = 45;
