@@ -280,7 +280,7 @@ const CHARS = {
     atk: { type: 'melee', dmg: 8, cd: 0.8, range: 68, arc: 2.4, fist: true },
     rageAt: 70, passive: '합계 70 피해를 받으면(보호막 포함) 다음 대지 강타가 분노의 강타로 변해 피해 25 · 쓰면 원래대로(라운드마다 초기화)',
     skills: [
-      { name: '방패', icon: '🛡️', desc: '3초간 내구도 40의 방패(체력 아래 파란 바)', cd: 8, ai: { use: 'defend' }, fx: [{ t: 'shield', amount: 40, dur: 3 }] },
+      { name: '방패', icon: '🛡️', desc: '3초간 내구도 40의 방패(체력 아래 파란 바) · 쿨타임은 방패가 끝난 뒤부터 8초', cd: 8, ai: { use: 'defend' }, fx: [{ t: 'shield', amount: 40, dur: 3 }] },
       { name: '돌진', icon: '🐗', desc: '돌진하다 벽에 닿거나 사거리 끝에 이르면 그 자리에 원형 범위가 터져 15 피해(1회) + 기절 0.8초', cd: 9, ai: { use: 'attack', maxD: 300, minD: 90 }, fx: [{ t: 'charge', dist: 260, speed: 640, w: 64, dmg: 15, endR: 100, endStun: 0.8, col: '#5b8def' }] },
       { name: '대지 강타', icon: '💥', desc: '주변 15 피해 + 2초간 50% 둔화 (분노 상태면 분노의 강타: 25 피해)', cd: 6, ai: { use: 'attack', maxD: 100 }, fx: [{ t: 'aoe', radius: 90, dmg: 15, rageDmg: 25, slowT: 2, slowMul: 0.5, col: '#ffb347' }] },
     ] },
@@ -478,7 +478,7 @@ class Game {
     let a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1);   // 서든데스 규칙: 모든 데미지 2배
     if (t.drT > 0) a *= 1 - t.dr;      // 받는 피해 감소 버프(전사의 함성)
     if (t.ch.rageAt && !t.rage) { t.taken += a; if (t.taken >= t.ch.rageAt) { t.rage = true; t.taken = 0; this.ev.push({ k: 'text', x: t.x, y: t.y - 36, txt: '분노!', col: '#ffd24a' }); } }      // 탱커: 받은 피해(보호막이 막은 양 포함)가 쌓이면 분노
-    if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; }
+    if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; if (t.shield <= 0) { const si = t.ch.skills.findIndex(k => k.fx.some(f => f.t === 'shield')); if (si >= 0) t.skCd[si] = Math.max(0, t.skCd[si] - t.shieldT); t.shieldT = 0; } }      // 방패가 깨지면 그때부터 쿨타임
     t.hp -= a;
     if (o && o.stun) { t.stun = Math.max(t.stun, o.stun); t.charge = null; t.cnt = null; }
     if (o && o.slowT) { t.slowT = Math.max(t.slowT, o.slowT); t.slowMul = o.slowMul != null ? o.slowMul : 0.5; }
@@ -570,7 +570,7 @@ class Game {
         p.stl = f.dur; p.stlI = i; p.stlMul = f.speed; p.skCd[i] = sk.cd + f.dur;      // 은신이 끝난 뒤부터 쿨타임
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 44, life: 0.35, max: 0.35, col: '#9aa4b8' });
       }
-      else if (f.t === 'shield') { p.shield = f.amount; p.shieldMax = f.amount; p.shieldT = f.dur; }
+      else if (f.t === 'shield') { p.shield = f.amount; p.shieldMax = f.amount; p.shieldT = f.dur; p.skCd[i] = sk.cd + f.dur; }      // 방패가 끝난 뒤부터 쿨타임(방패 중엔 화면에 풀 쿨타임으로 표시)
       else if (f.t === 'buff') {
         if (f.haste) { p.haste = f.dur; p.hasteMul = f.haste; }
         if (f.dr) { p.dr = f.dr; p.drT = f.dur; }
@@ -1443,7 +1443,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 46;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 47;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
