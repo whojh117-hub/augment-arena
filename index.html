@@ -148,6 +148,8 @@
         <button data-d="normal" aria-pressed="true">보통</button>
         <button data-d="hard" aria-pressed="false">어려움</button>
       </div>
+      <div class="vsL">맵</div>
+      <div class="seg" id="mapSeg" role="group" aria-label="맵"></div>
       <div class="row" style="margin-top:10px"><button class="btn" id="btnVsGo">게임 시작</button><button class="btn ghost" id="btnVsBack">뒤로</button></div>
     </div>
 
@@ -244,11 +246,24 @@ const OT_DMG_MUL = 2;
 const DASH = { cd: 5, time: 0.28, speed: 640 };   // 대시: 사용 중 무적, 쿨타임 5초
 const STL_MUL = 1.2;                               // 은신 중 이동속도 배수
 const ATK_BUFFER = 0.3;                            // 공격 버튼을 톡 눌렀을 때, 쿨타임이 끝날 때까지 기다려 주는 시간
-const WALLS = [
-  { x: 450, y: 200, w: 60, h: 140 },
-  { x: 250, y: 90, w: 50, h: 50 }, { x: 250, y: 400, w: 50, h: 50 },
-  { x: 660, y: 90, w: 50, h: 50 }, { x: 660, y: 400, w: 50, h: 50 },
-];
+// ─────────────────────────────────────────────────────────────
+// 맵. walls: 벽 목록, fx: 라운드 시작 전에 보여 줄 추가 효과 설명. 1칸 = 70px 기준.
+//  speedMul(이동속도 배수) / bolt(번개) / heat(고정 피해) / ess(정수) 가 있으면 그 효과가 켜짐
+// ─────────────────────────────────────────────────────────────
+const MAPS = {
+  basic: { id: 'basic', name: '기본', icon: '🏟️', fx: '추가 효과 없음', bg: '#131923', grid: '#1b2331', wall: '#2b3447', line: '#4a5a78',
+    walls: [{ x: 450, y: 200, w: 60, h: 140 }, { x: 250, y: 90, w: 50, h: 50 }, { x: 250, y: 400, w: 50, h: 50 }, { x: 660, y: 90, w: 50, h: 50 }, { x: 660, y: 400, w: 50, h: 50 }] },
+  waste: { id: 'waste', name: '황무지', icon: '🏜️', fx: '날아오는 모래로 모든 플레이어 이동속도 20% 감소', speedMul: 0.8, bg: '#2a2218', grid: '#352b1d', wall: '#6b5638', line: '#9b7f52',
+    walls: [{ x: 260, y: 110, w: 60, h: 60 }, { x: 640, y: 370, w: 60, h: 60 }, { x: 420, y: 330, w: 60, h: 60 }, { x: 480, y: 150, w: 60, h: 60 }] },      // 180도 돌려도 같은 모양(대각선 대칭)
+  temple: { id: 'temple', name: '신전', icon: '🏛️', fx: '5초마다 번개가 떨어져요 (빨간 원 경고 1초 뒤 30 피해)', bolt: { first: 4, every: 5, warn: 1, r: 70, dmg: 30 }, bg: '#1a1a22', grid: '#242430', wall: '#4a4660', line: '#8f86b8',
+    walls: [{ x: 375, y: 165, w: 70, h: 24 }, { x: 375, y: 165, w: 24, h: 70 }, { x: 515, y: 165, w: 70, h: 24 }, { x: 561, y: 165, w: 24, h: 70 },
+            { x: 375, y: 351, w: 70, h: 24 }, { x: 375, y: 305, w: 24, h: 70 }, { x: 515, y: 351, w: 70, h: 24 }, { x: 561, y: 305, w: 24, h: 70 }] },      // 가운데 3x3칸 사각형의 네 모서리만 ㄱ·ㄴ자 벽(상하좌우 가운데는 열려 있음)
+  hell: { id: 'hell', name: '지옥', icon: '🔥', fx: '뜨거운 공기로 1초마다 체력 1 고정 피해 · 가운데 정수: 체력 +10(25초마다 재생성)', heat: { every: 1, dmg: 1 }, ess: { first: 5, respawn: 25, heal: 10, r: 16 }, bg: '#220f0f', grid: '#2e1515', wall: '#5a2a24', line: '#c0553a',
+    walls: [{ x: 170, y: 165, w: 70, h: 210 }, { x: 720, y: 165, w: 70, h: 210 }, { x: 400, y: 80, w: 50, h: 50 }, { x: 510, y: 80, w: 50, h: 50 }, { x: 400, y: 410, w: 50, h: 50 }, { x: 510, y: 410, w: 50, h: 50 }] },
+};
+const MAP_ORDER = ['basic', 'waste', 'temple', 'hell'];
+const pickMap = () => MAP_ORDER[Math.floor(Math.random() * MAP_ORDER.length)];
+let WALLS = MAPS.basic.walls;      // 지금 계산 중인 게임의 벽 (Game.update가 시작할 때 자기 맵으로 바꿈)
 const SPAWN = [{ x: 90, y: 270 }, { x: 870, y: 270 }];
 
 // ─────────────────────────────────────────────────────────────
@@ -359,14 +374,15 @@ function mkPlayer(idx, charId) {
 }
 
 class Game {
-  constructor(myChar, aiChar, diffKey) {
-    this.diff = DIFFS[diffKey] || DIFFS.normal;
+  constructor(myChar, aiChar, diffKey, mapId) {
+    this.diff = DIFFS[diffKey] || DIFFS.normal; this.setMap(mapId);
     this.players = [mkPlayer(0, myChar), mkPlayer(1, aiChar)];
     this.auto0 = false;       // true면 0번(사람 자리)도 AI가 조작 (테스트용)
     this.remote = false;      // true면 1번도 사람(온라인 상대)이 조작: AI를 쓰지 않음
     this.ev = []; this.fx = []; this.bullets = []; this.zones = [];
     this.startMatch();
   }
+  setMap(id) { this.mapId = MAPS[id] ? id : 'basic'; this.map = MAPS[this.mapId]; this.walls = this.map.walls; WALLS = this.walls; }
   startMatch() {
     this.score = [0, 0]; this.round = 1; this.matchWinner = -1;
     for (const p of this.players) p.maxHp = p.ch.hp;     // 영구 체력 증가는 한 판(매치) 동안만 유지
@@ -381,6 +397,7 @@ class Game {
       p.think = 0.4; p.stuckT = 0; p.lx = p.x; p.ly = p.y; p.unstick = 0;
     }
     this.bullets = []; this.fx = []; this.zones = []; this.fightT = 0; this.res = null; this.ph = 'count'; this.timer = COUNT_TIME;
+    const m = this.map; this.bolts = []; this.boltT = m.bolt ? m.bolt.first : 0; this.heatT = m.heat ? m.heat.every : 0; this.ess = m.ess ? { up: false, t: m.ess.first } : null;
   }
   setMove(mx, my) { this.players[0].inp = { mx, my }; }
   pressDash() { this.pressDashP(0); }
@@ -392,6 +409,7 @@ class Game {
   pressAttackP(k) { if (this.ph === 'fight') this.players[k].atkBuf = ATK_BUFFER; }
 
   update(dt) {
+    WALLS = this.walls;
     for (const f of this.fx) f.life -= dt;
     this.fx = this.fx.filter(f => f.life > 0);
     if (this.ph === 'count') {
@@ -612,7 +630,7 @@ class Game {
     else if (p.stun <= 0) {
       let mx = p.inp.mx, my = p.inp.my; const ml = Math.hypot(mx, my);
       if (ml > 1) { mx /= ml; my /= ml; }
-      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1) * (p.stl > 0 ? STL_MUL : 1);
+      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1) * (p.stl > 0 ? STL_MUL : 1) * (this.map.speedMul || 1);
       vx = mx * sp; vy = my * sp;
     }
     p.vx = vx; p.vy = vy;
@@ -651,6 +669,8 @@ class Game {
     let mx, my;
     if (p.unstick > 0) { mx = Math.cos(p.unstickAng); my = Math.sin(p.unstickAng); }
     else { const sw = melee ? 0.35 : 0.8; mx = ux * ap - uy * p.strafe * sw; my = uy * ap + ux * p.strafe * sw; }
+    if (this.map.bolt) for (const bt of this.bolts) { const rx = p.x - bt.x, ry = p.y - bt.y, rd = Math.hypot(rx, ry) || 1; if (rd < this.map.bolt.r + R + 30) { mx = rx / rd; my = ry / rd; break; } }      // 번개 경고 원에서 벗어남
+    if (this.ess && this.ess.up && p.hp <= p.maxHp - 6) { const de = Math.hypot(p.x - W / 2, p.y - H / 2), dp = Math.hypot(e.x - W / 2, e.y - H / 2); if (de < dp + 120 || p.hp < p.maxHp * 0.6) { mx = (W / 2 - p.x) / (de || 1); my = (H / 2 - p.y) / (de || 1); } }      // 정수 먹으러 감
     let danger = false, dodged = false;
     for (const b of this.bullets) {
       if (b.owner === p.idx) continue;
@@ -679,11 +699,39 @@ class Game {
     }
   }
 
+  stepMapFx(dt) {      // 맵 추가 효과: 번개(신전) / 뜨거운 공기와 정수(지옥)
+    const m = this.map, P = this.players;
+    if (m.bolt) {
+      const B = m.bolt; this.boltT -= dt;
+      if (this.boltT <= 0) {
+        this.boltT += B.every; const bx = 70 + Math.random() * (W - 140), by = 70 + Math.random() * (H - 140);
+        this.bolts.push({ x: bx, y: by, t: B.warn }); this.fx.push({ k: 'bolt', x: bx, y: by, r: B.r, life: B.warn, max: B.warn, col: '#ff4a4a' });
+      }
+      for (const b of this.bolts) {
+        b.t -= dt; if (b.t > 0) continue; b.done = true;
+        this.fx.push({ k: 'bstar', x: b.x, y: b.y, r: B.r, life: 0.45, max: 0.45, col: '#ffe14a' });
+        for (const p of P) if (p.alive && Math.hypot(p.x - b.x, p.y - b.y) <= B.r + R) this.dealDamage(null, p, B.dmg, null);
+      }
+      this.bolts = this.bolts.filter(b => !b.done);
+    }
+    if (m.heat) {      // 체력에서 바로 깎음: 피해 감소·보호막·무적(대시)의 영향을 받지 않음
+      this.heatT -= dt;
+      if (this.heatT <= 0) { this.heatT += m.heat.every; for (const p of P) if (p.alive) { p.hp -= m.heat.dmg; this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '-' + m.heat.dmg, col: '#ff8a4a' }); } }
+    }
+    if (this.ess) {
+      const E = m.ess, e = this.ess;
+      if (!e.up) { e.t -= dt; if (e.t <= 0) { e.up = true; e.t = 0; } }
+      else for (const p of P) if (p.alive && Math.hypot(p.x - W / 2, p.y - H / 2) <= R + E.r) {
+        p.hp = Math.min(p.maxHp, p.hp + E.heal); e.up = false; e.t = E.respawn;
+        this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '+' + E.heal, col: '#6be08a' }); this.fx.push({ k: 'ring', x: W / 2, y: H / 2, r: 50, life: 0.4, max: 0.4, col: '#6be08a' }); break;
+      }
+    }
+  }
   stepFight(dt) {
     const P = this.players;
     if (!this.remote) this.ai(P[1], dt);
     if (this.auto0) this.ai(P[0], dt);
-    this.stepZones(dt);
+    this.stepZones(dt); this.stepMapFx(dt);
     for (const p of P) this.stepPlayer(p, dt);
     this.stepBullets(dt);
     for (const p of P) if (p.hp <= 0) p.alive = false;
@@ -747,12 +795,13 @@ const ME_COL = '#4aa3ff', OPP_COL = '#ff5d6c';
 const FONT = '"Noto Sans KR", system-ui, sans-serif';
 const EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
 
-let game = null, scene = 'menu', diffKey = 'normal', oppKey = 'random', myChar = 'warrior', lastPh = '', fightStartAt = 0;
+let game = null, scene = 'menu', diffKey = 'normal', oppKey = 'random', mapKey = 'random', myChar = 'warrior', lastPh = '', fightStartAt = 0;
 let impacts = [], hitFlash = [0, 0], floats = [], parts = [], shake = 0, touchMode = false, aimPrev = null;
 let otAt = 0, otDone = false;      // 서든데스 시작 알림 문구(라운드마다 1번)
 try {
   const d = localStorage.getItem('aa_diff'); if (DIFFS[d]) diffKey = d;
   const c = localStorage.getItem('aa_char'); if (CHARS[c]) myChar = c;
+  const mk = localStorage.getItem('aa_map'); if (MAPS[mk]) mapKey = mk;
   const o = localStorage.getItem('aa_opp'); if (o === 'random' || CHAR_ORDER.includes(o)) oppKey = o;
 } catch (e) { /* 무시 */ }
 if (window.matchMedia && matchMedia('(pointer: coarse)').matches) touchMode = true;
@@ -810,6 +859,18 @@ function setDiff(d) {
 }
 document.querySelectorAll('#diffSeg button').forEach(b => { b.onclick = () => setDiff(b.dataset.d); });
 setDiff(diffKey);
+function setMapSel(m) {      // 컴퓨터 대전 맵: 랜덤(기본) 또는 직접 선택
+  mapKey = m;
+  document.querySelectorAll('#mapSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === m ? 'true' : 'false'));
+  try { localStorage.setItem('aa_map', m); } catch (e) { /* 무시 */ }
+}
+(function buildMapSeg() {
+  const box = $('mapSeg'); box.innerHTML = '';
+  for (const [id, label] of [['random', '🎲 랜덤'], ...MAP_ORDER.map(k => [k, MAPS[k].icon + ' ' + MAPS[k].name])]) {
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.m = id; b.textContent = label; b.onclick = () => setMapSel(id); box.appendChild(b);
+  }
+  setMapSel(mapKey);
+})();
 function setOpp(o) {      // 상대 캐릭터: 랜덤(기본) 또는 직접 선택
   oppKey = o;
   document.querySelectorAll('#oppSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.o === o ? 'true' : 'false'));
@@ -885,7 +946,7 @@ function startGame() {
   if (isLocked(selKey)) return;
   if (scene === 'menu') resolveMy();
   const aiChar = oppKey === 'random' ? CHAR_ORDER[Math.floor(Math.random() * CHAR_ORDER.length)] : oppKey;
-  game = new Game(myChar, aiChar, diffKey); scene = 'play'; lastPh = ''; floats = []; parts = [];
+  game = new Game(myChar, aiChar, diffKey, mapKey === 'random' ? pickMap() : mapKey); scene = 'play'; lastPh = ''; floats = []; parts = [];
   setupButtons(); resetTouch(); setEndMode();
   $('menu').hidden = true; $('vs').hidden = true; $('end').hidden = true;
 }
@@ -906,7 +967,7 @@ function rematch(rand) {
     $('btnAgain').textContent = isSA() ? '상대 대기 중…' : '방장 대기 중…'; $('btnAgainR').hidden = true; return;
   }
   if (rand) { resolveMy(); startGame(); return; }
-  if (oppKey === 'random') { startGame(); return; } game.startMatch(); lastPh = ''; floats = []; parts = []; $('end').hidden = true; resetTouch();
+  if (oppKey === 'random') { startGame(); return; } if (mapKey === 'random') game.setMap(pickMap()); game.startMatch(); lastPh = ''; floats = []; parts = []; $('end').hidden = true; resetTouch();
 }
 $('btnAgain').onclick = () => rematch(false);
 $('btnAgainR').onclick = () => rematch(true);
@@ -1087,21 +1148,45 @@ function syncUI(now) {
 
 // 그리기
 function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function drawEssence(mp) {      // 지옥: 가운데 정수(나와 있으면 구슬, 아니면 다음까지 남은 초)
+  const e = game && game.ess; if (!e || !mp.ess || game.ph === 'count') return;
+  const cx = W / 2, cy = H / 2, t = performance.now() / 1000;
+  if (e.up) {
+    const pu = 1 + Math.sin(t * 5) * 0.12;
+    const gr = ctx.createRadialGradient(cx, cy, 2, cx, cy, 34 * pu); gr.addColorStop(0, 'rgba(120,255,160,.55)'); gr.addColorStop(1, 'rgba(120,255,160,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, 34 * pu, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#6be08a'; ctx.strokeStyle = '#d6ffe2'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, mp.ess.r * pu * 0.9, 0, 6.283); ctx.fill(); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 14px ' + FONT; ctx.fillStyle = '#063d1a'; ctx.fillText('+' + mp.ess.heal, cx, cy + 1);
+  } else {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 44px "Black Han Sans", ' + FONT; ctx.lineWidth = 5; ctx.strokeStyle = '#000a'; ctx.fillStyle = 'rgba(160,255,190,.85)';
+    const n = String(Math.max(1, Math.ceil(e.t))); ctx.strokeText(n, cx, cy); ctx.fillText(n, cx, cy);
+  }
+  ctx.textBaseline = 'alphabetic';
+}
 function drawArena() {
-  ctx.fillStyle = '#131923'; ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = '#1b2331'; ctx.lineWidth = 1; ctx.beginPath();
+  const mp = (game && game.map) || MAPS.basic; WALLS = (game && game.walls) || WALLS;
+  ctx.fillStyle = mp.bg; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = mp.grid; ctx.lineWidth = 1; ctx.beginPath();
   for (let x = 0; x <= W; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
   for (let y = 0; y <= H; y += 40) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
   ctx.stroke();
   ctx.strokeStyle = '#26304a'; ctx.setLineDash([8, 8]); ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke(); ctx.setLineDash([]);
-  for (const w of WALLS) { ctx.fillStyle = '#2b3447'; ctx.strokeStyle = '#4a5a78'; ctx.lineWidth = 2; rr(w.x, w.y, w.w, w.h, 6); ctx.fill(); ctx.stroke(); }
+  for (const w of WALLS) { ctx.fillStyle = mp.wall; ctx.strokeStyle = mp.line; ctx.lineWidth = 2; rr(w.x, w.y, w.w, w.h, 6); ctx.fill(); ctx.stroke(); }
+  drawEssence(mp);
   ctx.strokeStyle = '#3a4560'; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
 }
 function drawFx() {
   for (const f of game.fx) {
     const t = 1 - f.life / f.max;
     ctx.save();
-    if (f.k === 'ring') {
+    if (f.k === 'bolt') {      // 번개 경고: 빨간 원 테두리 + 중심에서 바깥으로 차오르는 면
+      ctx.globalAlpha = 0.9; ctx.strokeStyle = '#ff4a4a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.stroke();
+      ctx.globalAlpha = 0.38; ctx.fillStyle = '#ff3a3a'; ctx.beginPath(); ctx.arc(f.x, f.y, Math.max(1, f.r * t), 0, 6.283); ctx.fill();
+    } else if (f.k === 'bstar') {      // 번개 적중: 노란 별
+      ctx.globalAlpha = Math.min(1, (1 - t) * 1.6); ctx.fillStyle = '#ffe14a'; ctx.strokeStyle = '#fff6b0'; ctx.lineWidth = 3;
+      ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -1.5708 + i * 0.6283, rr0 = (i % 2 ? 0.45 : 1) * f.r * (0.8 + 0.25 * t); ctx.lineTo(f.x + Math.cos(a) * rr0, f.y + Math.sin(a) * rr0); } ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.globalAlpha = (1 - t) * 0.25; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.fill();
+    } else if (f.k === 'ring') {
       const rad = f.r * (0.35 + 0.65 * t);
       ctx.globalAlpha = (1 - t) * 0.9; ctx.strokeStyle = f.col; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(f.x, f.y, rad, 0, 6.283); ctx.stroke();
       ctx.globalAlpha = (1 - t) * 0.18; ctx.fillStyle = f.col; ctx.fill();
@@ -1311,7 +1396,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 42;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 43;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -1428,11 +1513,11 @@ function hostPeers() {
 }
 function startOnlineHost(guestChar) {
   net.started = true; net.hostChar = myChar; lobbyPresence({ o: null });
-  game = new Game(myChar, guestChar, 'normal'); game.remote = true;
+  game = new Game(myChar, guestChar, 'normal', pickMap()); game.remote = true;
   scene = 'play'; lastPh = ''; floats = []; parts = []; net.lastRx = performance.now(); net.lastQ = 0; net.gin = { mx: 0, my: 0, h: 0 };
   setupButtons(); resetTouch(); $('menu').hidden = true; $('net').hidden = true; $('end').hidden = true; setEndMode();
 }
-function hostRematch() { game.startMatch(); lastPh = ''; floats = []; parts = []; net.hostRm = false; net.guestRm = false; $('end').hidden = true; resetTouch(); setEndMode(); }
+function hostRematch() { game.setMap(pickMap()); game.startMatch(); lastPh = ''; floats = []; parts = []; net.hostRm = false; net.guestRm = false; $('end').hidden = true; resetTouch(); setEndMode(); }
 function hostTick() {       // 시뮬레이션 한 틱 전에: 상대 입력을 반영
   const stale = performance.now() - net.lastRx > 1500, g = net.gin, p = game.players[1];
   p.inp = stale ? { mx: 0, my: 0 } : { mx: g.mx, my: g.my }; p.atkHold = stale ? false : !!g.h;
@@ -1449,7 +1534,7 @@ function hostSend(now) {
     p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul)]);
   const bl = g.bullets.slice(0, 18).map(b => [b._i || (b._i = ++net.bid), r1(b.x), r1(b.y), r1(b.vx), r1(b.vy), b.r, b.owner, b.col || 0]);
   const fl = g.fx.slice(0, 10).map(f => { if (!f._i) f._i = ++net.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; if (f.fist) o.fi = 1; return o; });
-  const s = { n: ++net.n, ph: g.ph, tm: r2(g.timer), ft: r2(g.fightT), rd: g.round, sc: g.score, rs: g.res ? g.res.w : null, mw: g.matchWinner, ch: [cid(P[0].ch), cid(P[1].ch)], a: net.lastQ, p: pl, b: bl, f: fl, e: net.evBuf.slice(-10).map(x => x.a) };
+  const s = { n: ++net.n, ph: g.ph, tm: r2(g.timer), ft: r2(g.fightT), rd: g.round, sc: g.score, rs: g.res ? g.res.w : null, mw: g.matchWinner, ch: [cid(P[0].ch), cid(P[1].ch)], mp: g.mapId, es: g.ess ? [g.ess.up ? 1 : 0, r2(g.ess.t)] : 0, a: net.lastQ, p: pl, b: bl, f: fl, e: net.evBuf.slice(-10).map(x => x.a) };
   let js = JSON.stringify(s); net.maxLen = Math.max(net.maxLen || 0, js.length);
   if (js.length > 3600) { s.f = s.f.slice(0, 4); js = JSON.stringify(s); }
   if (js.length > 3600) { s.b = s.b.slice(0, 10); s.e = s.e.slice(-4); }
@@ -1484,7 +1569,8 @@ function onSnap(s) {
   if (net.qt) { const t0 = net.qt[s.a]; if (t0) { const smp = (net.snapT - t0) / 1000; if (smp > 0 && smp < 1.5) net.rtt = Math.min(0.4, Math.max(0.04, net.rtt * 0.8 + smp * 0.2)); } for (const k of Object.keys(net.qt)) if (Number(k) <= s.a) delete net.qt[k]; }
   net.q = net.q.filter(q => q[0] > s.a);
   if (!net.started) startOnlineGuest(s);
-  else if (game && (s.ch[0] !== game.players[1].ch.id || s.ch[1] !== game.players[0].ch.id)) rebuildChars(s);
+  else if (game && (s.mp !== game.mapId || !!s.mm !== game.mm)) applyMapClient(s);
+  if (net.started && game && (s.ch[0] !== game.players[1].ch.id || s.ch[1] !== game.players[0].ch.id)) rebuildChars(s);
   ingestEvents(s);
   if (s.ph !== 'over' && net.rmSent) { net.rmSent = false; if (!isSA()) net.m.presence({ rm: 0 }).catch(() => {}); }
 }
@@ -1494,9 +1580,14 @@ function rebuildChars(s) {      // 다시하기에서 캐릭터가 바뀐 경우
   net.pd = null; net.hold = null; net.cdo = {}; net.dq = []; net.pcnt = 0; net.pfx = []; net.pb = []; net.sh = null; net.atkBuf = 0; net.ownPrev = new Set(); net.pbSn = -1;
   floats = []; parts = []; setupButtons(); resetTouch();
 }
+const mirrorWalls = ws => ws.map(w => ({ x: W - w.x - w.w, y: w.y, w: w.w, h: w.h }));
+function applyMapClient(s) {      // 받은 맵으로 바꿈. 화면이 좌우 반전이라 벽도 (이미 반전돼 온 게 아니면) 뒤집어서 씀
+  const id = MAPS[s.mp] ? s.mp : 'basic';
+  game.mapId = id; game.map = MAPS[id]; game.mm = !!s.mm; game.walls = s.mm ? MAPS[id].walls : mirrorWalls(MAPS[id].walls); WALLS = game.walls;
+}
 function startOnlineGuest(s) {
   net.started = true; net.hostChar = s.ch[0];
-  game = new Game(myChar, s.ch[0], 'normal'); game.remote = true;
+  game = new Game(myChar, s.ch[0], 'normal'); game.remote = true; applyMapClient(s);
   game.setMove = (mx, my) => { net.mv = [-mx, my]; };                                   // 화면이 좌우 반전이라 이동 방향도 반전해서 보냄
   net.pd = null; net.hold = null; net.cdo = {}; net.dq = []; net.pcnt = 0; net.pfx = []; net.pb = []; net.sh = null; net.qt = {}; net.rtt = 0.15; net.atkBuf = 0; net.ownPrev = new Set(); net.pbSn = -1;
   game.pressDash = () => {
@@ -1596,6 +1687,7 @@ function guestFrame(now, dt) {
   if (s.ph !== 'fight') { net.pd = null; net.hold = null; net.pb = []; net.pfx = []; net.sh = null; }
   const age = Math.min(0.25, (now - net.snapT) / 1000), lead = Math.min(0.1, (net.rtt || 0.15) * 0.5);
   g.ph = s.ph; g.round = s.rd; g.score = [s.sc[1], s.sc[0]]; g.res = s.rs == null ? null : { w: s.rs < 0 ? s.rs : 1 - s.rs }; g.matchWinner = s.mw < 0 ? -1 : 1 - s.mw;
+  WALLS = g.walls; g.ess = s.es ? { up: !!s.es[0], t: Math.max(0, s.es[1] - (s.ph === 'fight' ? age : 0)) } : null;
   g.timer = s.tm - age; g.fightT = s.ft + (s.ph === 'fight' ? age : 0);
   for (let j = 0; j < 2; j++) {
     const d = s.p[j], vp = g.players[1 - j], ea = j === 0 ? age + lead : age, ex0 = clamp(W - (d[0] + d[2] * ea), R, W - R), ey0 = clamp(d[1] + d[3] * ea, R, H - R), tp = { x: ex0, y: ey0 }; for (const w of WALLS) resolveCircleRect(tp, R, w); const tx = tp.x, ty = tp.y;
@@ -1608,7 +1700,7 @@ function guestFrame(now, dt) {
       pd.t -= dt; if (pd.t <= 0) net.pd = null;
     } else if (own && d[7] && d[8] <= 0 && !(d[26] > 0) && !(now - (net.pcnt || 0) < 500) && (hold || (!d[16] && d[15] <= 0))) {      // 내 걷기: 내 화면에서 먼저 움직이고 서버 위치로 부드럽게 맞춤
       const m = readMove(); let mx = m[0], my = m[1]; const ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; }
-      const sp = vp.ch.speed * (d[9] > 0 ? d[22] : 1) * (d[14] > 0 ? (vp.hasteMul || 1) : 1) * (d[24] > 0 ? STL_MUL : 1), er = Math.hypot(tx - vp.x, ty - vp.y);
+      const sp = vp.ch.speed * (d[9] > 0 ? d[22] : 1) * (d[14] > 0 ? (vp.hasteMul || 1) : 1) * (d[24] > 0 ? STL_MUL : 1) * ((g.map && g.map.speedMul) || 1), er = Math.hypot(tx - vp.x, ty - vp.y);
       if (!vp._init || er > (hold ? 450 : 150)) { vp.x = tx; vp.y = ty; vp._init = 1; }
       else {
         stepMove(vp, mx * sp * dt, my * sp * dt);
@@ -1707,7 +1799,12 @@ function frame(now) {
   let sx = 0, sy = 0; if (shake > 0.3) { sx = (Math.random() - 0.5) * shake; sy = (Math.random() - 0.5) * shake; shake *= 0.85; } else shake = 0;
   ctx.translate(sx, OY + sy); ctx.beginPath(); ctx.rect(-4, -4, W + 8, H + 8); ctx.clip();
   drawArena(); drawFx(); drawAimPreview(); drawBullets(); drawPlayer(game.players[1], now); drawPlayer(game.players[0], now); drawEffects(dt); drawStealthBar();
-  if (game.ph === 'count') banner(String(Math.max(1, Math.ceil(game.timer))), '라운드 ' + game.round + ' 준비!', '#fff');
+  if (game.ph === 'count') {
+    const mp = game.map || MAPS.basic; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000c';
+    ctx.font = 'bold 30px ' + FONT; ctx.lineWidth = 6; ctx.strokeText(mp.icon + ' ' + mp.name + ' 맵', W / 2, 112); ctx.fillStyle = '#ffd24a'; ctx.fillText(mp.icon + ' ' + mp.name + ' 맵', W / 2, 112);
+    ctx.font = 'bold 19px ' + FONT; ctx.lineWidth = 4; mp.fx.split(' · ').forEach((ln, i) => { ctx.strokeText(ln, W / 2, 146 + i * 26); ctx.fillStyle = '#e8eefc'; ctx.fillText(ln, W / 2, 146 + i * 26); });
+    banner(String(Math.max(1, Math.ceil(game.timer))), '라운드 ' + game.round + ' 준비!', '#fff');
+  }
   else if (game.ph === 'fight' && now - fightStartAt < 900) banner('FIGHT!', '', '#ffd24a');
   else if (game.ph === 'end' && game.res) {
     const w = game.res.w;

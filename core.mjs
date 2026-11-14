@@ -10,11 +10,12 @@ const cid = ch => eng.CHAR_ORDER.find(k => eng.CHARS[k] === ch);
 export const SERVER_BUILD = eng.BUILD;
 
 // 상대 자리(1번) 기준 좌표계로 만든 상태를, 0번 자리 사람 기준(좌우 반전·자리 교체)으로 바꿈
+const pickMap = () => eng.MAP_ORDER[Math.floor(Math.random() * eng.MAP_ORDER.length)];
 export const mirrorSnap = s => {
   const mp = d => { const o = d.slice(); o[0] = r1(W - d[0]); o[2] = r1(-d[2]); o[4] = r2(Math.PI - d[4]); if (d[16]) o[16] = [r2(-d[16][0]), d[16][1]]; return o; };
   const flip = i => (i == null || i < 0 ? i : 1 - i);
   return Object.assign({}, s, {
-    sc: [s.sc[1], s.sc[0]], rs: flip(s.rs), mw: flip(s.mw), ch: [s.ch[1], s.ch[0]], p: [mp(s.p[1]), mp(s.p[0])],
+    mm: 1, sc: [s.sc[1], s.sc[0]], rs: flip(s.rs), mw: flip(s.mw), ch: [s.ch[1], s.ch[0]], p: [mp(s.p[1]), mp(s.p[0])],
     b: s.b.map(b => [b[0], r1(W - b[1]), b[2], r1(-b[3]), b[4], b[5], 1 - b[6], b[7], b[8]]),
     f: s.f.map(f => { const o = Object.assign({}, f, { x: r1(W - f.x) }); if (f.a != null) o.a = r2(Math.PI - f.a); if (f.f != null) o.f = flip(f.f); return o; }),
     e: s.e.map(e => (e[1] === 'h' ? [e[0], 'h', r1(W - e[2]), e[3], e[4], 1 - e[5]] : [e[0], 't', r1(W - e[2]), e[3], e[4], e[5]])),
@@ -23,7 +24,7 @@ export const mirrorSnap = s => {
 
 class Session {
   constructor(hub, room, ca, cb, charA, charB) {
-    this.hub = hub; this.room = room; this.c = [ca, cb]; this.game = new eng.Game(charA, charB, 'normal'); this.game.remote = true;
+    this.hub = hub; this.room = room; this.c = [ca, cb]; this.game = new eng.Game(charA, charB, 'normal', pickMap()); this.game.remote = true;
     this.inp = [{ mx: 0, my: 0, h: 0 }, { mx: 0, my: 0, h: 0 }]; this.lastQ = [0, 0]; this.ackQ = [0, 0]; this.rx = [Date.now(), Date.now()]; this.rm = [0, 0]; this.rmc = [null, null];
     this.gaps = []; this.bid = 0; this.fid = 0; this.eid = 0; this.evBuf = []; this.n = 0; this.acc = 0; this.last = performance.now(); this.sent = 0;
     ca.sess = { s: this, k: 0 }; cb.sess = { s: this, k: 1 }; ca.ackN = cb.ackN = 0;
@@ -48,7 +49,7 @@ class Session {
     this.rm[k] = 1; if (eng.CHAR_ORDER.includes(ch)) this.rmc[k] = ch;
     if (this.rm[0] && this.rm[1] && this.game.ph === 'over') {
       const P = this.game.players, a = this.rmc[0] || cid(P[0].ch), b = this.rmc[1] || cid(P[1].ch);
-      if (a !== cid(P[0].ch) || b !== cid(P[1].ch)) { this.game = new eng.Game(a, b, 'normal'); this.game.remote = true; } else this.game.startMatch();
+      if (a !== cid(P[0].ch) || b !== cid(P[1].ch)) { this.game = new eng.Game(a, b, 'normal', pickMap()); this.game.remote = true; } else { this.game.setMap(pickMap()); this.game.startMatch(); }
       this.rm = [0, 0]; this.rmc = [null, null]; this.evBuf = [];
     }
   }
@@ -74,7 +75,7 @@ class Session {
       p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0, p.rage ? 1 : 0]);      // 23~26: 대시 충전, 은신 남은 시간, 기본공격 강화, 반격 남은 시간
     const bl = g.bullets.slice(0, 18).map(b => [b._i || (b._i = ++this.bid), r1(b.x), r1(b.y), r1(b.vx), r1(b.vy), b.r, b.owner, b.col || 0, b.pierce ? 1 : 0]);
     const fl = g.fx.slice(0, 10).map(f => { if (!f._i) f._i = ++this.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; if (f.fist) o.fi = 1; return o; });
-    const s = { n: ++this.n, ph: g.ph, tm: r2(g.timer), ft: r2(g.fightT), rd: g.round, sc: g.score, rs: g.res ? g.res.w : null, mw: g.matchWinner, ch: [cid(P[0].ch), cid(P[1].ch)], a: 0, p: pl, b: bl, f: fl, e: this.evBuf.slice(-10).map(x => x.a) };
+    const s = { n: ++this.n, ph: g.ph, tm: r2(g.timer), ft: r2(g.fightT), rd: g.round, sc: g.score, rs: g.res ? g.res.w : null, mw: g.matchWinner, ch: [cid(P[0].ch), cid(P[1].ch)], mp: g.mapId, es: g.ess ? [g.ess.up ? 1 : 0, r2(g.ess.t)] : 0, a: 0, p: pl, b: bl, f: fl, e: this.evBuf.slice(-10).map(x => x.a) };
     const sB = Object.assign({}, s, { a: this.ackQ[1] }), sA = mirrorSnap(Object.assign({}, s, { a: this.ackQ[0] }));
     const go = () => {      // 흐름 제어: 상대가 받았다고 알려온 번호보다 너무 앞서 있으면(회선이 느려 쌓이는 중) 드물게만 보내 지연이 수 초로 불어나는 걸 막음
       const S = [sA, sB];

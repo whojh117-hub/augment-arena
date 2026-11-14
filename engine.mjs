@@ -6,11 +6,24 @@ const OT_DMG_MUL = 2;
 const DASH = { cd: 5, time: 0.28, speed: 640 };   // 대시: 사용 중 무적, 쿨타임 5초
 const STL_MUL = 1.2;                               // 은신 중 이동속도 배수
 const ATK_BUFFER = 0.3;                            // 공격 버튼을 톡 눌렀을 때, 쿨타임이 끝날 때까지 기다려 주는 시간
-const WALLS = [
-  { x: 450, y: 200, w: 60, h: 140 },
-  { x: 250, y: 90, w: 50, h: 50 }, { x: 250, y: 400, w: 50, h: 50 },
-  { x: 660, y: 90, w: 50, h: 50 }, { x: 660, y: 400, w: 50, h: 50 },
-];
+// ─────────────────────────────────────────────────────────────
+// 맵. walls: 벽 목록, fx: 라운드 시작 전에 보여 줄 추가 효과 설명. 1칸 = 70px 기준.
+//  speedMul(이동속도 배수) / bolt(번개) / heat(고정 피해) / ess(정수) 가 있으면 그 효과가 켜짐
+// ─────────────────────────────────────────────────────────────
+const MAPS = {
+  basic: { id: 'basic', name: '기본', icon: '🏟️', fx: '추가 효과 없음', bg: '#131923', grid: '#1b2331', wall: '#2b3447', line: '#4a5a78',
+    walls: [{ x: 450, y: 200, w: 60, h: 140 }, { x: 250, y: 90, w: 50, h: 50 }, { x: 250, y: 400, w: 50, h: 50 }, { x: 660, y: 90, w: 50, h: 50 }, { x: 660, y: 400, w: 50, h: 50 }] },
+  waste: { id: 'waste', name: '황무지', icon: '🏜️', fx: '날아오는 모래로 모든 플레이어 이동속도 20% 감소', speedMul: 0.8, bg: '#2a2218', grid: '#352b1d', wall: '#6b5638', line: '#9b7f52',
+    walls: [{ x: 260, y: 110, w: 60, h: 60 }, { x: 640, y: 370, w: 60, h: 60 }, { x: 420, y: 330, w: 60, h: 60 }, { x: 480, y: 150, w: 60, h: 60 }] },      // 180도 돌려도 같은 모양(대각선 대칭)
+  temple: { id: 'temple', name: '신전', icon: '🏛️', fx: '5초마다 번개가 떨어져요 (빨간 원 경고 1초 뒤 30 피해)', bolt: { first: 4, every: 5, warn: 1, r: 70, dmg: 30 }, bg: '#1a1a22', grid: '#242430', wall: '#4a4660', line: '#8f86b8',
+    walls: [{ x: 375, y: 165, w: 70, h: 24 }, { x: 375, y: 165, w: 24, h: 70 }, { x: 515, y: 165, w: 70, h: 24 }, { x: 561, y: 165, w: 24, h: 70 },
+            { x: 375, y: 351, w: 70, h: 24 }, { x: 375, y: 305, w: 24, h: 70 }, { x: 515, y: 351, w: 70, h: 24 }, { x: 561, y: 305, w: 24, h: 70 }] },      // 가운데 3x3칸 사각형의 네 모서리만 ㄱ·ㄴ자 벽(상하좌우 가운데는 열려 있음)
+  hell: { id: 'hell', name: '지옥', icon: '🔥', fx: '뜨거운 공기로 1초마다 체력 1 고정 피해 · 가운데 정수: 체력 +10(25초마다 재생성)', heat: { every: 1, dmg: 1 }, ess: { first: 5, respawn: 25, heal: 10, r: 16 }, bg: '#220f0f', grid: '#2e1515', wall: '#5a2a24', line: '#c0553a',
+    walls: [{ x: 170, y: 165, w: 70, h: 210 }, { x: 720, y: 165, w: 70, h: 210 }, { x: 400, y: 80, w: 50, h: 50 }, { x: 510, y: 80, w: 50, h: 50 }, { x: 400, y: 410, w: 50, h: 50 }, { x: 510, y: 410, w: 50, h: 50 }] },
+};
+const MAP_ORDER = ['basic', 'waste', 'temple', 'hell'];
+const pickMap = () => MAP_ORDER[Math.floor(Math.random() * MAP_ORDER.length)];
+let WALLS = MAPS.basic.walls;      // 지금 계산 중인 게임의 벽 (Game.update가 시작할 때 자기 맵으로 바꿈)
 const SPAWN = [{ x: 90, y: 270 }, { x: 870, y: 270 }];
 
 // ─────────────────────────────────────────────────────────────
@@ -121,14 +134,15 @@ function mkPlayer(idx, charId) {
 }
 
 class Game {
-  constructor(myChar, aiChar, diffKey) {
-    this.diff = DIFFS[diffKey] || DIFFS.normal;
+  constructor(myChar, aiChar, diffKey, mapId) {
+    this.diff = DIFFS[diffKey] || DIFFS.normal; this.setMap(mapId);
     this.players = [mkPlayer(0, myChar), mkPlayer(1, aiChar)];
     this.auto0 = false;       // true면 0번(사람 자리)도 AI가 조작 (테스트용)
     this.remote = false;      // true면 1번도 사람(온라인 상대)이 조작: AI를 쓰지 않음
     this.ev = []; this.fx = []; this.bullets = []; this.zones = [];
     this.startMatch();
   }
+  setMap(id) { this.mapId = MAPS[id] ? id : 'basic'; this.map = MAPS[this.mapId]; this.walls = this.map.walls; WALLS = this.walls; }
   startMatch() {
     this.score = [0, 0]; this.round = 1; this.matchWinner = -1;
     for (const p of this.players) p.maxHp = p.ch.hp;     // 영구 체력 증가는 한 판(매치) 동안만 유지
@@ -143,6 +157,7 @@ class Game {
       p.think = 0.4; p.stuckT = 0; p.lx = p.x; p.ly = p.y; p.unstick = 0;
     }
     this.bullets = []; this.fx = []; this.zones = []; this.fightT = 0; this.res = null; this.ph = 'count'; this.timer = COUNT_TIME;
+    const m = this.map; this.bolts = []; this.boltT = m.bolt ? m.bolt.first : 0; this.heatT = m.heat ? m.heat.every : 0; this.ess = m.ess ? { up: false, t: m.ess.first } : null;
   }
   setMove(mx, my) { this.players[0].inp = { mx, my }; }
   pressDash() { this.pressDashP(0); }
@@ -154,6 +169,7 @@ class Game {
   pressAttackP(k) { if (this.ph === 'fight') this.players[k].atkBuf = ATK_BUFFER; }
 
   update(dt) {
+    WALLS = this.walls;
     for (const f of this.fx) f.life -= dt;
     this.fx = this.fx.filter(f => f.life > 0);
     if (this.ph === 'count') {
@@ -374,7 +390,7 @@ class Game {
     else if (p.stun <= 0) {
       let mx = p.inp.mx, my = p.inp.my; const ml = Math.hypot(mx, my);
       if (ml > 1) { mx /= ml; my /= ml; }
-      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1) * (p.stl > 0 ? STL_MUL : 1);
+      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1) * (p.stl > 0 ? STL_MUL : 1) * (this.map.speedMul || 1);
       vx = mx * sp; vy = my * sp;
     }
     p.vx = vx; p.vy = vy;
@@ -413,6 +429,8 @@ class Game {
     let mx, my;
     if (p.unstick > 0) { mx = Math.cos(p.unstickAng); my = Math.sin(p.unstickAng); }
     else { const sw = melee ? 0.35 : 0.8; mx = ux * ap - uy * p.strafe * sw; my = uy * ap + ux * p.strafe * sw; }
+    if (this.map.bolt) for (const bt of this.bolts) { const rx = p.x - bt.x, ry = p.y - bt.y, rd = Math.hypot(rx, ry) || 1; if (rd < this.map.bolt.r + R + 30) { mx = rx / rd; my = ry / rd; break; } }      // 번개 경고 원에서 벗어남
+    if (this.ess && this.ess.up && p.hp <= p.maxHp - 6) { const de = Math.hypot(p.x - W / 2, p.y - H / 2), dp = Math.hypot(e.x - W / 2, e.y - H / 2); if (de < dp + 120 || p.hp < p.maxHp * 0.6) { mx = (W / 2 - p.x) / (de || 1); my = (H / 2 - p.y) / (de || 1); } }      // 정수 먹으러 감
     let danger = false, dodged = false;
     for (const b of this.bullets) {
       if (b.owner === p.idx) continue;
@@ -441,11 +459,39 @@ class Game {
     }
   }
 
+  stepMapFx(dt) {      // 맵 추가 효과: 번개(신전) / 뜨거운 공기와 정수(지옥)
+    const m = this.map, P = this.players;
+    if (m.bolt) {
+      const B = m.bolt; this.boltT -= dt;
+      if (this.boltT <= 0) {
+        this.boltT += B.every; const bx = 70 + Math.random() * (W - 140), by = 70 + Math.random() * (H - 140);
+        this.bolts.push({ x: bx, y: by, t: B.warn }); this.fx.push({ k: 'bolt', x: bx, y: by, r: B.r, life: B.warn, max: B.warn, col: '#ff4a4a' });
+      }
+      for (const b of this.bolts) {
+        b.t -= dt; if (b.t > 0) continue; b.done = true;
+        this.fx.push({ k: 'bstar', x: b.x, y: b.y, r: B.r, life: 0.45, max: 0.45, col: '#ffe14a' });
+        for (const p of P) if (p.alive && Math.hypot(p.x - b.x, p.y - b.y) <= B.r + R) this.dealDamage(null, p, B.dmg, null);
+      }
+      this.bolts = this.bolts.filter(b => !b.done);
+    }
+    if (m.heat) {      // 체력에서 바로 깎음: 피해 감소·보호막·무적(대시)의 영향을 받지 않음
+      this.heatT -= dt;
+      if (this.heatT <= 0) { this.heatT += m.heat.every; for (const p of P) if (p.alive) { p.hp -= m.heat.dmg; this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '-' + m.heat.dmg, col: '#ff8a4a' }); } }
+    }
+    if (this.ess) {
+      const E = m.ess, e = this.ess;
+      if (!e.up) { e.t -= dt; if (e.t <= 0) { e.up = true; e.t = 0; } }
+      else for (const p of P) if (p.alive && Math.hypot(p.x - W / 2, p.y - H / 2) <= R + E.r) {
+        p.hp = Math.min(p.maxHp, p.hp + E.heal); e.up = false; e.t = E.respawn;
+        this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '+' + E.heal, col: '#6be08a' }); this.fx.push({ k: 'ring', x: W / 2, y: H / 2, r: 50, life: 0.4, max: 0.4, col: '#6be08a' }); break;
+      }
+    }
+  }
   stepFight(dt) {
     const P = this.players;
     if (!this.remote) this.ai(P[1], dt);
     if (this.auto0) this.ai(P[0], dt);
-    this.stepZones(dt);
+    this.stepZones(dt); this.stepMapFx(dt);
     for (const p of P) this.stepPlayer(p, dt);
     this.stepBullets(dt);
     for (const p of P) if (p.hp <= 0) p.alive = false;
@@ -500,5 +546,5 @@ class Game {
   }
 }
 
-export { Game, CHARS, CHAR_ORDER, W, H };
-export const BUILD = 42;
+export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER };
+export const BUILD = 43;

@@ -10,7 +10,7 @@ const a = src.indexOf('// ===== ENGINE START ====='), b = src.indexOf('// ===== 
 if (a < 0 || b < 0) throw new Error('ENGINE 구간을 찾지 못했어요');
 const build = Number((src.match(/const BUILD = (\d+);/) || [])[1]);
 if (!build) throw new Error('BUILD 번호를 찾지 못했어요');
-const engine = '// 자동 생성 파일입니다. 직접 고치지 말고 index.html을 고친 뒤 `node tools/build.mjs`를 실행하세요.\n' + src.slice(a, b) + '\nexport { Game, CHARS, CHAR_ORDER, W, H };\nexport const BUILD = ' + build + ';\n';
+const engine = '// 자동 생성 파일입니다. 직접 고치지 말고 index.html을 고친 뒤 `node tools/build.mjs`를 실행하세요.\n' + src.slice(a, b) + '\nexport { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER };\nexport const BUILD = ' + build + ';\n';
 const outs = { 'engine.mjs': engine, 'public/index.html': src };
 let bad = 0;
 for (const [f, text] of Object.entries(outs)) {
