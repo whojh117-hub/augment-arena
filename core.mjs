@@ -88,6 +88,87 @@ class Session {
   end(except) { clearInterval(this.timer); this.hub.sessions.delete(this.room); for (const c of this.c) { c.sess = null; if (c !== except && c.alive) c.send({ t: 'left' }); } }
 }
 
+// ───────────── 2대2 (4명) 세션: 0·1번이 한 팀(왼쪽), 2·3번이 한 팀(오른쪽) ─────────────
+// 각 사람에게 보내는 상태는 1대1과 같은 규칙입니다: 화면 쪽에서 좌우를 한 번 뒤집어 그리므로,
+// 상태는 "내 시점의 좌우 반전"으로 만들어 보내고, 선수 순서는 [상대2, 상대1, 아군, 나]로 보냅니다(화면에서는 내 쪽이 0번).
+class QuadSession {
+  constructor(hub, room, conns, chars) {
+    this.hub = hub; this.room = room; this.c = conns; this.N = 4;
+    this.game = new eng.Game(null, null, 'normal', pickMap(), chars); this.game.remote = true;
+    const z = () => [0, 0, 0, 0]; this.inp = [0, 1, 2, 3].map(() => ({ mx: 0, my: 0, h: 0 })); this.lastQ = z(); this.ackQ = z(); this.rx = [1, 2, 3, 4].map(() => Date.now()); this.rm = z(); this.rmc = [null, null, null, null];
+    this.gaps = []; this.bid = 0; this.fid = 0; this.eid = 0; this.evBuf = []; this.n = 0; this.acc = 0; this.last = performance.now(); this.sent = 0;
+    conns.forEach((c, k) => { c.sess = { s: this, k }; c.ackN = 0; });
+    this.timer = setInterval(() => this.tick(), 8);
+  }
+  input(k, i) {
+    const g = this.game; this.rx[k] = Date.now();
+    const mx = Math.max(-1, Math.min(1, +i.mx || 0)), my = Math.max(-1, Math.min(1, +i.my || 0)), A = k < 2;      // 왼쪽 팀 사람의 화면은 반전돼 있으므로 좌우를 되돌림
+    this.inp[k] = { mx: A ? -mx : mx, my, h: i.h ? 1 : 0 };
+    for (const q of Array.isArray(i.q) ? i.q.slice(-8) : []) {
+      if (!Array.isArray(q) || !(q[0] > this.lastQ[k])) continue; this.lastQ[k] = q[0];
+      if (q[1] === 'd') g.pressDashP(k); else if (q[1] === 'a') g.pressAttackP(k, typeof q[2] === 'number' ? (A ? Math.PI - q[2] : q[2]) : undefined);
+      else if (q[1] === 's') g.pressSkillP(k, q[2] | 0, typeof q[3] === 'number' ? (A ? Math.PI - q[3] : q[3]) : undefined);
+    }
+  }
+  stat() { const g = this.gaps; if (g.length < 5) return null; let sum = 0, mx = 0; for (const x of g) { sum += x[1]; if (x[1] > mx) mx = x[1]; } return [Math.round(sum / g.length), Math.round(mx)]; }
+  wantRematch(k, ch) {
+    this.rm[k] = 1; if (eng.CHAR_ORDER.includes(ch)) this.rmc[k] = ch;
+    if (this.rm.every(x => x) && this.game.ph === 'over') {
+      const P = this.game.players, chars = P.map((p, i) => this.rmc[i] || cid(p.ch));
+      if (chars.some((x, i) => x !== cid(P[i].ch))) { this.game = new eng.Game(null, null, 'normal', pickMap(), chars); this.game.remote = true; } else { this.game.setMap(pickMap()); this.game.startMatch(); }
+      this.rm = [0, 0, 0, 0]; this.rmc = [null, null, null, null]; this.evBuf = [];
+    }
+  }
+  tick() {
+    const now = performance.now(), g = this.game;
+    let dt = (now - this.last) / 1000; if (!(dt > 0)) dt = 0.008;
+    this.acc = Math.min(0.25, this.acc + Math.min(0.1, dt)); this.last = now;
+    while (this.acc >= STEP) {
+      for (let k = 0; k < 4; k++) { const stale = Date.now() - this.rx[k] > 1500, p = g.players[k]; p.inp = stale ? { mx: 0, my: 0 } : { mx: this.inp[k].mx, my: this.inp[k].my }; p.atkHold = stale ? false : !!this.inp[k].h; }
+      g.update(STEP); this.acc -= STEP; this.ackQ = this.lastQ.slice();
+      for (const e of g.ev) if (e.k === 'hit') this.evBuf.push({ t: now, a: [++this.eid, 'h', r1(e.x), r1(e.y), e.d, e.to] }); else if (e.k === 'text') this.evBuf.push({ t: now, a: [++this.eid, 't', r1(e.x), r1(e.y), e.txt, e.col] });
+      g.ev = [];
+    }
+    this.evBuf = this.evBuf.filter(x => now - x.t < 1200);
+    if (now - this.sent >= 16 || now < this.sent) {
+      if (this.sent) { this.gaps.push([now, now - this.sent]); while (this.gaps.length && now - this.gaps[0][0] > 3000) this.gaps.shift(); }
+      this.sent = now; this.send();
+    }
+  }
+  send() {
+    const g = this.game, P = g.players;
+    const pl = P.map(p => [r1(p.x), r1(p.y), r1(p.vx), r1(p.vy), r2(p.aim), r1(p.hp), p.maxHp, p.alive ? 1 : 0, r2(p.stun), r2(p.slowT), r1(p.shield), p.shieldMax, r2(p.shieldT), r2(p.drT), r2(p.haste), r2(p.dashT),
+      p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0, p.rage ? 1 : 0, p.hits | 0, p.adv ? 1 : 0]);
+    const bl = g.bullets.slice(0, 30).map(b => [b._i || (b._i = ++this.bid), r1(b.x), r1(b.y), r1(b.vx), r1(b.vy), b.r, b.owner, b.col || 0, b.pierce ? 1 : 0]);
+    const fl = g.fx.slice(0, 14).map(f => { if (!f._i) f._i = ++this.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; if (f.fist) o.fi = 1; return o; });
+    const mn = g.minions.slice(0, 14).map(m => [m.id, r1(m.x), r1(m.y), r1(m.vx), r1(m.vy), r1(m.hp), m.kind === 'orb' ? 1 : 0, m.owner, r2(m.aim), m.fire ? 1 : 0, m.maxHp, m.r, m.guard > 0 ? 1 : 0]);
+    const pw = g.pw.map(w => [r1(w.cx), r1(w.cy), Math.round(w.a * 1000) / 1000, w.fw, w.fh, w.own, r2(w.t), w.max]);
+    const base = { n: ++this.n, ph: g.ph, tm: r2(g.timer), ft: r2(g.fightT), rd: g.round, mp: g.mapId, es: g.ess ? [g.ess.up ? 1 : 0, r2(g.ess.t)] : 0, q: 1 };
+    const ev = this.evBuf.slice(-14).map(x => x.a), res = g.res ? g.res.w : null;
+    const S = [0, 1, 2, 3].map(v => {
+      const T = P[v].team, ally = P.findIndex((p, i) => i !== v && p.team === T), foes = P.map((p, i) => i).filter(i => P[i].team !== T);
+      const order = [foes[1], foes[0], ally, v], pos = []; order.forEach((slot, j) => { pos[slot] = j; });      // 서버 번호 → 이 사람에게 보내는 번호
+      const fx = T === 0, X = x => (fx ? r1(W - x) : x);      // 왼쪽 팀 사람에게는 좌우를 한 번 뒤집어 보냄(화면이 다시 뒤집어 그림)
+      const mp = d => { const o = d.slice(); if (fx) { o[0] = r1(W - d[0]); o[2] = r1(-d[2]); o[4] = r2(Math.PI - d[4]); if (d[16]) o[16] = [r2(-d[16][0]), d[16][1]]; } return o; };
+      const mine = t => (t < 0 ? t : (t === T ? 1 : 0));
+      return Object.assign({}, base, {
+        mm: fx ? 1 : 0, a: this.ackQ[v], sc: [g.score[1 - T], g.score[T]], rs: res == null ? null : mine(res), mw: mine(g.matchWinner), ch: order.map(i => cid(P[i].ch)),
+        p: order.map(i => mp(pl[i])),
+        b: bl.map(b => [b[0], X(b[1]), b[2], fx ? r1(-b[3]) : b[3], b[4], b[5], pos[b[6]], b[7], b[8]]),
+        f: fl.map(f => { const o = Object.assign({}, f, { x: X(f.x) }); if (fx && f.a != null) o.a = r2(Math.PI - f.a); if (f.f != null && f.f >= 0) o.f = pos[f.f]; return o; }),
+        e: ev.map(e => (e[1] === 'h' ? [e[0], 'h', X(e[2]), e[3], e[4], pos[e[5]]] : [e[0], 't', X(e[2]), e[3], e[4], e[5]])),
+        mn: mn.map(m => { const o = m.slice(); o[1] = X(m[1]); if (fx) { o[3] = r1(-m[3]); o[8] = r2(Math.PI - m[8]); } o[7] = pos[m[7]]; return o; }),
+        pw: pw.map(w => [X(w[0]), w[1], fx ? Math.round((Math.PI - w[2]) * 1000) / 1000 : w[2], w[3], w[4], pos[w[5]], w[6], w[7]]),
+      });
+    });
+    const go = () => {
+      for (let k = 0; k < 4; k++) { const c = this.c[k], lag = this.n - (c.ackN || 0); if (lag > 48 && this.n % (lag > 150 ? 30 : 8) !== 0) continue; c.send({ t: 'snap', s: S[k] }); }
+    };
+    if (this.hub.lat) setTimeout(go, this.hub.lat); else go();
+  }
+  end(except) { clearInterval(this.timer); this.hub.sessions.delete(this.room); for (const c of this.c) { c.sess = null; if (c !== except && c.alive) c.send({ t: 'left' }); } }
+}
+
 export class Hub {
   // opts.lat: 테스트용 인위적 지연(ms), opts.debug: 테스트 전용 명령 허용
   constructor(opts = {}) { this.lat = opts.lat || 0; this.debug = !!opts.debug; this.rooms = new Map(); this.sessions = new Map(); this.conns = new Set(); this.seq = 0; this.sweepTimer = null; }
@@ -119,7 +200,7 @@ export class Hub {
     if (!NAME_RE.test(name) && name !== '') return;
     if (c.joined.has(name) || c.joined.size >= MAX_ROOMS_PER_CONN) return;
     let m = this.rooms.get(name); if (!m) { m = new Map(); this.rooms.set(name, m); }
-    if (m.size >= MAX_PEERS_PER_ROOM && name !== '') { c.send({ t: 'err', room: name, code: 'room_full' }); return; }
+    if ((m.size >= MAX_PEERS_PER_ROOM || (name.slice(0, 2) === 'q-' && m.size >= 4)) && name !== '') { c.send({ t: 'err', room: name, code: 'room_full' }); return; }
     const peers = []; for (const [o, p] of m) peers.push([o.id, p]);
     m.set(c, {}); c.joined.add(name);
     c.send({ t: 'init', room: name, me: c.id, peers });
@@ -130,7 +211,16 @@ export class Hub {
     if (this.sessions.has(name)) this.sessions.get(name).end(c);
     if (m.size === 0) this.rooms.delete(name); else this.broadcast(name, c, { t: 'l', room: name, id: c.id });
   }
+  checkQuad(room) {      // 2대2 방: 4명이 모두 같은 버전·캐릭터를 고르면 시작 (들어온 순서대로 0·1번 왼쪽 팀, 2·3번 오른쪽 팀)
+    const m = this.rooms.get(room); if (!m || m.size !== 4) return;
+    const L = [...m.entries()]; if (!L.every(([c, p]) => p && p.r === 'q' && eng.CHAR_ORDER.includes(p.c))) return;
+    let bad = false;
+    for (const [c, p] of L) if (p.v !== SERVER_BUILD) { bad = true; if (!c.verrAt || Date.now() - c.verrAt > 3000) { c.verrAt = Date.now(); c.send({ t: 'verr', v: SERVER_BUILD }); } }
+    if (bad) return;
+    this.sessions.set(room, new QuadSession(this, room, L.map(x => x[0]), L.map(x => x[1].c)));
+  }
   checkSession(room) {
+    if (room.slice(0, 2) === 'q-') { if (!this.sessions.has(room)) this.checkQuad(room); return; }
     if (this.sessions.has(room) || room.slice(0, 2) !== 'g-') return;
     const m = this.rooms.get(room); if (!m) return;
     let hh = null, gg = null;

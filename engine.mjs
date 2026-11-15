@@ -25,6 +25,7 @@ const MAP_ORDER = ['basic', 'waste', 'temple', 'hell'];
 const pickMap = () => MAP_ORDER[Math.floor(Math.random() * MAP_ORDER.length)];
 let WALLS = MAPS.basic.walls;      // 지금 계산 중인 게임의 벽 (Game.update가 시작할 때 자기 맵으로 바꿈)
 const SPAWN = [{ x: 90, y: 270 }, { x: 870, y: 270 }];
+const SPAWN4 = [{ x: 90, y: 180 }, { x: 90, y: 360 }, { x: 870, y: 180 }, { x: 870, y: 360 }];      // 2대2: 0·1번 왼쪽 팀, 2·3번 오른쪽 팀
 
 // ─────────────────────────────────────────────────────────────
 // 캐릭터 정의. 체력/속도/기본공격/스킬은 이 표만 고치면 돼요. (전사는 확정값, 나머지는 임시값)
@@ -165,7 +166,7 @@ const freshWant = () => ({ dash: 0, sk: [0, 0, 0], angs: [null, null, null] });
 
 function mkPlayer(idx, charId) {
   const ch = CHARS[charId];
-  return { idx, ch, x: 0, y: 0, vx: 0, vy: 0, aim: 0, hp: ch.hp, maxHp: ch.hp, alive: true, atkCd: 0, skCd: [0, 0, 0],
+  return { idx, team: idx, ch, x: 0, y: 0, vx: 0, vy: 0, aim: 0, hp: ch.hp, maxHp: ch.hp, alive: true, atkCd: 0, skCd: [0, 0, 0],
     dashCd: 0, dashT: 0, dx: 1, dy: 0, inv: 0, stun: 0, slowT: 0, slowMul: 1, shield: 0, shieldMax: 0, shieldT: 0, dr: 0, drT: 0, haste: 0, hasteMul: 1, charge: null, guard: null,
     atkHold: false, atkBuf: 0, atkAng: null, hits: 0, adv: false, dashN: ch.dashN || 0, stl: 0, stlI: -1, emp: false, cnt: null, seenX: 0, seenY: 0,
     inp: { mx: 0, my: 0 }, want: freshWant(), taken: 0, rage: false,
@@ -173,14 +174,22 @@ function mkPlayer(idx, charId) {
 }
 
 class Game {
-  constructor(myChar, aiChar, diffKey, mapId) {
+  constructor(myChar, aiChar, diffKey, mapId, chars) {
     this.diff = DIFFS[diffKey] || DIFFS.normal; this.setMap(mapId);
-    this.players = [mkPlayer(0, myChar), mkPlayer(1, aiChar)];
+    this.quad = !!(chars && chars.length === 4);      // 2대2: chars = 4명의 캐릭터(0·1번이 한 팀, 2·3번이 다른 팀)
+    this.players = this.quad ? chars.map((c, i) => { const p = mkPlayer(i, c); p.team = i < 2 ? 0 : 1; return p; }) : [mkPlayer(0, myChar), mkPlayer(1, aiChar)];
     this.auto0 = false;       // true면 0번(사람 자리)도 AI가 조작 (테스트용)
     this.remote = false;      // true면 1번도 사람(온라인 상대)이 조작: AI를 쓰지 않음
     this.ev = []; this.fx = []; this.bullets = []; this.zones = []; this.minions = []; this.mid = 0;
     this.startMatch();
   }
+  foes(p) { return this.players.filter(q => q.team !== p.team); }      // 상대 팀 사람들
+  nearFoe(team, x, y) {      // (x,y)에서 가장 가까운 상대 팀 플레이어(살아 있는 사람 우선, 은신한 사람은 마지막으로 보인 자리 기준)
+    let best = null, bd = 1e9;
+    for (const q of this.players) { if (q.team === team) continue; const hid = q.stl > 0, d = Math.hypot((hid ? q.seenX : q.x) - x, (hid ? q.seenY : q.y) - y) + (q.alive ? 0 : 1e6); if (d < bd) { bd = d; best = q; } }
+    return best;
+  }
+  foe(p) { return this.nearFoe(p.team, p.x, p.y); }
   setMap(id) { this.mapId = MAPS[id] ? id : 'basic'; this.map = MAPS[this.mapId]; this.baseWalls = this.map.walls; this.pw = []; this.walls = this.baseWalls; WALLS = this.walls; }
   rebuildWalls() { this.walls = this.pw.length ? this.baseWalls.concat(this.pw) : this.baseWalls; WALLS = this.walls; }      // 맵 벽 + 소환사가 세운 벽
   startMatch() {
@@ -190,7 +199,7 @@ class Game {
   }
   startRound() {
     for (const p of this.players) {
-      p.x = SPAWN[p.idx].x; p.y = SPAWN[p.idx].y; p.vx = p.vy = 0; p.aim = p.idx === 0 ? 0 : Math.PI;
+      const sp0 = (this.quad ? SPAWN4 : SPAWN)[p.idx]; p.x = sp0.x; p.y = sp0.y; p.vx = p.vy = 0; p.aim = p.team === 0 ? 0 : Math.PI;
       p.maxHp = p.ch.hp; p.hp = p.maxHp; p.alive = true; p.atkCd = 0.5;      // 함성 등으로 늘어난 최대 체력은 라운드가 끝나면 초기화
       p.atkBuf = 0; p.skCd = [0, 0, 0]; p.dashCd = 0; p.dashT = 0; p.inv = 0; p.stun = 0; p.dashN = p.ch.dashN || 0; p.stl = 0; p.stlI = -1; p.emp = false; p.cnt = null; p.taken = 0; p.rage = false; p.seenX = p.x; p.seenY = p.y;
       p.slowT = 0; p.shield = 0; p.shieldT = 0; p.dr = 0; p.drT = 0; p.haste = 0; p.charge = null; p.guard = null; p.inp = { mx: 0, my: 0 }; p.want = freshWant();
@@ -215,13 +224,13 @@ class Game {
     this.fx = this.fx.filter(f => f.life > 0);
     if (this.ph === 'count') {
       this.timer -= dt;
-      for (const p of this.players) { const e = this.players[1 - p.idx]; p.aim = Math.atan2(e.y - p.y, e.x - p.x); }
+      for (const p of this.players) { const e = this.foe(p); p.aim = Math.atan2(e.y - p.y, e.x - p.x); }
       if (this.timer <= 0) { this.ph = 'fight'; this.fightT = 0; }
     } else if (this.ph === 'fight') { this.fightT += dt; this.stepFight(dt); }
     else if (this.ph === 'end') {
       this.timer -= dt;
       if (this.timer <= 0) {
-        if (this.score.some(s => s >= WIN)) { this.ph = 'over'; this.matchWinner = this.score[0] >= WIN ? 0 : 1; }
+        if (this.score.some(s => s >= WIN)) { this.ph = 'over'; this.matchWinner = this.score[0] >= WIN ? 0 : 1; }      // 점수는 팀 기준(0: 왼쪽 팀, 1: 오른쪽 팀)
         else { this.round++; this.startRound(); }
       }
     }
@@ -305,33 +314,31 @@ class Game {
   }
   explode(b, noDmg) {      // noDmg: 직격으로 이미 피해를 줬을 때는 폭발 효과만(피해 2번 방지)
     this.fx.push({ k: 'ring', x: b.x, y: b.y, r: b.aoe, life: 0.3, max: 0.3, col: b.col || '#ff8a4a' });
-    const e = this.players[1 - b.owner];
-    if (!noDmg && e.alive && Math.hypot(e.x - b.x, e.y - b.y) <= b.aoe + R) this.dealDamage(this.players[b.owner], e, b.aoeDmg != null ? b.aoeDmg : b.dmg, b);
+    if (!noDmg) for (const e of this.foes(this.players[b.owner])) if (e.alive && Math.hypot(e.x - b.x, e.y - b.y) <= b.aoe + R) this.dealDamage(this.players[b.owner], e, b.aoeDmg != null ? b.aoeDmg : b.dmg, b);
     if (!noDmg) this.hitMinions(b.owner, m => Math.hypot(m.x - b.x, m.y - b.y) <= b.aoe + m.r, b.aoeDmg != null ? b.aoeDmg : b.dmg);
   }
   chargeEnd(p, c) {      // 끝까지 돌진하면 도착 지점에서 원형 범위 기절
     if (!c.endR) return;
     this.fx.push({ k: 'ring', x: p.x, y: p.y, r: c.endR, life: 0.4, max: 0.4, col: c.col || '#5b8def' });
     this.hitMinions(p.idx, m => Math.hypot(m.x - p.x, m.y - p.y) <= c.endR + m.r, c.dmg);
-    const e = this.players[1 - p.idx];
-    if (e.alive && e.dashT <= 0 && e.inv <= 0 && Math.hypot(e.x - p.x, e.y - p.y) <= c.endR + R) {
-      if (!c.hit) this.dealDamage(p, e, c.dmg, Object.assign({}, c, { stun: 0 }));      // 경로에서 안 맞았다면 원 안에서 12 피해 (한 번만)
-      if (!e.alive) return;
+    for (const e of this.foes(p)) if (e.alive && e.dashT <= 0 && e.inv <= 0 && Math.hypot(e.x - p.x, e.y - p.y) <= c.endR + R) {
+      if (!(c.hits ? c.hits.has(e.idx) : c.hit)) this.dealDamage(p, e, c.dmg, Object.assign({}, c, { stun: 0 }));      // 경로에서 안 맞았다면 원 안에서 12 피해 (한 번만)
+      if (!e.alive) continue;
       e.stun = Math.max(e.stun, c.endStun); e.charge = null; this.ev.push({ k: 'text', x: e.x, y: e.y - 30, txt: '기절!', col: '#ffd24a' }); }
   }
   coneHit(p, range, arc, dmg, o, ang) {
-    const A = typeof ang === 'number' ? ang : p.aim, e = this.players[1 - p.idx], life = (o && o.guard) || 0.2;
+    const A = typeof ang === 'number' ? ang : p.aim, life = (o && o.guard) || 0.2;
     this.fx.push({ k: 'cone', x: p.x, y: p.y, a: A, arc, r: range, life, max: life, col: (o && o.col) || '#e8edf7', follow: o && o.guard ? p.idx : -1, fist: !o && !!p.ch.atk.fist });
-    const d = Math.hypot(e.x - p.x, e.y - p.y);
-    if (d <= range + R && Math.abs(normAng(Math.atan2(e.y - p.y, e.x - p.x) - A)) <= arc / 2) this.dealDamage(p, e, dmg, o);
+    for (const e of this.foes(p)) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (e.alive && d <= range + R && Math.abs(normAng(Math.atan2(e.y - p.y, e.x - p.x) - A)) <= arc / 2) this.dealDamage(p, e, dmg, o); }
     this.hitMinions(p.idx, m => Math.hypot(m.x - p.x, m.y - p.y) <= range + m.r && Math.abs(normAng(Math.atan2(m.y - p.y, m.x - p.x) - A)) <= arc / 2, dmg);
   }
   lineArea(src, x, y, A, len, width, dmg, o) {      // 고정 위치의 직선 범위를 지금 판정
-    const e = this.players[1 - src.idx];
     this.fx.push({ k: 'line', x, y, a: A, len, w: width, life: 0.25, max: 0.25, col: (o && o.col) || '#e8edf7' });
-    const ex = e.x - x, ey = e.y - y, c = Math.cos(A), s = Math.sin(A);
-    const along = ex * c + ey * s, perp = Math.abs(-ex * s + ey * c);
-    if (along >= -R && along <= len + R && perp <= width / 2 + R) this.dealDamage(src, e, dmg, o);
+    const c = Math.cos(A), s = Math.sin(A);
+    for (const e of this.foes(src)) {
+      const ex = e.x - x, ey = e.y - y, along = ex * c + ey * s, perp = Math.abs(-ex * s + ey * c);
+      if (e.alive && along >= -R && along <= len + R && perp <= width / 2 + R) this.dealDamage(src, e, dmg, o);
+    }
     this.hitMinions(src.idx, m => { const mx = m.x - x, my = m.y - y, al = mx * c + my * s, pe = Math.abs(-mx * s + my * c); return al >= -m.r && al <= len + m.r && pe <= width / 2 + m.r; }, dmg);
   }
   lineHit(p, len, width, dmg, o, ang) { this.lineArea(p, p.x, p.y, typeof ang === 'number' ? ang : p.aim, len, width, dmg, o); }
@@ -348,13 +355,12 @@ class Game {
     if (p.ch.empAtk) p.emp = true;      // 스킬을 쓰면 다음 기본공격 강화
     p.skCd[i] = sk.cd;                 // 시전하자마자 쿨타임이 돌기 시작
     this.ev.push({ k: 'skill', p: p.idx, i });
-    const e = this.players[1 - p.idx];
     for (const f of sk.fx) {
       if (f.t === 'proj') this.fireProj(p, f, ang);
       else if (f.t === 'aoe') {
         const rg = !!(f.rageDmg && p.rage); if (rg) { p.rage = false; p.taken = 0; }      // 분노의 강타: 한 번 쓰면 원래대로
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: f.radius * (rg ? 1.1 : 1), life: rg ? 0.45 : 0.3, max: rg ? 0.45 : 0.3, col: rg ? '#ffd24a' : (f.col || '#ffffff') });
-        if (Math.hypot(e.x - p.x, e.y - p.y) <= f.radius * (rg ? 1.1 : 1) + R) this.dealDamage(p, e, rg ? f.rageDmg : f.dmg, f);
+        for (const e of this.foes(p)) if (e.alive && Math.hypot(e.x - p.x, e.y - p.y) <= f.radius * (rg ? 1.1 : 1) + R) this.dealDamage(p, e, rg ? f.rageDmg : f.dmg, f);
         this.hitMinions(p.idx, m => Math.hypot(m.x - p.x, m.y - p.y) <= f.radius * (rg ? 1.1 : 1) + m.r, rg ? f.rageDmg : f.dmg);
       } else if (f.t === 'cone') {
         if (f.guard) {      // 막기 먼저, 피해는 막기가 끝난 뒤(stepPlayer)에 범위 안의 적에게
@@ -444,11 +450,11 @@ class Game {
     const a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1); m.hp -= a;
     this.ev.push({ k: 'text', x: m.x, y: m.y - m.r - 6, txt: '-' + Math.round(a), col: '#e8edf7' });
   }
-  hitMinions(srcIdx, pred, dmg) { for (const m of this.minions) if (m.owner !== srcIdx && m.hp > 0 && pred(m)) this.hurtMinion(m, dmg); }
+  hitMinions(srcIdx, pred, dmg) { const tm = this.players[srcIdx].team; for (const m of this.minions) if (this.players[m.owner].team !== tm && m.hp > 0 && pred(m)) this.hurtMinion(m, dmg); }
   orbBurst(m) {      // 구슬 폭발: 닿거나 죽을 때
-    const own = this.players[m.owner], e = this.players[1 - m.owner];
+    const own = this.players[m.owner];
     this.fx.push({ k: 'ring', x: m.x, y: m.y, r: m.burst, life: 0.6, max: 0.6, col: '#ffd24a' });
-    if (e.alive && Math.hypot(e.x - m.x, e.y - m.y) <= m.burst + R) this.dealDamage({ x: m.x, y: m.y, idx: own.idx }, e, m.dmg, null);
+    for (const e of this.foes(own)) if (e.alive && Math.hypot(e.x - m.x, e.y - m.y) <= m.burst + R) this.dealDamage({ x: m.x, y: m.y, idx: own.idx }, e, m.dmg, null);
     m.hp = -1; m.done = true;
   }
   moveCirc(o, dx, dy) {      // 반지름 o.r짜리 소환물 이동(벽에 막힘)
@@ -456,7 +462,7 @@ class Game {
     for (let i = 0; i < n; i++) { o.x = clamp(o.x + sx, o.r, W - o.r); o.y = clamp(o.y + sy, o.r, H - o.r); for (const w of WALLS) resolveCircleRect(o, o.r, w); o.x = clamp(o.x, o.r, W - o.r); o.y = clamp(o.y, o.r, H - o.r); }
   }
   advent(p) {      // 강림: 내 앞에 용 소환 + 넓은 범위 10 피해와 둔화. 소환 위치는 순간이동 조준과 같음
-    const A = p.ch.advent, e = this.players[1 - p.idx], m = Math.hypot(p.inp.mx, p.inp.my);
+    const A = p.ch.advent, e = this.foe(p), m = Math.hypot(p.inp.mx, p.inp.my);
     let dx, dy;
     if (typeof p.atkAng === 'number') { dx = Math.cos(p.atkAng); dy = Math.sin(p.atkAng); }
     else if (m > 0.2) { dx = p.inp.mx / m; dy = p.inp.my / m; }
@@ -467,7 +473,7 @@ class Game {
     o.x = clamp(o.x, D.r, W - D.r); o.y = clamp(o.y, D.r, H - D.r);
     this.minions.push({ id: ++this.mid, kind: 'dragon', owner: p.idx, x: o.x, y: o.y, vx: 0, vy: 0, hp: D.hp, maxHp: D.hp, r: D.r, speed: D.speed, guard: 0, slot: 0, aim: Math.atan2(e.y - o.y, e.x - o.x), fire: 0, fireT: 0.15, nv: null, nvT: 0 });
     this.fx.push({ k: 'ring', x: o.x, y: o.y, r: A.burst.r, life: 0.5, max: 0.5, col: '#ff7a30' });
-    if (e.alive && Math.hypot(e.x - o.x, e.y - o.y) <= A.burst.r + R) this.dealDamage(p, e, A.burst.dmg, { slowT: A.burst.slowT, slowMul: A.burst.slowMul });
+    for (const q of this.foes(p)) if (q.alive && Math.hypot(q.x - o.x, q.y - o.y) <= A.burst.r + R) this.dealDamage(p, q, A.burst.dmg, { slowT: A.burst.slowT, slowMul: A.burst.slowMul });
     p.hits = 0; p.adv = false; p.atkBuf = 0;
     this.ev.push({ k: 'text', x: p.x, y: p.y - 40, txt: '강림!', col: '#ffd24a' });
   }
@@ -476,7 +482,7 @@ class Game {
     for (const m of this.minions) {
       if (m.hp <= 0 && m.kind === 'orb' && !m.done) this.orbBurst(m);
       if (m.hp <= 0) { if (m.kind === 'dragon') this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 40, life: 0.3, max: 0.3, col: '#ff7a30' }); continue; }
-      const own = this.players[m.owner], e = this.players[1 - m.owner];
+      const own = this.players[m.owner], e = this.nearFoe(own.team, m.x, m.y);
       if (!own.alive || !e.alive) { keep.push(m); m.vx = m.vy = 0; continue; }
       let tx, ty, sp = m.speed;
       if (m.guard > 0) { m.guard -= dt; tx = own.x + Math.cos(m.slot) * 46; ty = own.y + Math.sin(m.slot) * 46; sp = Math.max(sp, 260); }
@@ -491,14 +497,14 @@ class Game {
       m.aim = Math.atan2(e.y - m.y, e.x - m.x);
       if (m.kind === 'orb') {
         m.life -= dt;
-        if (m.life <= 0 || Math.hypot(e.x - m.x, e.y - m.y) <= m.r + R) { this.orbBurst(m); continue; }
+        if (m.life <= 0 || this.foes(own).some(f => f.alive && Math.hypot(f.x - m.x, f.y - m.y) <= m.r + R)) { this.orbBurst(m); continue; }
       } else {
         const D = CHARS.summoner.advent.dragon, de = Math.hypot(e.x - m.x, e.y - m.y);
         m.fireT -= dt;
         m.fire = 1;      // 용은 항상 상대 쪽으로 불을 뿜음(피해는 범위 안일 때만)
         if (m.fireT <= 0) {
           m.fireT = D.every;
-          if (de <= D.range + R && Math.abs(normAng(Math.atan2(e.y - m.y, e.x - m.x) - m.aim)) <= D.arc / 2 + 0.2) this.dealDamage({ x: m.x, y: m.y, idx: own.idx }, e, D.dmg, null);
+          for (const f of this.foes(own)) if (f.alive && Math.hypot(f.x - m.x, f.y - m.y) <= D.range + R && Math.abs(normAng(Math.atan2(f.y - m.y, f.x - m.x) - m.aim)) <= D.arc / 2 + 0.2) this.dealDamage({ x: m.x, y: m.y, idx: own.idx }, f, D.dmg, null);
           this.hitMinions(own.idx, q => q.kind === 'orb' && Math.hypot(q.x - m.x, q.y - m.y) <= D.range + q.r && Math.abs(normAng(Math.atan2(q.y - m.y, q.x - m.x) - m.aim)) <= D.arc / 2, D.dmg);
         }
       }
@@ -517,7 +523,7 @@ class Game {
     if (p.stl > 0) this.endStealth(p);      // 공격하면 은신이 풀림
     const emp = p.emp && p.ch.empAtk; p.emp = false;
     if (emp && a.lunge) {      // 강화 평타: 상대 쪽으로 짧게 파고들며 벤다 (몸이 겹치지 않는 거리까지만)
-      const e = this.players[1 - p.idx], dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1, mv = Math.min(a.lunge, d - (2 * R + 2));
+      const e = this.foe(p), dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1, mv = Math.min(a.lunge, d - (2 * R + 2));
       if (mv > 0) { stepMove(p, dx / d * mv, dy / d * mv); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 26, life: 0.18, max: 0.18, col: p.ch.color }); }
     }
     if (a.type === 'melee') this.coneHit(p, a.range, a.arc, dmg, null);
@@ -526,7 +532,7 @@ class Game {
   }
 
   stepPlayer(p, dt) {
-    const e = this.players[1 - p.idx];
+    const e = this.foe(p);
     p.atkCd -= dt; p.dashCd -= dt; p.inv -= dt;
     p.adv = !!(p.ch.advent && p.hits >= p.ch.advent.hits && !this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0));      // 강림 가능: 게이지가 차고 내 용이 없을 때
     if (p.ch.dashN && p.dashN === 0 && p.dashCd <= 0) p.dashN = p.ch.dashN;      // 대시를 모두 쓴 뒤 쿨타임이 끝나면 다시 충전
@@ -542,7 +548,7 @@ class Game {
       if (p.cnt.t <= 0) {      // 막기가 끝남: 삼각형 안의 적에게 피해 (막았으면 12, 못 막았으면 6)
         const c = p.cnt; p.cnt = null;
         this.fx.push({ k: 'tri', x: p.x, y: p.y, a: c.a, len: c.len, w: c.w, life: 0.2, max: 0.2, col: c.blocked ? '#ffd24a' : c.col });
-        if (p.alive && e.alive && inTri(c, p, e.x, e.y, R)) this.dealDamage(p, e, c.blocked ? c.hit : c.miss, null);
+        if (p.alive) for (const q of this.foes(p)) if (q.alive && inTri(c, p, q.x, q.y, R)) this.dealDamage(p, q, c.blocked ? c.hit : c.miss, null);
         if (p.alive) this.hitMinions(p.idx, m => inTri(c, p, m.x, m.y, m.r), c.blocked ? c.hit : c.miss);
       }
     }
@@ -589,10 +595,13 @@ class Game {
     stepMove(p, vx * dt, vy * dt);
 
     const dist = Math.hypot(e.x - p.x, e.y - p.y);
-    if (p.charge && !p.charge.hit && dist < p.charge.w / 2 + R) {      // 경로상 적 12 피해      // 지나가며 부딪힌 적에게 1회 피해 (돌진은 계속)
-      const c = p.charge; c.hit = true;
-      this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 45, life: 0.25, max: 0.25, col: '#ffffff' });
-      this.dealDamage(p, e, c.dmg, c);
+    if (p.charge) {      // 경로상 적 피해: 지나가며 부딪힌 적에게 한 사람당 1회 (돌진은 계속)
+      const c = p.charge; c.hits = c.hits || new Set();
+      for (const q of this.foes(p)) if (q.alive && !c.hits.has(q.idx) && Math.hypot(q.x - p.x, q.y - p.y) < c.w / 2 + R) {
+        c.hit = true; c.hits.add(q.idx);
+        this.fx.push({ k: 'ring', x: q.x, y: q.y, r: 45, life: 0.25, max: 0.25, col: '#ffffff' });
+        this.dealDamage(p, q, c.dmg, c);
+      }
     }
     // 기본공격: 버튼을 톡 누르면 1회(사거리 상관없이), 꾹 누르면 사거리 안에서 자동 반복
     if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0 && !p.cnt && p.atkCd <= 0) {
@@ -604,7 +613,7 @@ class Game {
 
   ai(p, dt) {
     p.atkHold = true;
-    const e = this.players[1 - p.idx], d = this.diff, inp = p.inp;
+    const e = this.foe(p), d = this.diff, inp = p.inp;
     p.think -= dt; p.strafeT -= dt; p.unstick -= dt; p.stuckT += dt;
     if (p.stuckT >= 0.6) {
       const moved = Math.hypot(p.x - p.lx, p.y - p.ly); p.lx = p.x; p.ly = p.y; p.stuckT = 0;
@@ -698,14 +707,14 @@ class Game {
   }
   stepFight(dt) {
     const P = this.players;
-    if (!this.remote) this.ai(P[1], dt);
+    if (!this.remote && !this.quad) this.ai(P[1], dt);
     if (this.auto0) this.ai(P[0], dt);
     this.stepZones(dt); this.stepMapFx(dt);
     this.stepPWalls(dt);
     for (const p of P) this.stepPlayer(p, dt);
     this.stepMinions(dt); this.stepBullets(dt);
     for (const p of P) if (p.hp <= 0) p.alive = false;
-    const a0 = P[0].alive, a1 = P[1].alive;
+    const a0 = P.some(p => p.team === 0 && p.alive), a1 = P.some(p => p.team === 1 && p.alive);      // 한 팀이 모두 쓰러지면 라운드 종료
     if (!a0 || !a1) {
       let w = -1; if (a0 && !a1) w = 0; else if (a1 && !a0) w = 1;
       if (w >= 0) this.score[w]++;
@@ -724,11 +733,11 @@ class Game {
   stepBullets(dt) {
     for (const b of this.bullets) {
       b.life -= dt; let dead = false, boom = false;
-      const t = this.players[1 - b.owner];
+      const ownP = this.players[b.owner], FO = this.foes(ownP);
       let tg = null, td = 1e9;      // 유도: 가장 가까운 적(상대 본체 또는 소환물)을 향함
       if (b.hom) {
-        if (t.alive && !(t.stl > 0)) { tg = t; td = Math.hypot(t.x - b.x, t.y - b.y); }
-        for (const m of this.minions) if (m.owner !== b.owner && m.hp > 0) { const dd = Math.hypot(m.x - b.x, m.y - b.y); if (dd < td) { td = dd; tg = m; } }
+        for (const t of FO) if (t.alive && !(t.stl > 0)) { const dd = Math.hypot(t.x - b.x, t.y - b.y); if (dd < td) { td = dd; tg = t; } }
+        for (const m of this.minions) if (this.players[m.owner].team !== ownP.team && m.hp > 0) { const dd = Math.hypot(m.x - b.x, m.y - b.y); if (dd < td) { td = dd; tg = m; } }
       }
       if (tg) {      // 서서히 방향을 틂(벽은 못 돌아감)
         const sp0 = Math.hypot(b.vx, b.vy) || 1, cur = Math.atan2(b.vy, b.vx), da = normAng(Math.atan2(tg.y - b.y, tg.x - b.x) - cur), na = cur + clamp(da, -b.hom * dt, b.hom * dt);
@@ -737,30 +746,33 @@ class Game {
       b.x += b.vx * dt; b.y += b.vy * dt;
       if (b.life <= 0) { dead = true; boom = b.aoe > 0; }
       else if (b.x < b.r || b.x > W - b.r || b.y < b.r || b.y > H - b.r) { dead = true; boom = b.aoe > 0; }
-      if (!dead && t.cnt && inTri(t.cnt, t, b.x, b.y, b.r)) {      // 반격: 삼각형 안으로 들어온 투사체를 막음
-        dead = true; this.blockedBy(t);
-      }
-      if (!dead && t.guard) {      // 가로베기 같은 막기: 부채꼴 안으로 들어온 투사체는 사라짐
-        const gx = b.x - t.x, gy = b.y - t.y;
-        if (Math.hypot(gx, gy) <= t.guard.r + b.r && Math.abs(normAng(Math.atan2(gy, gx) - t.guard.a)) <= t.guard.arc / 2) {
-          dead = true; this.fx.push({ k: 'ring', x: b.x, y: b.y, r: 20, life: 0.2, max: 0.2, col: '#ffffff' });
+      for (const t of FO) {
+        if (!dead && t.cnt && inTri(t.cnt, t, b.x, b.y, b.r)) {      // 반격: 삼각형 안으로 들어온 투사체를 막음
+          dead = true; this.blockedBy(t);
+        }
+        if (!dead && t.guard) {      // 가로베기 같은 막기: 부채꼴 안으로 들어온 투사체는 사라짐
+          const gx = b.x - t.x, gy = b.y - t.y;
+          if (Math.hypot(gx, gy) <= t.guard.r + b.r && Math.abs(normAng(Math.atan2(gy, gx) - t.guard.a)) <= t.guard.arc / 2) {
+            dead = true; this.fx.push({ k: 'ring', x: b.x, y: b.y, r: 20, life: 0.2, max: 0.2, col: '#ffffff' });
+          }
         }
       }
       if (!dead && !b.pierce) for (const w of WALLS) { if (b.pass && w.own === b.owner) continue; if (resolveCircleRect(b, b.r, w)) { dead = true; boom = b.aoe > 0; break; } }
-      if (!dead) {
-        if (t.alive && t.dashT <= 0 && t.inv <= 0 && !(b.pierce && b.hit) && !(t.stl > 0 && b.basic)) {      // 은신 중엔 기본공격 투사체에 맞지 않음
+      if (!dead) for (const t of FO) {
+        if (dead) break;
+        if (t.alive && t.dashT <= 0 && t.inv <= 0 && !(b.pierce && b.hs && b.hs.has(t.idx)) && !(t.stl > 0 && b.basic)) {      // 은신 중엔 기본공격 투사체에 맞지 않음
           const dx = t.x - b.x, dy = t.y - b.y, rr = R + b.r;
           if (dx * dx + dy * dy < rr * rr) {
-            const ok = this.dealDamage(this.players[b.owner], t, b.dmg, b); b.hit = true;      // 직격 피해
-            if (ok && b.hom) { const o = this.players[b.owner]; if (o.ch.advent && !o.adv) o.hits = Math.min(o.ch.advent.hits, o.hits + 1); }      // 소환사 평타 적중 게이지
-            if (ok && b.tp) this.tpBehind(this.players[b.owner], t, b);      // 단검투척: 맞힌 적의 바로 뒤로 순간이동
+            const ok = this.dealDamage(ownP, t, b.dmg, b); b.hit = true; (b.hs || (b.hs = new Set())).add(t.idx);      // 직격 피해 (관통탄은 한 사람당 1번)
+            if (ok && b.hom) { const o = ownP; if (o.ch.advent && !o.adv) o.hits = Math.min(o.ch.advent.hits, o.hits + 1); }      // 소환사 평타 적중 게이지
+            if (ok && b.tp) this.tpBehind(ownP, t, b);      // 단검투척: 맞힌 적의 바로 뒤로 순간이동
             if (b.aoe > 0) { dead = true; this.explode(b, true); }               // 폭발은 모양만, 추가 피해 없음
             else if (!b.pierce) dead = true;
           }
         }
       }
       if (!dead) for (const m of this.minions) {      // 상대 소환물(용·구슬)도 맞을 수 있음
-        if (m.owner === b.owner || m.hp <= 0 || (b.pierce && b.hm && b.hm.has(m.id))) continue;
+        if (this.players[m.owner].team === ownP.team || m.hp <= 0 || (b.pierce && b.hm && b.hm.has(m.id))) continue;
         const dx = m.x - b.x, dy = m.y - b.y, rr = m.r + b.r;
         if (dx * dx + dy * dy < rr * rr) {
           this.hurtMinion(m, b.dmg);
@@ -776,4 +788,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 51;
+export const BUILD = 52;
