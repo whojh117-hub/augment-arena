@@ -15,7 +15,7 @@ export const mirrorSnap = s => {
   const mp = d => { const o = d.slice(); o[0] = r1(W - d[0]); o[2] = r1(-d[2]); o[4] = r2(Math.PI - d[4]); if (d[16]) o[16] = [r2(-d[16][0]), d[16][1]]; return o; };
   const flip = i => (i == null || i < 0 ? i : 1 - i);
   return Object.assign({}, s, {
-    mm: 1, mn: (s.mn || []).map(m => { const o = m.slice(); o[1] = r1(W - m[1]); o[3] = r1(-m[3]); o[7] = 1 - m[7]; o[8] = r2(Math.PI - m[8]); return o; }), pw: (s.pw || []).map(w => [r1(W - w[0] - w[2]), w[1], w[2], w[3], 1 - w[4], w[5], w[6]]), sc: [s.sc[1], s.sc[0]], rs: flip(s.rs), mw: flip(s.mw), ch: [s.ch[1], s.ch[0]], p: [mp(s.p[1]), mp(s.p[0])],
+    mm: 1, mn: (s.mn || []).map(m => { const o = m.slice(); o[1] = r1(W - m[1]); o[3] = r1(-m[3]); o[7] = 1 - m[7]; o[8] = r2(Math.PI - m[8]); return o; }), pw: (s.pw || []).map(w => [r1(W - w[0]), w[1], Math.round((Math.PI - w[2]) * 1000) / 1000, w[3], w[4], 1 - w[5], w[6], w[7]]), sc: [s.sc[1], s.sc[0]], rs: flip(s.rs), mw: flip(s.mw), ch: [s.ch[1], s.ch[0]], p: [mp(s.p[1]), mp(s.p[0])],
     b: s.b.map(b => [b[0], r1(W - b[1]), b[2], r1(-b[3]), b[4], b[5], 1 - b[6], b[7], b[8]]),
     f: s.f.map(f => { const o = Object.assign({}, f, { x: r1(W - f.x) }); if (f.a != null) o.a = r2(Math.PI - f.a); if (f.f != null) o.f = flip(f.f); return o; }),
     e: s.e.map(e => (e[1] === 'h' ? [e[0], 'h', r1(W - e[2]), e[3], e[4], 1 - e[5]] : [e[0], 't', r1(W - e[2]), e[3], e[4], e[5]])),
@@ -76,7 +76,7 @@ class Session {
     const bl = g.bullets.slice(0, 18).map(b => [b._i || (b._i = ++this.bid), r1(b.x), r1(b.y), r1(b.vx), r1(b.vy), b.r, b.owner, b.col || 0, b.pierce ? 1 : 0]);
     const fl = g.fx.slice(0, 10).map(f => { if (!f._i) f._i = ++this.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; if (f.fist) o.fi = 1; return o; });
     const mn = g.minions.slice(0, 10).map(m => [m.id, r1(m.x), r1(m.y), r1(m.vx), r1(m.vy), r1(m.hp), m.kind === 'orb' ? 1 : 0, m.owner, r2(m.aim), m.fire ? 1 : 0, m.maxHp, m.r, m.guard > 0 ? 1 : 0]);
-    const pw = g.pw.map(w => [r1(w.x), r1(w.y), w.w, w.h, w.own, r2(w.t), w.max]);
+    const pw = g.pw.map(w => [r1(w.cx), r1(w.cy), Math.round(w.a * 1000) / 1000, w.fw, w.fh, w.own, r2(w.t), w.max]);
     const s = { n: ++this.n, mn, pw, ph: g.ph, tm: r2(g.timer), ft: r2(g.fightT), rd: g.round, sc: g.score, rs: g.res ? g.res.w : null, mw: g.matchWinner, ch: [cid(P[0].ch), cid(P[1].ch)], mp: g.mapId, es: g.ess ? [g.ess.up ? 1 : 0, r2(g.ess.t)] : 0, a: 0, p: pl, b: bl, f: fl, e: this.evBuf.slice(-10).map(x => x.a) };
     const sB = Object.assign({}, s, { a: this.ackQ[1] }), sA = mirrorSnap(Object.assign({}, s, { a: this.ackQ[0] }));
     const go = () => {      // 흐름 제어: 상대가 받았다고 알려온 번호보다 너무 앞서 있으면(회선이 느려 쌓이는 중) 드물게만 보내 지연이 수 초로 불어나는 걸 막음

@@ -73,14 +73,14 @@ CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: 
     { name: '반격', icon: '🤺', desc: '0.5초간 삼각형 범위로 오는 공격을 막고(제자리), 끝나면 범위 안의 적에게 피해: 막았으면 20 / 못 막았으면 10', cd: 10, ai: { use: 'block', maxD: 130 }, fx: [{ t: 'counter', len: 140, w: 70, block: 0.5, hit: 20, miss: 10, col: '#ff6b6b' }] },
     { name: '은신', icon: '🫥', desc: '3.5초간 은신: 이동속도 1.2배, 상대에게 보이지 않고 기본공격 투사체에 맞지 않음. 공격·스킬을 쓰면 풀림(피해를 받아도 유지). 쿨타임 9초는 은신이 끝난 뒤부터', cd: 9, ai: { use: 'gapclose', minD: 220, maxD: 9999 }, fx: [{ t: 'stealth', dur: 3.5, speed: STL_MUL }] },
   ] };
-CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🐲', atkIcon: '🪄', color: '#ffd24a', role: '원거리 · 소환', hp: 100, speed: 215, keep: 240,
+CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '🪄', color: '#ffd24a', role: '원거리 · 소환', hp: 100, speed: 215, keep: 240,
   passive: '기본 공격을 5번 적중시키면 다음 기본 공격이 \'강림\'(용 소환)으로 바뀜. 용이 살아 있으면 강림을 쓸 수 없음',
   advent: { hits: 5, dist: 118, burst: { r: 110, dmg: 10, slowT: 1, slowMul: 0.5 }, dragon: { hp: 50, speed: 90, r: 26, range: 110, arc: 1.9, dmg: 5, every: 0.3 } },
   atk: { type: 'ranged', dmg: 10, cd: 1.5, range: 210, speed: 300, r: 9, hom: 4, life: 0.95, pass: true, rangeCircle: true },
   skills: [
-    { name: '추적 구슬', icon: '🔮', desc: '내 자리에 체력 10의 구슬 2개 소환. 아주 빠르게 상대를 쫓아가 닿거나 죽으면 반지름 1칸 폭발(각 10 피해)', cd: 10, ai: { use: 'attack', maxD: 420 }, fx: [{ t: 'orbs', n: 2, hp: 10, speed: 330, r: 12, burst: 70, dmg: 10 }] },
+    { name: '추적 구슬', icon: '🔮', desc: '내 자리에 체력 10의 구슬 2개 소환. 빠르게(280) 상대를 쫓아가 닿거나 죽으면 반지름 1칸 폭발(각 10 피해)', cd: 10, ai: { use: 'attack', maxD: 420 }, fx: [{ t: 'orbs', n: 2, hp: 10, speed: 280, r: 14, burst: 70, dmg: 10 }] },
     { name: '벽 소환', icon: '🧱', desc: '드래그한 방향 앞(70)에 1×2칸 벽을 5초간 설치(탭하면 상대 쪽). 다른 벽 위에는 설치 불가, 내 기본 공격은 통과. 쿨타임 10초는 벽이 사라진 뒤부터', cd: 10, ai: { use: 'wall', minD: 110, maxD: 330 }, fx: [{ t: 'pwall', w: 70, h: 140, dur: 5, dist: 70 }] },
-    { name: '구슬·용 부르기', icon: '📯', desc: '내 소환물(용·구슬)을 모두 내 곁으로 불러 1.5초간 지키게 함. 소환물이 없으면 쓸 수 없음', cd: 12, ai: { use: 'recall', maxD: 150 }, fx: [{ t: 'recall', guard: 1.5 }] },
+    { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움. 내 용이 살아 있으면 용과 위치를 맞바꿈(용이 없고 게이지가 가득이면 쓸 수 없음)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
   ] };
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
@@ -94,7 +94,7 @@ const DIFFS = {
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 function normAng(a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
-function resolveCircleRect(o, r, w) {
+function resolveRect(o, r, w) {
   const cx = clamp(o.x, w.x, w.x + w.w), cy = clamp(o.y, w.y, w.y + w.h);
   let dx = o.x - cx, dy = o.y - cy;
   const d2 = dx * dx + dy * dy;
@@ -102,6 +102,36 @@ function resolveCircleRect(o, r, w) {
   if (d2 > 1e-6) { const d = Math.sqrt(d2); dx /= d; dy /= d; o.x = cx + dx * r; o.y = cy + dy * r; return true; }
   const l = o.x - w.x, rr = w.x + w.w - o.x, t = o.y - w.y, b = w.y + w.h - o.y, m = Math.min(l, rr, t, b);
   if (m === l) o.x = w.x - r; else if (m === rr) o.x = w.x + w.w + r; else if (m === t) o.y = w.y - r; else o.y = w.y + w.h + r;
+  return true;
+}
+// 회전 벽(소환사): 벽 중심 기준 좌표로 돌려서 일반 사각형처럼 처리
+function resolveCircleRect(o, r, w) {
+  if (w.ca === undefined) return resolveRect(o, r, w);
+  const dx0 = o.x - w.cx, dy0 = o.y - w.cy, t = { x: dx0 * w.ca + dy0 * w.sa, y: -dx0 * w.sa + dy0 * w.ca };
+  if (!resolveRect(t, r, { x: -w.hw, y: -w.hh, w: 2 * w.hw, h: 2 * w.hh })) return false;
+  o.x = w.cx + t.x * w.ca - t.y * w.sa; o.y = w.cy + t.x * w.sa + t.y * w.ca; return true;
+}
+function wallDist(w, x, y) {      // 점에서 벽까지 거리(안이면 0)
+  if (w.ca === undefined) { const cx = clamp(x, w.x, w.x + w.w), cy = clamp(y, w.y, w.y + w.h); return Math.hypot(x - cx, y - cy); }
+  const dx0 = x - w.cx, dy0 = y - w.cy, lx = dx0 * w.ca + dy0 * w.sa, ly = -dx0 * w.sa + dy0 * w.ca;
+  return Math.hypot(lx - clamp(lx, -w.hw, w.hw), ly - clamp(ly, -w.hh, w.hh));
+}
+function makeWall(cx, cy, a, fw, fh) {      // 중심 (cx,cy), 방향 a, fw: a 방향 두께, fh: 수직 방향 길이
+  const ca = Math.cos(a), sa = Math.sin(a), hw = fw / 2, hh = fh / 2, ex = Math.abs(ca) * hw + Math.abs(sa) * hh, ey = Math.abs(sa) * hw + Math.abs(ca) * hh;
+  return { cx, cy, a, ca, sa, hw, hh, fw, fh, x: cx - ex, y: cy - ey, w: 2 * ex, h: 2 * ey };
+}
+function wallCorners(w) {
+  if (w.ca === undefined) return [[w.x, w.y], [w.x + w.w, w.y], [w.x + w.w, w.y + w.h], [w.x, w.y + w.h]];
+  return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => { const lx = sx * w.hw, ly = sy * w.hh; return [w.cx + lx * w.ca - ly * w.sa, w.cy + lx * w.sa + ly * w.ca]; });
+}
+function wallsOverlap(A, B) {      // 분리축 정리
+  const pa = wallCorners(A), pb = wallCorners(B);
+  for (const P of [pa, pb]) for (let i = 0; i < 2; i++) {
+    const nx = -(P[i + 1][1] - P[i][1]), ny = P[i + 1][0] - P[i][0]; let a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9;
+    for (const q of pa) { const d = q[0] * nx + q[1] * ny; if (d < a0) a0 = d; if (d > a1) a1 = d; }
+    for (const q of pb) { const d = q[0] * nx + q[1] * ny; if (d < b0) b0 = d; if (d > b1) b1 = d; }
+    if (a1 <= b0 + 0.01 || b1 <= a0 + 0.01) return false;
+  }
   return true;
 }
 // 벽을 뚫고 지나가지 않도록 잘게 나눠서 이동 (프레임이 끊겨 한 번에 크게 움직여도 벽에서 멈춤)
@@ -201,7 +231,7 @@ class Game {
     const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.ceil(d / 8));
     for (let i = 0; i <= n; i++) {
       const x = x1 + (x2 - x1) * i / n, y = y1 + (y2 - y1) * i / n;
-      for (const w of WALLS) { const cx = clamp(x, w.x, w.x + w.w), cy = clamp(y, w.y, w.y + w.h); if (Math.hypot(x - cx, y - cy) < r) return false; }
+      for (const w of WALLS) if (wallDist(w, x, y) < r) return false;
     }
     return true;
   }
@@ -210,7 +240,7 @@ class Game {
     if (this.clearR(p.x, p.y, tx, ty, rr0)) return [dx / dd, dy / dd];
     if (this._gw !== this.walls) {
       this._gw = this.walls; const g = new Uint8Array(C * Rw);
-      for (let j = 0; j < Rw; j++) for (let i = 0; i < C; i++) { const x = i * S + S / 2, y = j * S + S / 2; let b = x < R || x > W - R || y < R || y > H - R; if (!b) for (const w of this.walls) { const cx = clamp(x, w.x, w.x + w.w), cy = clamp(y, w.y, w.y + w.h); if (Math.hypot(x - cx, y - cy) < rr0) { b = true; break; } } g[j * C + i] = b ? 1 : 0; }
+      for (let j = 0; j < Rw; j++) for (let i = 0; i < C; i++) { const x = i * S + S / 2, y = j * S + S / 2; let b = x < R || x > W - R || y < R || y > H - R; if (!b) for (const w of this.walls) if (wallDist(w, x, y) < rr0) { b = true; break; } g[j * C + i] = b ? 1 : 0; }
       this._g = g;
     }
     const g = this._g, si = clamp(Math.floor(p.x / S), 0, C - 1), sj = clamp(Math.floor(p.y / S), 0, Rw - 1), prev = new Int32Array(C * Rw).fill(-2), q = [sj * C + si]; prev[q[0]] = -1;
@@ -236,7 +266,7 @@ class Game {
     const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.ceil(d / 10));
     for (let i = 1; i < n; i++) {
       const x = x1 + (x2 - x1) * i / n, y = y1 + (y2 - y1) * i / n;
-      for (const w of WALLS) if (!(own != null && w.own === own) && x > w.x - 6 && x < w.x + w.w + 6 && y > w.y - 6 && y < w.y + w.h + 6) return false;
+      for (const w of WALLS) if (!(own != null && w.own === own) && wallDist(w, x, y) < 6) return false;
     }
     return true;
   }
@@ -365,16 +395,19 @@ class Game {
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 40, life: 0.3, max: 0.3, col: '#c36bff' });
       } else if (f.t === 'pwall') {      // 벽 소환: 쿨타임은 벽이 사라진 뒤부터
         const r = this.wallRect(p, f, ang);
-        if (r) { this.pw.push(Object.assign(r, { own: p.idx, t: f.dur, max: f.dur })); this.rebuildWalls(); p.skCd[i] = sk.cd + f.dur; this.fx.push({ k: 'ring', x: r.x + r.w / 2, y: r.y + r.h / 2, r: 48, life: 0.3, max: 0.3, col: '#ffd24a' }); }
-      } else if (f.t === 'recall') {      // 구슬·용 부르기: 내 소환물 전부를 내 곁으로
-        const mine = this.minions.filter(m => m.owner === p.idx && m.hp > 0);
-        mine.forEach((m, k) => {
-          this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 26, life: 0.25, max: 0.25, col: '#ffd24a' });
-          const a = k / Math.max(1, mine.length) * 6.283 + p.aim; m.slot = a; m.x = clamp(p.x + Math.cos(a) * 46, m.r, W - m.r); m.y = clamp(p.y + Math.sin(a) * 46, m.r, H - m.r);
-          for (const w of WALLS) resolveCircleRect(m, m.r, w);
-          m.guard = f.guard; m.nv = null;
-        });
-        this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 64, life: 0.35, max: 0.35, col: '#ffd24a' });
+        if (r) { this.pw.push(Object.assign(r, { own: p.idx, t: f.dur, max: f.dur })); this.rebuildWalls(); p.skCd[i] = sk.cd + f.dur; this.fx.push({ k: 'ring', x: r.cx, y: r.cy, r: 48, life: 0.3, max: 0.3, col: '#ffd24a' }); }
+      } else if (f.t === 'dpower') {      // 용의 힘: 강림 게이지 +1, 내 용이 있으면 용과 위치 교체
+        const A = p.ch.advent; p.hits = Math.min(A.hits, p.hits + 1);
+        const d = this.minions.find(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0);
+        this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 54, life: 0.4, max: 0.4, col: '#ffd24a' });
+        if (d) {
+          const px = p.x, py = p.y, dx = d.x, dy = d.y;
+          this.fx.push({ k: 'ring', x: dx, y: dy, r: 54, life: 0.4, max: 0.4, col: '#ff7a30' });
+          p.x = clamp(dx, R, W - R); p.y = clamp(dy, R, H - R); for (const w of WALLS) resolveCircleRect(p, R, w); p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
+          d.x = clamp(px, d.r, W - d.r); d.y = clamp(py, d.r, H - d.r); for (const w of WALLS) resolveCircleRect(d, d.r, w); d.x = clamp(d.x, d.r, W - d.r); d.y = clamp(d.y, d.r, H - d.r);
+          d.nv = null; d.nvT = 0; this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 30, life: 0.25, max: 0.25, col: '#ffd24a' });
+        }
+        this.ev.push({ k: 'text', x: p.x, y: p.y - 40, txt: '용의 힘 +1', col: '#ffd24a' });
       }
       else if (f.t === 'blink') {
         let dx, dy; const m = Math.hypot(p.inp.mx, p.inp.my);
@@ -393,17 +426,16 @@ class Game {
     }
   }
   // ── 소환사: 벽·소환물 ──
-  wallRect(p, f, ang, force) {      // 벽이 설 자리. 겹치거나 맵 밖이면 null(설치 불가)
-    const c = Math.cos(ang), s2 = Math.sin(ang), cx = p.x + c * f.dist, cy = p.y + s2 * f.dist, horiz = Math.abs(c) >= Math.abs(s2);
-    const w = horiz ? f.w : f.h, h = horiz ? f.h : f.w, r = { x: cx - w / 2, y: cy - h / 2, w, h };      // 긴 변이 바라보는 방향과 수직
-    let bad = r.x < 0 || r.y < 0 || r.x + r.w > W || r.y + r.h > H;
-    if (!bad) for (const q of this.walls) if (r.x < q.x + q.w && r.x + r.w > q.x && r.y < q.y + q.h && r.y + r.h > q.y) { bad = true; break; }
+  wallRect(p, f, ang, force) {      // 벽이 설 자리(자유 각도). 겹치거나 맵 밖이면 null(설치 불가)
+    const r = makeWall(p.x + Math.cos(ang) * f.dist, p.y + Math.sin(ang) * f.dist, ang, f.w, f.h);
+    let bad = wallCorners(r).some(q => q[0] < 0 || q[1] < 0 || q[0] > W || q[1] > H);
+    if (!bad) for (const q of this.walls) if (wallsOverlap(r, q)) { bad = true; break; }
     if (bad) { if (!force) return null; r.bad = true; }
     return r;
   }
   canUse(p, i, ang) {      // 쓸 수 없는 상황이면 쿨타임도 돌지 않음
     for (const f of p.ch.skills[i].fx) {
-      if (f.t === 'recall' && !this.minions.some(m => m.owner === p.idx && m.hp > 0)) return false;
+      if (f.t === 'dpower' && p.hits >= p.ch.advent.hits && !this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0)) return false;
       if (f.t === 'pwall' && !this.wallRect(p, f, typeof ang === 'number' ? ang : p.aim)) return false;
     }
     return true;
@@ -415,7 +447,7 @@ class Game {
   hitMinions(srcIdx, pred, dmg) { for (const m of this.minions) if (m.owner !== srcIdx && m.hp > 0 && pred(m)) this.hurtMinion(m, dmg); }
   orbBurst(m) {      // 구슬 폭발: 닿거나 죽을 때
     const own = this.players[m.owner], e = this.players[1 - m.owner];
-    this.fx.push({ k: 'ring', x: m.x, y: m.y, r: m.burst, life: 0.35, max: 0.35, col: '#c36bff' });
+    this.fx.push({ k: 'ring', x: m.x, y: m.y, r: m.burst, life: 0.6, max: 0.6, col: '#ffd24a' });
     if (e.alive && Math.hypot(e.x - m.x, e.y - m.y) <= m.burst + R) this.dealDamage({ x: m.x, y: m.y, idx: own.idx }, e, m.dmg, null);
     m.hp = -1; m.done = true;
   }
@@ -460,12 +492,14 @@ class Game {
       if (m.kind === 'orb') {
         if (Math.hypot(e.x - m.x, e.y - m.y) <= m.r + R) { this.orbBurst(m); continue; }
       } else {
-        const D = this.players[m.owner].ch.advent.dragon, de = Math.hypot(e.x - m.x, e.y - m.y);
+        const D = CHARS.summoner.advent.dragon, de = Math.hypot(e.x - m.x, e.y - m.y);
         m.fireT -= dt;
-        if (de <= D.range + R) {
-          m.fire = 1;
-          if (m.fireT <= 0) { m.fireT = D.every; this.dealDamage({ x: m.x, y: m.y, idx: own.idx }, e, D.dmg, null); }
-        } else m.fire = 0;
+        m.fire = 1;      // 용은 항상 상대 쪽으로 불을 뿜음(피해는 범위 안일 때만)
+        if (m.fireT <= 0) {
+          m.fireT = D.every;
+          if (de <= D.range + R && Math.abs(normAng(Math.atan2(e.y - m.y, e.x - m.x) - m.aim)) <= D.arc / 2 + 0.2) this.dealDamage({ x: m.x, y: m.y, idx: own.idx }, e, D.dmg, null);
+          this.hitMinions(own.idx, q => q.kind === 'orb' && Math.hypot(q.x - m.x, q.y - m.y) <= D.range + q.r && Math.abs(normAng(Math.atan2(q.y - m.y, q.x - m.x) - m.aim)) <= D.arc / 2, D.dmg);
+        }
       }
       keep.push(m);
     }
@@ -627,7 +661,7 @@ class Game {
       }
       else if (h.use === 'block') use = danger || dist <= h.maxD;
       else if (h.use === 'wall') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && los && Math.random() < 0.5;
-      else if (h.use === 'recall') use = this.minions.some(m => m.owner === p.idx && m.hp > 0) && (dist < (h.maxD || 150) || p.hp < p.maxHp * 0.45);
+      else if (h.use === 'power') { const dr = this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0); use = dr ? (dist < 170 && Math.random() < 0.4) : p.hits < p.ch.advent.hits; }
       else if (h.use === 'gapclose') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999);
       if (use) p.want.sk[i] = 1;
     }
@@ -690,8 +724,13 @@ class Game {
     for (const b of this.bullets) {
       b.life -= dt; let dead = false, boom = false;
       const t = this.players[1 - b.owner];
-      if (b.hom && t.alive && !(t.stl > 0)) {      // 유도: 상대 쪽으로 서서히 방향을 틂(벽은 못 돌아감)
-        const sp0 = Math.hypot(b.vx, b.vy) || 1, cur = Math.atan2(b.vy, b.vx), da = normAng(Math.atan2(t.y - b.y, t.x - b.x) - cur), na = cur + clamp(da, -b.hom * dt, b.hom * dt);
+      let tg = null, td = 1e9;      // 유도: 가장 가까운 적(상대 본체 또는 소환물)을 향함
+      if (b.hom) {
+        if (t.alive && !(t.stl > 0)) { tg = t; td = Math.hypot(t.x - b.x, t.y - b.y); }
+        for (const m of this.minions) if (m.owner !== b.owner && m.hp > 0) { const dd = Math.hypot(m.x - b.x, m.y - b.y); if (dd < td) { td = dd; tg = m; } }
+      }
+      if (tg) {      // 서서히 방향을 틂(벽은 못 돌아감)
+        const sp0 = Math.hypot(b.vx, b.vy) || 1, cur = Math.atan2(b.vy, b.vx), da = normAng(Math.atan2(tg.y - b.y, tg.x - b.x) - cur), na = cur + clamp(da, -b.hom * dt, b.hom * dt);
         b.vx = Math.cos(na) * sp0; b.vy = Math.sin(na) * sp0;
       }
       b.x += b.vx * dt; b.y += b.vy * dt;
@@ -735,5 +774,5 @@ class Game {
   }
 }
 
-export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER };
-export const BUILD = 49;
+export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
+export const BUILD = 50;
