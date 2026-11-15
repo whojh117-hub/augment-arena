@@ -78,7 +78,7 @@ CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '�
   advent: { hits: 5, dist: 118, burst: { r: 110, dmg: 10, slowT: 1, slowMul: 0.5 }, dragon: { hp: 50, speed: 90, r: 26, range: 110, arc: 1.9, dmg: 5, every: 0.3 } },
   atk: { type: 'ranged', dmg: 10, cd: 1.5, range: 210, speed: 300, r: 9, hom: 4, life: 0.95, pass: true, rangeCircle: true },
   skills: [
-    { name: '추적 구슬', icon: '🔮', desc: '내 자리에 체력 10의 구슬 2개 소환. 빠르게(280) 상대를 쫓아가 닿거나 죽으면 반지름 1칸 폭발(각 10 피해)', cd: 10, ai: { use: 'attack', maxD: 420 }, fx: [{ t: 'orbs', n: 2, hp: 10, speed: 280, r: 14, burst: 70, dmg: 10 }] },
+    { name: '추적 구슬', icon: '🔮', desc: '내 자리에 체력 10의 구슬 2개 소환. 속도 230으로 쫓다가 4초 뒤 저절로 터짐. 상대를 쫓아가 닿거나 죽으면 반지름 1칸 폭발(각 10 피해)', cd: 10, ai: { use: 'attack', maxD: 420 }, fx: [{ t: 'orbs', n: 2, hp: 10, speed: 230, r: 14, burst: 70, dmg: 10, life: 4 }] },
     { name: '벽 소환', icon: '🧱', desc: '드래그한 방향 앞(70)에 1×2칸 벽을 5초간 설치(탭하면 상대 쪽). 다른 벽 위에는 설치 불가, 내 기본 공격은 통과. 쿨타임 10초는 벽이 사라진 뒤부터', cd: 10, ai: { use: 'wall', minD: 110, maxD: 330 }, fx: [{ t: 'pwall', w: 70, h: 140, dur: 5, dist: 70 }] },
     { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움. 내 용이 살아 있으면 용과 위치를 맞바꿈(용이 없고 게이지가 가득이면 쓸 수 없음)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
   ] };
@@ -390,7 +390,7 @@ class Game {
       else if (f.t === 'orbs') {      // 추적 구슬: 내 자리에서 n개 소환
         for (let k = 0; k < f.n; k++) {
           const off = (k - (f.n - 1) / 2) * 26, nx = -Math.sin(p.aim), ny = Math.cos(p.aim);
-          this.minions.push({ id: ++this.mid, kind: 'orb', owner: p.idx, x: p.x + nx * off, y: p.y + ny * off, vx: 0, vy: 0, hp: f.hp, maxHp: f.hp, r: f.r, speed: f.speed, burst: f.burst, dmg: f.dmg, guard: 0, slot: 0, aim: p.aim, fire: 0, fireT: 0, nv: null, nvT: 0 });
+          this.minions.push({ id: ++this.mid, kind: 'orb', owner: p.idx, x: p.x + nx * off, y: p.y + ny * off, vx: 0, vy: 0, hp: f.hp, maxHp: f.hp, r: f.r, speed: f.speed, burst: f.burst, dmg: f.dmg, life: f.life, guard: 0, slot: 0, aim: p.aim, fire: 0, fireT: 0, nv: null, nvT: 0 });
         }
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 40, life: 0.3, max: 0.3, col: '#c36bff' });
       } else if (f.t === 'pwall') {      // 벽 소환: 쿨타임은 벽이 사라진 뒤부터
@@ -490,7 +490,8 @@ class Game {
       } else m.vx = m.vy = 0;
       m.aim = Math.atan2(e.y - m.y, e.x - m.x);
       if (m.kind === 'orb') {
-        if (Math.hypot(e.x - m.x, e.y - m.y) <= m.r + R) { this.orbBurst(m); continue; }
+        m.life -= dt;
+        if (m.life <= 0 || Math.hypot(e.x - m.x, e.y - m.y) <= m.r + R) { this.orbBurst(m); continue; }
       } else {
         const D = CHARS.summoner.advent.dragon, de = Math.hypot(e.x - m.x, e.y - m.y);
         m.fireT -= dt;
@@ -775,4 +776,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 50;
+export const BUILD = 51;
