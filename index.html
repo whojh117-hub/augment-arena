@@ -59,7 +59,9 @@
   .row { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
   #net { background: #0a0d13f5; }
   .netbox { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 300px; }
-  #nick { width: 190px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 15px var(--body); text-align: center; }
+  #nickBox { position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px; z-index: 3; }
+  #nickBox .tag { margin: 0; font-size: 12px; }
+  #nick { width: 130px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 15px var(--body); text-align: center; }
   #joinCode { width: 150px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 20px var(--body); text-align: center; letter-spacing: 3px; text-transform: lowercase; }
   #hostCode { font: 400 64px var(--display); letter-spacing: 8px; color: var(--me); }
   .rooms { display: flex; flex-direction: column; gap: 6px; min-width: 300px; color: var(--dim); font-size: 13px; text-align: center; }
@@ -136,7 +138,7 @@
     <div id="menu" class="panel">
       <h1 class="logo"><span class="a">증강</span> <span class="b">아레나</span></h1>
       <p class="tag">캐릭터를 고르고 대전 방식을 선택하세요</p>
-      <div class="row" style="margin:-2px 0 4px"><span class="tag">닉네임</span><input id="nick" maxlength="8" placeholder="닉네임 (최대 8글자)" autocomplete="off" spellcheck="false"></div>
+      <div id="nickBox"><span class="tag">닉네임</span><input id="nick" maxlength="8" placeholder="최대 8글자" autocomplete="off" spellcheck="false"></div>
       <div class="chars" id="chars"></div>
       <div class="info" id="info"></div>
       <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button><button class="btn ghost" id="btnCfg">🎮 조작 설정</button></div>
