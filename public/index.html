@@ -1590,9 +1590,10 @@ function drawPlayer(p, now) {
     ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = '#000b'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x0 - d, y0 - d); ctx.lineTo(x0 + d, y0 + d); ctx.moveTo(x0 + d, y0 - d); ctx.lineTo(x0 - d, y0 + d); ctx.stroke();
     ctx.strokeStyle = '#ff4a5a'; ctx.lineWidth = 5; ctx.stroke(); ctx.restore();
   }
-  if (p.idx === 0 && myNick) {      // 내 닉네임: 내 캐릭터 머리 위(체력바 위)
+  const nm = p.idx === 0 ? myNick : (p.nick || '');
+  if (nm) {      // 닉네임: 캐릭터 머리 위(체력바 위). 온라인에서는 상대·아군 것도 표시
     ctx.save(); ctx.globalAlpha = p.alive ? 1 : 0.4; ctx.font = 'bold 13px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000c';
-    const ny = p.y - R - 22 - (p.alive && p.shieldT > 0 && p.shield > 0 ? 0 : 0); ctx.strokeText(myNick, p.x, ny); ctx.fillStyle = '#fff'; ctx.fillText(myNick, p.x, ny); ctx.restore();
+    const ny = p.y - R - 22 - (p.alive && p.shieldT > 0 && p.shield > 0 ? 0 : 0); ctx.strokeText(nm, p.x, ny); ctx.fillStyle = p.idx === 0 ? '#fff' : (p.team === game.players[0].team ? '#b8ffe0' : '#ffc2c8'); ctx.fillText(nm, p.x, ny); ctx.restore();
   }
   if (p.alive) {
     const w = 56, x = p.x - w / 2, y = p.y - R - 16;
@@ -1834,7 +1835,7 @@ async function netHost() {
   if (!(await netBoot())) { netMsg('온라인을 쓸 수 없어요.', true); return; }
   netLeave(); net.role = 'host'; net.code = randCode();
   try { net.m = await net.room.join('g-' + net.code); } catch (e) { netMsg('방을 만들지 못했어요(' + (e && e.code) + '). 잠시 뒤 다시 해보세요.', true); net.role = 'none'; return; }
-  net.m.presence({ r: 'h', c: myChar, v: BUILD, rnd: selKey === 'random' ? 1 : 0 }).catch(() => {});
+  net.m.presence({ r: 'h', c: myChar, v: BUILD, nk: myNick, rnd: selKey === 'random' ? 1 : 0 }).catch(() => {});
   lobbyPresence({ o: net.code, c: myChar, rnd: selKey === 'random' ? 1 : 0 });
   $('hostChar').textContent = '내 캐릭터: ' + myLabel();
   $('netBtns').hidden = true; $('netHost').hidden = false; $('hostCode').textContent = net.code.toUpperCase();
@@ -1909,7 +1910,7 @@ async function quadOpen(code, role) {
   if (!(await netBoot())) { netMsg('온라인을 쓸 수 없어요.', true); return false; }
   netLeave(); net.role = role; net.code = code; net.quad = true;
   try { net.m = await net.room.join('q-' + code); } catch (e) { netMsg(e && e.code === 'room_full' ? '방이 가득 찼어요(4명).' : '방에 들어가지 못했어요(' + (e && e.code) + ').', true); net.role = 'none'; net.quad = false; return false; }
-  net.m.presence({ r: 'q', c: myChar, v: BUILD, rnd: selKey === 'random' ? 1 : 0 }).catch(() => {});
+  net.m.presence({ r: 'q', c: myChar, v: BUILD, nk: myNick, rnd: selKey === 'random' ? 1 : 0 }).catch(() => {});
   net.offPeers = net.m.onPeers(quadLobby, () => {}); return true;
 }
 async function netHost2() {
@@ -1927,7 +1928,7 @@ async function netJoin(code) {
   if (!(await netBoot())) { netMsg('온라인을 쓸 수 없어요.', true); return; }
   netLeave(); net.role = 'guest'; net.code = code;
   try { net.m = await net.room.join('g-' + code); } catch (e) { netMsg('방에 들어가지 못했어요(' + (e && e.code) + ').', true); net.role = 'none'; return; }
-  net.m.presence({ r: 'g', c: myChar, v: BUILD, rnd: selKey === 'random' ? 1 : 0, i: { mx: 0, my: 0, h: 0, q: [] } }).catch(() => {});
+  net.m.presence({ r: 'g', c: myChar, v: BUILD, nk: myNick, rnd: selKey === 'random' ? 1 : 0, i: { mx: 0, my: 0, h: 0, q: [] } }).catch(() => {});
   netMsg('방 ' + code.toUpperCase() + '에 들어갔어요(내 캐릭터: ' + myLabel() + '). 방장을 기다리는 중…');
   net.joinAt = performance.now(); net.offPeers = isSA() ? null : net.m.onPeers(guestPeers, () => {});
   setTimeout(() => { if (net.role === 'guest' && !net.started) netMsg('방장이 응답하지 않아요. 코드를 확인하거나 방장이 방을 만들었는지 확인하세요.', true); }, 8000);
@@ -2113,6 +2114,7 @@ function guestFrame(now, dt) {
     } else if (!vp._init || Math.hypot(tx - vp.x, ty - vp.y) > 100) { vp.x = tx; vp.y = ty; vp._init = 1; }
     else { const k = Math.min(1, dt * 18); stepMove(vp, (tx - vp.x) * k, (ty - vp.y) * k); }
     if (own && net.pd) { vp.dashT = net.pd.t; }
+    vp.nick = (s.nk && s.nk[j]) || '';
     vp.vx = -d[2]; vp.vy = d[3]; vp.aim = Math.PI - d[4]; vp.hp = d[5]; vp.maxHp = d[6]; vp.alive = !!d[7]; vp.stun = d[8]; vp.slowT = d[9]; vp.shield = d[10]; vp.shieldMax = d[11]; vp.shieldT = d[12]; vp.drT = d[13]; vp.haste = d[14]; vp.dashT = d[15];
     vp.charge = d[16] ? { dx: -d[16][0], dy: d[16][1] } : null; vp.atkCd = Math.max(0, d[17] - age); vp.dashCd = Math.max(0, d[18] - age); vp.skCd = [d[19], d[20], d[21]].map(v => Math.max(0, v - age)); vp.slowMul = d[22];
     vp.dashN = d[23] | 0; vp.stl = d[24] || 0; vp.emp = !!d[25]; vp.cnt = d[26] > 0 ? { t: d[26] } : null; vp.rage = !!d[27]; vp.hits = d[28] | 0; vp.adv = !!d[29];
