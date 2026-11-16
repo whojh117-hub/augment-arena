@@ -109,7 +109,11 @@
   @keyframes advp { from { filter: brightness(1); } to { filter: brightness(1.45); } }
   #cfgBar { position: fixed; left: 50%; top: max(8px, env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 60; width: min(94vw, 680px); display: flex; flex-direction: column; gap: 8px; align-items: center;
     background: #0a0d13ee; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; pointer-events: auto; touch-action: manipulation; }
-  #cfgBar[hidden] { display: none; }
+  #cfgBar[hidden] { display: none; } #cfgBar { transition: transform .22s ease, opacity .22s ease; }
+  #cfgBar.fold { transform: translateX(calc(-50% - 105vw)); opacity: 0; pointer-events: none; }
+  #cfgFold { position: absolute; left: 6px; top: 6px; padding: 4px 10px !important; font-size: 13px !important; }
+  #cfgTab { pointer-events: auto; position: fixed; left: max(6px, env(safe-area-inset-left, 0px)); top: 82px; z-index: 61; padding: 8px 12px; font-size: 14px; border-radius: 0 12px 12px 0; background: #0a0d13ee; color: var(--fg); border: 1px solid var(--line); touch-action: manipulation; }
+  #cfgTab[hidden] { display: none; }
   #cfgBar.play .cfgT, #cfgBar.play #cfgSizeRow, #cfgBar.play #cfgReset { display: none; } #cfgBar.play { gap: 4px; } #cfgBar.play .btn { padding: 5px 16px; font-size: 14px; }
   #cfgBar .btn.on { background: var(--accent, #4aa8ff); color: #fff; border-color: transparent; }
   .cfgT { font-size: 13px; color: var(--dim); text-align: center; } .cfgT b { color: var(--fg); }
@@ -188,12 +192,14 @@
 
 <div id="updBar" hidden>새 버전이 나왔어요 <button id="btnUpd" type="button">지금 업데이트</button></div>
 <div id="ctl" hidden>
+  <button type="button" id="cfgTab" hidden>▶ 조절창</button>
   <div id="cfgBar" hidden>
+  <button type="button" class="btn ghost" id="cfgFold">◀ 접기</button>
   <div class="cfgT">🎮 조작 설정 · <b>✏️ 편집</b>에서 버튼을 옮기고, <b>🎯 연습</b>에서 내 캐릭터로 직접 움직이며 스킬을 써 보세요 · (스킬 취소 버튼 포함) 버튼을 <b>끌어서 옮기고</b>, 눌러서 선택하면 <b>크기</b>를 바꿀 수 있어요(왼쪽 <b>이동 원</b>도 눌러서 크기 조절)</div>
   <div class="cfgR" id="cfgSizeRow"><label>선택한 버튼 크기 <input type="range" id="cfgSize" min="60" max="160" step="2" value="100"><span id="cfgSizeV">100%</span></label>
   <label>버튼 투명도 <input type="range" id="cfgOp" min="35" max="100" step="5" value="93"><span id="cfgOpV">93%</span></label></div>
   <div class="cfgR" id="cfgModeRow"><button type="button" class="btn" id="cfgModeE">✏️ 편집</button><button type="button" class="btn ghost" id="cfgModeP">🎯 연습</button>
-  <label>조준 방향 민감도 <input type="range" id="cfgAim" min="30" max="200" step="5" value="80"><span id="cfgAimV">80</span></label></div>
+  <label>조준 방향 민감도 <input type="range" id="cfgAim" min="10" max="100" step="5" value="80"><span id="cfgAimV">80</span></label></div>
   <div class="cfgR"><button type="button" class="btn ghost" id="cfgReset">처음 위치로</button><button type="button" class="btn" id="cfgDone">완료</button></div>
 </div>
 <div id="cxl" hidden data-cfgbtn="1"><b>✕</b><span>취소</span></div>
@@ -1220,9 +1226,11 @@ function cfgOpen() {
   game.ph = 'fight'; game.fightT = 0; scene = 'play'; lastPh = 'fight'; fightStartAt = -9999; floats = []; parts = [];
   cfg.open = true; setupButtons(); $('menu').hidden = true; ctl.hidden = false; $('cfgBar').hidden = false; $('end').hidden = true;
   $('cfgOp').value = ctlCfg.op; $('cfgOpV').textContent = ctlCfg.op + '%'; $('cfgAim').value = ctlCfg.aim; $('cfgAimV').textContent = ctlCfg.aim; cfgSelect(cfg.sel);
-  cfgMode('edit');
+  cfgFold(false); cfgMode('edit');
 }
-function cfgClose() { cfg.on = cfg.open = false; cfg.drag = null; resetTouch(); game = null; scene = 'menu'; $('cxl').hidden = true; $('cxl').classList.remove('cfg', 'on'); $('cfgBar').hidden = true; $('cfgBar').classList.remove('play'); ctl.hidden = true; CTL_IDS.concat('hintL').forEach(k => $(k).classList.remove('sel')); $('hintL').style.pointerEvents = ''; $('menu').hidden = false; saveCtl(); }
+function cfgClose() { $('cfgTab').hidden = true; $('cfgBar').classList.remove('fold'); cfg.on = cfg.open = false; cfg.drag = null; resetTouch(); game = null; scene = 'menu'; $('cxl').hidden = true; $('cxl').classList.remove('cfg', 'on'); $('cfgBar').hidden = true; $('cfgBar').classList.remove('play'); ctl.hidden = true; CTL_IDS.concat('hintL').forEach(k => $(k).classList.remove('sel')); $('hintL').style.pointerEvents = ''; $('menu').hidden = false; saveCtl(); }
+function cfgFold(f) { $('cfgBar').classList.toggle('fold', f); $('cfgTab').hidden = !(f && cfg.open); }
+$('cfgFold').onclick = () => cfgFold(true); $('cfgTab').onclick = () => cfgFold(false);
 $('cfgModeE').onclick = () => cfgMode('edit'); $('cfgModeP').onclick = () => cfgMode('play');
 $('cfgAim').oninput = e => { ctlCfg.aim = Number(e.target.value); $('cfgAimV').textContent = ctlCfg.aim; saveCtl(); };
 $('btnCfg').onclick = cfgOpen; $('cfgDone').onclick = cfgClose;
@@ -1231,7 +1239,7 @@ $('cfgSize').oninput = e => { if (cfg.sel === 'hintL') { ctlCfg.st = Number(e.ta
 $('cfgOp').oninput = e => { ctlCfg.op = Number(e.target.value); $('cfgOpV').textContent = ctlCfg.op + '%'; applyLayout(); saveCtl(); };
 function cfgStart(src, id, x, y, target) {
   if (isDup(src, x, y)) return true;
-  if (target && target.closest && target.closest('#cfgBar')) return false;
+  if (target && target.closest && target.closest('#cfgBar,#cfgTab')) return false;
   if (target && target.closest && target.closest('#hintL')) { cfgSelect('hintL'); return true; }
   const b = target && target.closest ? target.closest('[data-act],[data-cfgbtn]') : null; if (!b) return true;
   const r = b.getBoundingClientRect(); cfgSelect(b.id);
@@ -1321,7 +1329,7 @@ function isDup(src, x, y) {
   return false;
 }
 function inStart(src, id, x, y, target) {
-  if (cfg.open && target && target.closest && target.closest('#cfgBar')) return false;      // 조작 설정창의 슬라이더·버튼
+  if (cfg.open && target && target.closest && target.closest('#cfgBar,#cfgTab')) return false;      // 조작 설정창의 슬라이더·버튼
   if (cfg.on) return cfgStart(src, id, x, y, target);
   if (ctl.hidden) return false;
   if (isDup(src, x, y)) return true;
@@ -1355,8 +1363,8 @@ function inMove(src, id, x, y) {
   const key = src + id;
   if (stick.key === key) { stick.dx = x - stick.ox; stick.dy = y - stick.oy; stkDraw(); }
   const r = roles.get(key);
-  if (r && r.type === 'skill') {      // 조준 기준점이 손가락을 L(px)보다 멀리 못 벗어나게 따라옴: 민감도가 높을수록 L이 작아 방향이 빨리 바뀜
-    let dx = x - r.ox, dy = y - r.oy; const len = Math.hypot(dx, dy), L = 8000 / (ctlCfg.aim || 80);
+  if (r && r.type === 'skill') {      // 민감도(0~100, 기본 80): 80 초과는 기준점이 손가락을 따라와 방향이 빨리 바뀌고, 80 미만은 조준이 천천히 따라옴
+    let dx = x - r.ox, dy = y - r.oy; const len = Math.hypot(dx, dy), sv = ctlCfg.aim || 80, L = sv > 80 ? 1600 / (sv - 80) : 1e9;      // 80: 이전과 같음 / 80 초과: 기준점이 손가락을 따라와 더 민감
     if (len > L) { r.ox += dx / len * (len - L); r.oy += dy / len * (len - L); dx = x - r.ox; dy = y - r.oy; }
     r.dx = dx; r.dy = dy; r.cx = overCancel(x, y);
   }
@@ -1379,7 +1387,7 @@ function inEnd(src, id, cancel) {
   if (stick.key === key) { stick.key = null; stick.dx = stick.dy = 0; stkDraw(); }
   const r = roles.get(key);
   if (r) {
-    if (r.type === 'skill' && !cancel && !r.cx && game) { const ang = Math.hypot(r.dx, r.dy) > DRAG_MIN ? Math.atan2(r.dy, r.dx) : undefined; if (r.i === -1) game.pressAttack(ang); else pressSk(r.i, ang); }
+    if (r.type === 'skill' && !cancel && !r.cx && game) { const ang = Math.hypot(r.dx, r.dy) > DRAG_MIN ? ((ctlCfg.aim || 80) < 80 && r.sa != null ? r.sa : Math.atan2(r.dy, r.dx)) : undefined; if (r.i === -1) game.pressAttack(ang); else pressSk(r.i, ang); }
     r.btn.classList.remove('hold'); roles.delete(key);
   }
 }
@@ -1393,7 +1401,7 @@ addEventListener('pointermove', e => { inMove('p', e.pointerId, e.clientX, e.cli
 addEventListener('pointerup', e => { inEnd('p', e.pointerId, false); });
 addEventListener('pointercancel', e => { inEnd('p', e.pointerId, true); });
 // 터치 이벤트
-const onBar = e => cfg.open && !cfg.drag && e.target && e.target.closest && e.target.closest('#cfgBar');      // 조작 설정창의 슬라이더/버튼은 기본 동작 유지
+const onBar = e => cfg.open && !cfg.drag && e.target && e.target.closest && e.target.closest('#cfgBar,#cfgTab');      // 조작 설정창의 슬라이더/버튼은 기본 동작 유지
 addEventListener('touchstart', e => {
   touchMode = true; diag.t++; updateDiag();
   if (ctl.hidden || onBar(e)) return;
@@ -1828,7 +1836,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 59;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 60;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -2257,7 +2265,10 @@ function frame(now) {
   if (scene !== 'play' || !game) { ctx.save(); ctx.translate(0, OY); drawArena(); ctx.restore(); return; }
   aimPrev = null;
   let aimingAny = false, cxOn = false;
-  for (const r of roles.values()) if (r.type === 'skill') { aimingAny = true; if (r.cx) cxOn = true; else if (Math.hypot(r.dx, r.dy) > DRAG_MIN) aimPrev = { i: r.i, ang: Math.atan2(r.dy, r.dx) }; }
+  for (const r of roles.values()) if (r.type === 'skill') { aimingAny = true; if (r.cx) cxOn = true; else if (Math.hypot(r.dx, r.dy) > DRAG_MIN) {
+    const tg = Math.atan2(r.dy, r.dx), sv = ctlCfg.aim || 80;      // 민감도 80 미만이면 조준 방향이 손가락을 천천히 따라옴
+    if (r.sa == null || sv >= 80) r.sa = tg; else r.sa += normAng(tg - r.sa) * (1 - Math.exp(-dt / (((80 - sv) / 80) * 0.25)));
+    aimPrev = { i: r.i, ang: r.sa }; } }
   if (!cfg.on) { const cxl = $('cxl'); cxl.hidden = !aimingAny; cxl.classList.toggle('on', cxOn); }
   acc += dt;
   if (net.role !== 'guest' && net.pingT) { net.pingT = 0; pingTag(false); }
