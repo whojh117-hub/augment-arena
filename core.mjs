@@ -38,7 +38,7 @@ class Session {
     this.inp[k] = { mx: k === 0 ? -mx : mx, my, h: i.h ? 1 : 0 };      // 0번 자리 사람은 화면이 반전돼 있으므로 좌우를 되돌림
     for (const q of Array.isArray(i.q) ? i.q.slice(-8) : []) {
       if (!Array.isArray(q) || !(q[0] > this.lastQ[k])) continue; this.lastQ[k] = q[0];
-      if (q[1] === 'd') g.pressDashP(k); else if (q[1] === 'a') g.pressAttackP(k, typeof q[2] === 'number' ? (k === 0 ? Math.PI - q[2] : q[2]) : undefined);
+      if (q[1] === 'd') g.pressDashP(k, typeof q[2] === 'number' ? (k === 0 ? -q[2] : q[2]) : 0, +q[3] || 0); else if (q[1] === 'a') g.pressAttackP(k, typeof q[2] === 'number' ? (k === 0 ? Math.PI - q[2] : q[2]) : undefined);
       else if (q[1] === 's') g.pressSkillP(k, q[2] | 0, typeof q[3] === 'number' ? (k === 0 ? Math.PI - q[3] : q[3]) : undefined);
     }
   }
@@ -108,7 +108,7 @@ class QuadSession {
     this.inp[k] = { mx: A ? -mx : mx, my, h: i.h ? 1 : 0 };
     for (const q of Array.isArray(i.q) ? i.q.slice(-8) : []) {
       if (!Array.isArray(q) || !(q[0] > this.lastQ[k])) continue; this.lastQ[k] = q[0];
-      if (q[1] === 'd') g.pressDashP(k); else if (q[1] === 'a') g.pressAttackP(k, typeof q[2] === 'number' ? (A ? Math.PI - q[2] : q[2]) : undefined);
+      if (q[1] === 'd') g.pressDashP(k, typeof q[2] === 'number' ? (A ? -q[2] : q[2]) : 0, +q[3] || 0); else if (q[1] === 'a') g.pressAttackP(k, typeof q[2] === 'number' ? (A ? Math.PI - q[2] : q[2]) : undefined);
       else if (q[1] === 's') g.pressSkillP(k, q[2] | 0, typeof q[3] === 'number' ? (A ? Math.PI - q[3] : q[3]) : undefined);
     }
   }

@@ -144,6 +144,12 @@ function stepMove(o, dx, dy) {
     o.x = clamp(o.x, R, W - R); o.y = clamp(o.y, R, H - R);
   }
 }
+// 두 지점 사이 직선 경로가 벽에 막히는지 (서버 위치로 맞출 때, 벽 반대편에 갇히지 않게 쓰임)
+function pathBlocked(ax, ay, bx, by) {
+  const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 6));
+  for (let i = 1; i < n; i++) { const x = ax + (bx - ax) * i / n, y = ay + (by - ay) * i / n; for (const w of WALLS) if (wallDist(w, x, y) < R - 1) return true; }
+  return false;
+}
 // 반격 삼각형: 시전자 위치가 밑변(폭 w), 조준 방향 len 앞이 꼭지점. (x,y)가 안(여유 pad 포함)에 있는지
 function inTri(c, o, x, y, pad) {
   const ca = Math.cos(c.a), sa = Math.sin(c.a), dx = x - o.x, dy = y - o.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
@@ -162,7 +168,7 @@ function chargePath(p, ang, dist) {
   }
   return { d: Math.min(tr, dist), x: o.x, y: o.y };
 }
-const freshWant = () => ({ dash: 0, sk: [0, 0, 0], angs: [null, null, null] });
+const freshWant = () => ({ dash: 0, sk: [0, 0, 0], angs: [null, null, null], dd: null });
 
 function mkPlayer(idx, charId) {
   const ch = CHARS[charId];
@@ -214,7 +220,7 @@ class Game {
   pressSkill(i, ang) { this.pressSkillP(0, i, ang); }
   pressAttack(ang) { this.pressAttackP(0, ang); }
   // 플레이어 번호를 지정하는 입력 (온라인 대전에서 1번 입력용)
-  pressDashP(k) { if (this.ph === 'fight') this.players[k].want.dash = 1; }
+  pressDashP(k, dx, dy) { if (this.ph === 'fight') { const w = this.players[k].want; w.dash = 1; const l = Math.hypot(dx, dy); w.dd = l > 0.2 ? [dx / l, dy / l] : null; } }      // dx,dy: 누른 사람 화면에서 정한 대시 방향(서버가 늦게 받아도 같은 방향으로 감)
   pressSkillP(k, i, ang) { if (this.ph === 'fight' && i >= 0 && i < 3) { const w = this.players[k].want; w.sk[i] = 1; w.angs[i] = typeof ang === 'number' ? ang : null; } }
   pressAttackP(k, ang) { if (this.ph === 'fight') { this.players[k].atkBuf = ATK_BUFFER; this.players[k].atkAng = typeof ang === 'number' ? ang : null; } }
 
@@ -572,7 +578,8 @@ class Game {
     if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0 && !p.cnt) {
       if (p.want.dash && (p.ch.dashN ? p.dashN > 0 : p.dashCd <= 0) && !isRoot(p)) {
         const m = Math.hypot(p.inp.mx, p.inp.my);
-        if (m > 0.2) { p.dx = p.inp.mx / m; p.dy = p.inp.my / m; } else { p.dx = -Math.cos(p.aim); p.dy = -Math.sin(p.aim); }
+        if (p.want.dd) { p.dx = p.want.dd[0]; p.dy = p.want.dd[1]; }
+        else if (m > 0.2) { p.dx = p.inp.mx / m; p.dy = p.inp.my / m; } else { p.dx = -Math.cos(p.aim); p.dy = -Math.sin(p.aim); }
         p.dashT = DASH.time;
         if (p.ch.dashN) { p.dashN--; if (p.dashN === 0) p.dashCd = p.ch.dashCd || DASH.cd; } else p.dashCd = DASH.cd;      // 암살자: 충전 대시를 모두 써야 쿨타임이 돎
         this.ev.push({ k: 'dash', p: p.idx });
@@ -796,4 +803,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 53;
+export const BUILD = 54;
