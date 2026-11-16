@@ -80,7 +80,10 @@
   .btn.ghost { background: var(--surface); color: var(--fg); border: 1px solid var(--line); font-weight: 700; font-size: 17px; padding: 12px 26px; }
   .note { color: var(--dim); font-size: 12px; text-align: center; line-height: 1.6; max-width: 900px; }
   .note b { color: var(--fg); }
-  #end { background: #05070bd9; }
+  #end { background: #05070bd9; } #pauseOv { background: #05070be6; z-index: 70; }
+  #gameBtns { position: fixed; right: max(8px, env(safe-area-inset-right, 0px)); top: 118px; z-index: 40; display: flex; gap: 8px; pointer-events: auto; }
+  #gameBtns[hidden] { display: none; }
+  #gameBtns button { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: #0a0d13cc; color: var(--fg); font-size: 18px; touch-action: manipulation; }
   #end h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 60px; }
   #endSc { font-size: 22px; color: var(--dim); }
   #portraitHint { display: none; color: var(--gold); font-size: 13px; }
@@ -182,6 +185,10 @@
       <div class="row"><button class="btn ghost" id="btnReload" hidden>새로고침</button><button class="btn ghost" id="btnNetBack">뒤로</button></div>
     </div>
 
+    <div id="pauseOv" class="panel" hidden>
+      <h2>⏸ 일시정지</h2>
+      <div style="display:flex;gap:12px"><button class="btn" id="btnResume">계속하기</button><button class="btn ghost" id="btnQuit2">나가기</button></div>
+    </div>
     <div id="end" class="panel" hidden>
       <h2 id="endTitle"></h2>
       <div id="endSc"></div>
@@ -191,6 +198,7 @@
 </div>
 
 <div id="updBar" hidden>새 버전이 나왔어요 <button id="btnUpd" type="button">지금 업데이트</button></div>
+<div id="gameBtns" hidden><button type="button" id="btnPause" aria-label="일시정지">⏸</button><button type="button" id="btnQuit" aria-label="나가기">🚪</button></div>
 <div id="ctl" hidden>
   <button type="button" id="cfgTab" hidden>▶ 조절창</button>
   <div id="cfgBar" hidden>
@@ -306,7 +314,7 @@ const CHARS = {
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
     atk: { type: 'melee', dmg: 10, cd: 0.6, range: 72, arc: 2.2 },
     skills: [
-      { name: '강타', icon: '🗡️', desc: '직선 범위가 보이고 0.3초 뒤 25 피해', cd: 5, ai: { use: 'attack', maxD: 195 }, fx: [{ t: 'line', len: 215, w: 68, dmg: 25, delay: 0.3, col: '#ff8a4a' }] },
+      { name: '강타', icon: '🗡️', desc: '직선 범위가 보이고 0.2초 뒤 25 피해', cd: 5, ai: { use: 'attack', maxD: 195 }, fx: [{ t: 'line', len: 215, w: 68, dmg: 25, delay: 0.2, col: '#ff8a4a' }] },
       { name: '전사의 함성', icon: '📣', desc: '3초간 받는 피해 30% 감소, 최대 체력 +10(그 라운드 동안)', cd: 15, ai: { use: 'attack', maxD: 200 }, fx: [{ t: 'buff', dr: 0.3, dur: 3, maxHp: 10, col: '#ffd24a' }] },
       { name: '가로베기', icon: '🌙', desc: '0.6초간 120° 부채꼴로 투사체를 막고, 끝나면 범위 안의 적에게 15 피해', cd: 10, ai: { use: 'block', maxD: 125 }, fx: [{ t: 'cone', range: 128, arc: 2.094, dmg: 15, guard: 0.6, col: '#ff8a4a' }] },
     ] },
@@ -1295,7 +1303,11 @@ function endBtns() {      // 랜덤으로 골랐다면: '같은 캐릭터로 다
   const rnd = selKey === 'random' && (net.role === 'none' || isSA());
   $('btnAgain').textContent = rnd ? '같은 캐릭터로 다시' : '다시하기'; $('btnAgainR').hidden = !rnd;
 }
-$('btnMenu').onclick = () => { if (net.role !== 'none') netLeave(); setEndMode(); scene = 'menu'; game = null; $('end').hidden = true; $('menu').hidden = false; ctl.hidden = true; resetTouch(); };
+let paused = false;
+function setPause(p) { paused = !!p && !!game; $('pauseOv').hidden = !paused; if (paused) resetTouch(); }
+$('btnPause').onclick = () => setPause(true); $('btnResume').onclick = () => setPause(false);
+$('btnQuit').onclick = $('btnQuit2').onclick = () => { setPause(false); $('btnMenu').onclick(); };      // 나가기: 캐릭터 선택 화면으로
+$('btnMenu').onclick = () => { paused = false; $('pauseOv').hidden = true; if (net.role !== 'none') netLeave(); setEndMode(); scene = 'menu'; game = null; $('end').hidden = true; $('menu').hidden = false; ctl.hidden = true; resetTouch(); };
 
 // 입력: 조이스틱과 화면 버튼만 사용 (키보드 조작 없음: 방 코드 입력과 충돌하지 않도록)
 // 입력: 터치/펜/마우스. 포인터 이벤트와 터치 이벤트를 둘 다 받아서(기기에 따라 한쪽만 오는 경우 대비) 같은 손가락의 중복 입력은 걸러냄.
@@ -1329,6 +1341,8 @@ function isDup(src, x, y) {
   return false;
 }
 function inStart(src, id, x, y, target) {
+  if (target && target.closest && target.closest('#gameBtns,#pauseOv')) return false;
+  if (paused) return true;      // 일시정지 중엔 조작 버튼·스틱이 먹지 않음
   if (cfg.open && target && target.closest && target.closest('#cfgBar,#cfgTab')) return false;      // 조작 설정창의 슬라이더·버튼
   if (cfg.on) return cfgStart(src, id, x, y, target);
   if (ctl.hidden) return false;
@@ -1401,7 +1415,7 @@ addEventListener('pointermove', e => { inMove('p', e.pointerId, e.clientX, e.cli
 addEventListener('pointerup', e => { inEnd('p', e.pointerId, false); });
 addEventListener('pointercancel', e => { inEnd('p', e.pointerId, true); });
 // 터치 이벤트
-const onBar = e => cfg.open && !cfg.drag && e.target && e.target.closest && e.target.closest('#cfgBar,#cfgTab');      // 조작 설정창의 슬라이더/버튼은 기본 동작 유지
+const onBar = e => e.target && e.target.closest && (e.target.closest('#gameBtns,#pauseOv') || (cfg.open && !cfg.drag && e.target.closest('#cfgBar,#cfgTab')));      // 조작 설정창의 슬라이더/버튼은 기본 동작 유지
 addEventListener('touchstart', e => {
   touchMode = true; diag.t++; updateDiag();
   if (ctl.hidden || onBar(e)) return;
@@ -1836,7 +1850,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 61;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 62;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -2262,6 +2276,7 @@ function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   fit();
   ctx.setTransform(cv.width / CW, 0, 0, cv.height / CH, 0, 0); ctx.clearRect(0, 0, CW, CH);
+  { const sb = scene === 'play' && !!game && net.role === 'none' && !game.practice && game.ph !== 'over'; if ($('gameBtns').hidden === sb) $('gameBtns').hidden = !sb; if (!sb && paused) setPause(false); }
   if (scene !== 'play' || !game) { ctx.save(); ctx.translate(0, OY); drawArena(); ctx.restore(); return; }
   aimPrev = null;
   let aimingAny = false, cxOn = false;
@@ -2270,7 +2285,7 @@ function frame(now) {
     if (r.sa == null || sv >= 80) r.sa = tg; else r.sa += normAng(tg - r.sa) * (1 - Math.exp(-dt / (((80 - sv) / 80) * 0.25)));
     aimPrev = { i: r.i, ang: r.sa }; } }
   if (!cfg.on) { const cxl = $('cxl'); cxl.hidden = !aimingAny; cxl.classList.toggle('on', cxOn); }
-  acc += dt;
+  if (paused) acc = 0; else acc += dt;
   if (net.role !== 'guest' && net.pingT) { net.pingT = 0; pingTag(false); }
   if (net.role === 'guest') { guestFrame(now, dt); acc = 0; }
   else {
