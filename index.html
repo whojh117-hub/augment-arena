@@ -110,6 +110,8 @@
   #cfgBar { position: fixed; left: 50%; top: max(8px, env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 60; width: min(94vw, 680px); display: flex; flex-direction: column; gap: 8px; align-items: center;
     background: #0a0d13ee; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; pointer-events: auto; touch-action: manipulation; }
   #cfgBar[hidden] { display: none; }
+  #cfgBar.play .cfgT, #cfgBar.play #cfgSizeRow, #cfgBar.play #cfgReset { display: none; } #cfgBar.play { gap: 4px; } #cfgBar.play .btn { padding: 5px 16px; font-size: 14px; }
+  #cfgBar .btn.on { background: var(--accent, #4aa8ff); color: #fff; border-color: transparent; }
   .cfgT { font-size: 13px; color: var(--dim); text-align: center; } .cfgT b { color: var(--fg); }
   .cfgR { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center; }
   .cfgR label { display: flex; gap: 8px; align-items: center; font-size: 13px; } .cfgR input[type=range] { width: 150px; }
@@ -187,9 +189,11 @@
 <div id="updBar" hidden>새 버전이 나왔어요 <button id="btnUpd" type="button">지금 업데이트</button></div>
 <div id="ctl" hidden>
   <div id="cfgBar" hidden>
-  <div class="cfgT">🎮 조작 설정 · (스킬 취소 버튼 포함) 버튼을 <b>끌어서 옮기고</b>, 눌러서 선택하면 <b>크기</b>를 바꿀 수 있어요(왼쪽 <b>이동 원</b>도 눌러서 크기 조절)</div>
-  <div class="cfgR"><label>선택한 버튼 크기 <input type="range" id="cfgSize" min="60" max="160" step="2" value="100"><span id="cfgSizeV">100%</span></label>
+  <div class="cfgT">🎮 조작 설정 · <b>✏️ 편집</b>에서 버튼을 옮기고, <b>🎯 연습</b>에서 내 캐릭터로 직접 움직이며 스킬을 써 보세요 · (스킬 취소 버튼 포함) 버튼을 <b>끌어서 옮기고</b>, 눌러서 선택하면 <b>크기</b>를 바꿀 수 있어요(왼쪽 <b>이동 원</b>도 눌러서 크기 조절)</div>
+  <div class="cfgR" id="cfgSizeRow"><label>선택한 버튼 크기 <input type="range" id="cfgSize" min="60" max="160" step="2" value="100"><span id="cfgSizeV">100%</span></label>
   <label>버튼 투명도 <input type="range" id="cfgOp" min="35" max="100" step="5" value="93"><span id="cfgOpV">93%</span></label></div>
+  <div class="cfgR" id="cfgModeRow"><button type="button" class="btn" id="cfgModeE">✏️ 편집</button><button type="button" class="btn ghost" id="cfgModeP">🎯 연습</button>
+  <label>조준 방향 민감도 <input type="range" id="cfgAim" min="30" max="200" step="5" value="80"><span id="cfgAimV">80</span></label></div>
   <div class="cfgR"><button type="button" class="btn ghost" id="cfgReset">처음 위치로</button><button type="button" class="btn" id="cfgDone">완료</button></div>
 </div>
 <div id="cxl" hidden data-cfgbtn="1"><b>✕</b><span>취소</span></div>
@@ -434,6 +438,7 @@ class Game {
     this.diff = DIFFS[diffKey] || DIFFS.normal; this.setMap(mapId);
     this.quad = !!(chars && chars.length === 4);      // 2대2: chars = 4명의 캐릭터(0·1번이 한 팀, 2·3번이 다른 팀)
     this.players = this.quad ? chars.map((c, i) => { const p = mkPlayer(i, c); p.team = i < 2 ? 0 : 1; return p; }) : [mkPlayer(0, myChar), mkPlayer(1, aiChar)];
+    this.practice = false;    // true면 연습 모드: 1번은 가만히 서 있는 체력 무한 인형, 시간 제한·라운드 종료 없음
     this.auto0 = false;       // true면 0번(사람 자리)도 AI가 조작 (테스트용)
     this.remote = false;      // true면 1번도 사람(온라인 상대)이 조작: AI를 쓰지 않음
     this.ev = []; this.fx = []; this.bullets = []; this.zones = []; this.minions = []; this.mid = 0;
@@ -482,7 +487,10 @@ class Game {
       this.timer -= dt;
       for (const p of this.players) { const e = this.foe(p); p.aim = Math.atan2(e.y - p.y, e.x - p.x); }
       if (this.timer <= 0) { this.ph = 'fight'; this.fightT = 0; }
-    } else if (this.ph === 'fight') { this.fightT += dt; this.stepFight(dt); }
+    } else if (this.ph === 'fight') {
+      this.fightT += dt; this.stepFight(dt);
+      if (this.practice) { const d = this.players[1], sp = SPAWN[1]; d.hp = d.maxHp; d.alive = true; d.stun = 0; d.slowT = 0; d.slowMul = 1; d.charge = null; d.inp = { mx: 0, my: 0 }; d.x = sp.x; d.y = sp.y; d.vx = d.vy = 0; this.players[0].hp = Math.max(this.players[0].hp, 1); this.fightT = 0; this.res = null; this.ph = 'fight'; }      // 연습 인형은 죽지도 움직이지도 않음
+    }
     else if (this.ph === 'end') {
       this.timer -= dt;
       if (this.timer <= 0) {
@@ -988,7 +996,7 @@ class Game {
   }
   stepFight(dt) {
     const P = this.players;
-    if (!this.remote && !this.quad) this.ai(P[1], dt);
+    if (!this.remote && !this.quad && !this.practice) this.ai(P[1], dt);
     if (this.auto0) this.ai(P[0], dt);
     this.stepZones(dt); this.stepMapFx(dt);
     this.stepPWalls(dt);
@@ -1173,9 +1181,9 @@ function setOpp(o) {      // 상대 캐릭터: 랜덤(기본) 또는 직접 선�
 
 // ── 조작 설정: 버튼 위치/크기/투명도를 직접 바꾸고 기기에 저장 ──
 const CTL_IDS = ['bAtk', 'bS0', 'bS1', 'bS2', 'bDash', 'cxl'], CTL_BASE = { bAtk: 100, bS0: 76, bS1: 76, bS2: 76, bDash: 64, cxl: 92 };
-let ctlCfg = { b: {}, op: 93, st: 100 };      // b[id] = { x, y (버튼 중심, 화면 비율 0~1), s (크기 %) }
-try { const j = JSON.parse(localStorage.getItem('aa_ctl') || 'null'); if (j && j.b) { ctlCfg = { b: j.b, op: j.op || 93, st: j.st || 100 }; } } catch (e) { /* 무시 */ }
-const cfg = { on: false, sel: 'bAtk', drag: null };
+let ctlCfg = { b: {}, op: 93, st: 100, aim: 80 };      // aim: 조준 방향 민감도(클수록 손가락 방향 바뀜에 빨리 반응). b[id] = { x, y (버튼 중심, 화면 비율 0~1), s (크기 %) }
+try { const j = JSON.parse(localStorage.getItem('aa_ctl') || 'null'); if (j && j.b) { ctlCfg = { b: j.b, op: j.op || 93, st: j.st || 100, aim: j.aim || 80 }; } } catch (e) { /* 무시 */ }
+const cfg = { on: false, open: false, sel: 'bAtk', drag: null };      // on: 편집 중, open: 조작 설정 화면이 열려 있음(편집 또는 연습)
 function saveCtl() { try { localStorage.setItem('aa_ctl', JSON.stringify(ctlCfg)); } catch (e) { /* 무시 */ } }
 function applyLayout() {
   for (const id of CTL_IDS) {
@@ -1196,14 +1204,29 @@ function cfgSelect(id) {
   cfg.sel = id; CTL_IDS.concat('hintL').forEach(k => $(k).classList.toggle('sel', k === id));
   const v = id === 'hintL' ? (ctlCfg.st || 100) : ((ctlCfg.b[id] && ctlCfg.b[id].s) || 100); $('cfgSize').value = v; $('cfgSizeV').textContent = v + '%';
 }
-function cfgOpen() {
-  cfg.on = true; setupButtons(); $('cxl').hidden = false; $('cxl').classList.add('cfg'); $('menu').hidden = true; ctl.hidden = false; $('cfgBar').hidden = false; $('hintL').style.visibility = 'visible';
-  $('cfgOp').value = ctlCfg.op; $('cfgOpV').textContent = ctlCfg.op + '%'; cfgSelect(cfg.sel);
-  document.querySelectorAll('.abtn').forEach(b => { b.querySelector('.n').textContent = ''; b.classList.remove('cd'); b.style.setProperty('--cd', '0%'); }); $('hintL').style.pointerEvents = 'auto';
+function cfgMode(m) {      // 'edit': 버튼 옮기기·크기 조절 / 'play': 내 캐릭터로 직접 움직이고 스킬 써 보기
+  cfg.on = m === 'edit'; cfg.drag = null; resetTouch();
+  $('cfgBar').classList.toggle('play', m === 'play'); $('cfgModeE').classList.toggle('on', m === 'edit'); $('cfgModeP').classList.toggle('on', m === 'play');
+  $('cxl').hidden = m !== 'edit'; $('cxl').classList.toggle('cfg', m === 'edit'); $('cxl').classList.remove('on');
+  $('hintL').style.pointerEvents = m === 'edit' ? 'auto' : ''; $('hintL').style.visibility = 'visible';
+  CTL_IDS.concat('hintL').forEach(k => $(k).classList.toggle('sel', m === 'edit' && k === cfg.sel));
+  if (m === 'edit') document.querySelectorAll('.abtn').forEach(b => { b.querySelector('.n').textContent = ''; b.classList.remove('cd'); b.style.setProperty('--cd', '0%'); });
 }
-function cfgClose() { cfg.on = false; cfg.drag = null; $('cxl').hidden = true; $('cxl').classList.remove('cfg', 'on'); $('cfgBar').hidden = true; ctl.hidden = true; CTL_IDS.concat('hintL').forEach(k => $(k).classList.remove('sel')); $('hintL').style.pointerEvents = ''; $('menu').hidden = false; saveCtl(); }
+function cfgOpen() {
+  if (typeof net !== 'undefined' && net.role !== 'none') netLeave();
+  resolveMy();
+  game = new Game(myChar, 'tank', 'easy', 'basic'); game.practice = true;      // 연습: 상대 스폰 자리에 체력 무한 인형
+  { const d = game.players[1]; d.ch = Object.assign({}, CHARS.tank, { icon: '🎯', name: '연습 인형', color: '#9aa4b8', hp: 99999 }); d.maxHp = d.hp = 99999; }
+  game.ph = 'fight'; game.fightT = 0; scene = 'play'; lastPh = 'fight'; fightStartAt = -9999; floats = []; parts = [];
+  cfg.open = true; setupButtons(); $('menu').hidden = true; ctl.hidden = false; $('cfgBar').hidden = false; $('end').hidden = true;
+  $('cfgOp').value = ctlCfg.op; $('cfgOpV').textContent = ctlCfg.op + '%'; $('cfgAim').value = ctlCfg.aim; $('cfgAimV').textContent = ctlCfg.aim; cfgSelect(cfg.sel);
+  cfgMode('edit');
+}
+function cfgClose() { cfg.on = cfg.open = false; cfg.drag = null; resetTouch(); game = null; scene = 'menu'; $('cxl').hidden = true; $('cxl').classList.remove('cfg', 'on'); $('cfgBar').hidden = true; $('cfgBar').classList.remove('play'); ctl.hidden = true; CTL_IDS.concat('hintL').forEach(k => $(k).classList.remove('sel')); $('hintL').style.pointerEvents = ''; $('menu').hidden = false; saveCtl(); }
+$('cfgModeE').onclick = () => cfgMode('edit'); $('cfgModeP').onclick = () => cfgMode('play');
+$('cfgAim').oninput = e => { ctlCfg.aim = Number(e.target.value); $('cfgAimV').textContent = ctlCfg.aim; saveCtl(); };
 $('btnCfg').onclick = cfgOpen; $('cfgDone').onclick = cfgClose;
-$('cfgReset').onclick = () => { ctlCfg = { b: {}, op: 93, st: 100 }; saveCtl(); applyLayout(); $('cfgOp').value = 93; $('cfgOpV').textContent = '93%'; cfgSelect(cfg.sel); };
+$('cfgReset').onclick = () => { ctlCfg = { b: {}, op: 93, st: 100, aim: ctlCfg.aim || 80 }; saveCtl(); applyLayout(); $('cfgOp').value = 93; $('cfgOpV').textContent = '93%'; cfgSelect(cfg.sel); };
 $('cfgSize').oninput = e => { if (cfg.sel === 'hintL') { ctlCfg.st = Number(e.target.value); $('cfgSizeV').textContent = ctlCfg.st + '%'; applyLayout(); saveCtl(); return; } const id = cfg.sel, el = $(id), r = el.getBoundingClientRect(), c = ctlCfg.b[id] || { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight, s: 100 }; c.s = Number(e.target.value); ctlCfg.b[id] = c; $('cfgSizeV').textContent = c.s + '%'; applyLayout(); saveCtl(); };
 $('cfgOp').oninput = e => { ctlCfg.op = Number(e.target.value); $('cfgOpV').textContent = ctlCfg.op + '%'; applyLayout(); saveCtl(); };
 function cfgStart(src, id, x, y, target) {
@@ -1298,6 +1321,7 @@ function isDup(src, x, y) {
   return false;
 }
 function inStart(src, id, x, y, target) {
+  if (cfg.open && target && target.closest && target.closest('#cfgBar')) return false;      // 조작 설정창의 슬라이더·버튼
   if (cfg.on) return cfgStart(src, id, x, y, target);
   if (ctl.hidden) return false;
   if (isDup(src, x, y)) return true;
@@ -1331,7 +1355,11 @@ function inMove(src, id, x, y) {
   const key = src + id;
   if (stick.key === key) { stick.dx = x - stick.ox; stick.dy = y - stick.oy; stkDraw(); }
   const r = roles.get(key);
-  if (r && r.type === 'skill') { r.dx = x - r.ox; r.dy = y - r.oy; r.cx = overCancel(x, y); }
+  if (r && r.type === 'skill') {      // 조준 기준점이 손가락을 L(px)보다 멀리 못 벗어나게 따라옴: 민감도가 높을수록 L이 작아 방향이 빨리 바뀜
+    let dx = x - r.ox, dy = y - r.oy; const len = Math.hypot(dx, dy), L = 8000 / (ctlCfg.aim || 80);
+    if (len > L) { r.ox += dx / len * (len - L); r.oy += dy / len * (len - L); dx = x - r.ox; dy = y - r.oy; }
+    r.dx = dx; r.dy = dy; r.cx = overCancel(x, y);
+  }
 }
 let notice = { t: 0, txt: '' };
 function showNotice(txt) { notice = { t: performance.now(), txt }; }
@@ -1365,7 +1393,7 @@ addEventListener('pointermove', e => { inMove('p', e.pointerId, e.clientX, e.cli
 addEventListener('pointerup', e => { inEnd('p', e.pointerId, false); });
 addEventListener('pointercancel', e => { inEnd('p', e.pointerId, true); });
 // 터치 이벤트
-const onBar = e => cfg.on && !cfg.drag && e.target && e.target.closest && e.target.closest('#cfgBar');      // 조작 설정창의 슬라이더/버튼은 기본 동작 유지
+const onBar = e => cfg.open && !cfg.drag && e.target && e.target.closest && e.target.closest('#cfgBar');      // 조작 설정창의 슬라이더/버튼은 기본 동작 유지
 addEventListener('touchstart', e => {
   touchMode = true; diag.t++; updateDiag();
   if (ctl.hidden || onBar(e)) return;
@@ -1637,6 +1665,10 @@ function drawPlayer(p, now) {
     ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = '#000b'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x0 - d, y0 - d); ctx.lineTo(x0 + d, y0 + d); ctx.moveTo(x0 + d, y0 - d); ctx.lineTo(x0 - d, y0 + d); ctx.stroke();
     ctx.strokeStyle = '#ff4a5a'; ctx.lineWidth = 5; ctx.stroke(); ctx.restore();
   }
+  if (game.ph === 'count' && game.players.length === 4 && p.idx === 0) {      // 2대2 카운트다운: 내 머리 위 흰 역삼각형으로 '나'를 표시
+    const by = p.y - R - 56 + Math.sin(now / 160) * 3;
+    ctx.save(); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000b'; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(p.x - 11, by - 9); ctx.lineTo(p.x + 11, by - 9); ctx.lineTo(p.x, by + 9); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.restore();
+  }
   const nm = p.idx === 0 ? myNick : (p.nick || '');
   if (nm) {      // 닉네임: 캐릭터 머리 위(체력바 위). 온라인에서는 상대·아군 것도 표시
     ctx.save(); ctx.globalAlpha = p.alive ? 1 : 0.4; ctx.font = 'bold 13px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000c';
@@ -1760,7 +1792,7 @@ function hpBar(x, w, p, left, col, name) {
     const sw = w * Math.max(0, Math.min(1, p.shield / (p.shieldMax || p.shield))); ctx.fillStyle = '#3d9bff'; if (sw > 1) { rr(left ? x : x + w - sw, 51, sw, 9, 4); ctx.fill(); }
     ctx.fillStyle = '#fff'; ctx.font = 'bold 9px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(Math.ceil(p.shield), x + w / 2, 59);
   }
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(hp + ' / ' + p.maxHp, x + w / 2, 43);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(game.practice && p.idx === 1 ? '∞' : hp + ' / ' + p.maxHp, x + w / 2, 43);
 }
 function fmtTime(s) { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function drawHUD(now) {
@@ -1773,6 +1805,7 @@ function drawHUD(now) {
     hpBar(16, 350, P[0], true, ME_COL, '나 · ' + P[0].ch.name);
     hpBar(CW - 16 - 350, 350, P[1], false, OPP_COL, oppLabel() + ' · ' + P[1].ch.name);
   }
+  if (game.practice) { ctx.textAlign = 'center'; ctx.fillStyle = '#9aa6bd'; ctx.font = 'bold 11px ' + FONT; ctx.fillText('PRACTICE', CW / 2, 14); ctx.font = 'bold 19px ' + FONT; ctx.fillStyle = '#6be08a'; ctx.fillText('🎯 연습 모드', CW / 2, 36); return; }
   ctx.textAlign = 'center'; ctx.fillStyle = '#9aa6bd'; ctx.font = 'bold 11px ' + FONT; ctx.fillText('ROUND ' + game.round, CW / 2, 14);
   // 서든데스 타이머: 전투 시작부터 40초 카운트다운, 0이 되면 "피해 2배" 표시
   const inOT = game.fightT > OT_START, left = OT_START - game.fightT;
@@ -1795,7 +1828,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 58;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 59;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -2213,7 +2246,7 @@ function netWatchdog(now) {
   if (now - net.lastRx > 8000) opponentLeft();
 }
 function setEndMode() { net.ended = false; $('btnAgain').hidden = false; endBtns(); $('btnMenu').textContent = net.role === 'none' ? '캐릭터 선택' : '나가기'; }
-function oppLabel() { return net.role === 'none' ? 'AI(' + game.diff.name + ')' : '상대'; }
+function oppLabel() { return game.practice ? '🎯' : net.role === 'none' ? 'AI(' + game.diff.name + ')' : '상대'; }
 
 let last = performance.now(), acc = 0; const STEP = 1 / 60;
 function frame(now) {

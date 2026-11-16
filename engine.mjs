@@ -184,6 +184,7 @@ class Game {
     this.diff = DIFFS[diffKey] || DIFFS.normal; this.setMap(mapId);
     this.quad = !!(chars && chars.length === 4);      // 2대2: chars = 4명의 캐릭터(0·1번이 한 팀, 2·3번이 다른 팀)
     this.players = this.quad ? chars.map((c, i) => { const p = mkPlayer(i, c); p.team = i < 2 ? 0 : 1; return p; }) : [mkPlayer(0, myChar), mkPlayer(1, aiChar)];
+    this.practice = false;    // true면 연습 모드: 1번은 가만히 서 있는 체력 무한 인형, 시간 제한·라운드 종료 없음
     this.auto0 = false;       // true면 0번(사람 자리)도 AI가 조작 (테스트용)
     this.remote = false;      // true면 1번도 사람(온라인 상대)이 조작: AI를 쓰지 않음
     this.ev = []; this.fx = []; this.bullets = []; this.zones = []; this.minions = []; this.mid = 0;
@@ -232,7 +233,10 @@ class Game {
       this.timer -= dt;
       for (const p of this.players) { const e = this.foe(p); p.aim = Math.atan2(e.y - p.y, e.x - p.x); }
       if (this.timer <= 0) { this.ph = 'fight'; this.fightT = 0; }
-    } else if (this.ph === 'fight') { this.fightT += dt; this.stepFight(dt); }
+    } else if (this.ph === 'fight') {
+      this.fightT += dt; this.stepFight(dt);
+      if (this.practice) { const d = this.players[1], sp = SPAWN[1]; d.hp = d.maxHp; d.alive = true; d.stun = 0; d.slowT = 0; d.slowMul = 1; d.charge = null; d.inp = { mx: 0, my: 0 }; d.x = sp.x; d.y = sp.y; d.vx = d.vy = 0; this.players[0].hp = Math.max(this.players[0].hp, 1); this.fightT = 0; this.res = null; this.ph = 'fight'; }      // 연습 인형은 죽지도 움직이지도 않음
+    }
     else if (this.ph === 'end') {
       this.timer -= dt;
       if (this.timer <= 0) {
@@ -738,7 +742,7 @@ class Game {
   }
   stepFight(dt) {
     const P = this.players;
-    if (!this.remote && !this.quad) this.ai(P[1], dt);
+    if (!this.remote && !this.quad && !this.practice) this.ai(P[1], dt);
     if (this.auto0) this.ai(P[0], dt);
     this.stepZones(dt); this.stepMapFx(dt);
     this.stepPWalls(dt);
@@ -824,4 +828,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 58;
+export const BUILD = 59;
