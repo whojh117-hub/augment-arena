@@ -81,7 +81,7 @@ CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '�
   skills: [
     { name: '추적 구슬', icon: '🔮', desc: '내 자리에 체력 10의 구슬 2개 소환(0.5초 뒤부터 움직임). 속도 230으로 쫓다가 4초 뒤 저절로 터짐. 쿨타임은 구슬이 모두 터진 뒤부터. 상대를 쫓아가 닿거나 죽으면 반지름 1칸 폭발(각 10 피해)', cd: 10, ai: { use: 'attack', maxD: 420 }, fx: [{ t: 'orbs', n: 2, hp: 10, speed: 230, r: 14, burst: 70, dmg: 10, life: 4 }] },
     { name: '벽 소환', icon: '🧱', desc: '드래그한 방향 앞(70)에 1×2칸 벽을 5초간 설치(탭하면 상대 쪽). 다른 벽 위에는 설치 불가, 내 기본 공격은 통과. 쿨타임 10초는 벽이 사라진 뒤부터', cd: 10, ai: { use: 'wall', minD: 110, maxD: 330 }, fx: [{ t: 'pwall', w: 70, h: 140, dur: 5, dist: 70 }] },
-    { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움. 내 용이 살아 있으면 용과 위치를 맞바꿈(용이 없고 게이지가 가득이면 쓸 수 없음)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
+    { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움(용이 없고 게이지가 가득이면 쓸 수 없음). 내 용이 살아 있으면 \'위치 교환\'으로 바뀌어 용과 위치를 맞바꿈(게이지는 안 참, 화면이 흔들림)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
   ] };
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
@@ -410,11 +410,11 @@ class Game {
         const r = this.wallRect(p, f, ang);
         if (r) { this.pw.push(Object.assign(r, { own: p.idx, t: f.dur, max: f.dur })); this.rebuildWalls(); p.skCd[i] = sk.cd + f.dur; this.fx.push({ k: 'ring', x: r.cx, y: r.cy, r: 48, life: 0.3, max: 0.3, col: '#ffd24a' }); }
       } else if (f.t === 'dpower') {      // 용의 힘: 강림 게이지 +1, 내 용이 있으면 용과 위치 교체
-        const A = p.ch.advent; p.hits = Math.min(A.hits, p.hits + 1);
-        const d = this.minions.find(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0);
+        const A = p.ch.advent, d = this.minions.find(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0);
+        if (!d) p.hits = Math.min(A.hits, p.hits + 1);      // 용이 없을 때만 게이지가 참 (용이 있으면 위치 교환만)
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 54, life: 0.4, max: 0.4, col: '#ffd24a' });
         if (d) {
-          const px = p.x, py = p.y, dx = d.x, dy = d.y;
+          const px = p.x, py = p.y, dx = d.x, dy = d.y; this.ev.push({ k: 'swap', p: p.idx });
           this.fx.push({ k: 'ring', x: dx, y: dy, r: 54, life: 0.4, max: 0.4, col: '#ff7a30' });
           p.x = clamp(dx, R, W - R); p.y = clamp(dy, R, H - R); for (const w of WALLS) resolveCircleRect(p, R, w); p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
           d.x = clamp(px, d.r, W - d.r); d.y = clamp(py, d.r, H - d.r); for (const w of WALLS) resolveCircleRect(d, d.r, w); d.x = clamp(d.x, d.r, W - d.r); d.y = clamp(d.y, d.r, H - d.r);
@@ -617,7 +617,7 @@ class Game {
       }
     }
     // 기본공격: 버튼을 톡 누르면 1회(사거리 상관없이), 꾹 누르면 사거리 안에서 자동 반복
-    if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0 && !p.cnt && p.atkCd <= 0) {
+    if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0 && !p.cnt && (p.atkCd <= 0 || p.adv)) {      // 강림(5스택)은 평타 쿨타임과 상관없이 바로
       const a = p.ch.atk;
       const inRange = a.type === 'melee' ? dist <= a.range + R : (dist <= a.range && this.clear(p.x, p.y, e.x, e.y, a.pass ? p.idx : null));
       if (p.atkBuf > 0 || (!p.adv && p.atkHold && inRange)) { this.basicAttack(p); p.atkBuf = 0; }      // 강림은 누를 때만(꾹 눌러 자동으로 나가지 않음)
@@ -633,7 +633,7 @@ class Game {
       if (moved < 25 && p.stun <= 0) { p.unstick = 0.6; p.unstickAng = Math.random() * 6.283; p.strafe *= -1; }
     }
     if (p.strafeT <= 0) { p.strafe = Math.random() < 0.5 ? -1 : 1; p.strafeT = 0.6 + Math.random() * 1.2; }
-    if (p.adv && p.atkCd <= 0.05 && p.alive) { const hid0 = e.stl > 0; p.atkAng = Math.atan2((hid0 ? e.seenY : e.y) - p.y, (hid0 ? e.seenX : e.x) - p.x); p.atkBuf = ATK_BUFFER; }      // 강림은 상대 쪽으로
+    if (p.adv && p.alive) { const hid0 = e.stl > 0; p.atkAng = Math.atan2((hid0 ? e.seenY : e.y) - p.y, (hid0 ? e.seenX : e.x) - p.x); p.atkBuf = ATK_BUFFER; }      // 강림은 상대 쪽으로
     if (p.think > 0) return;
     p.think = d.react;
     const hid = e.stl > 0, ex = hid ? e.seenX : e.x, ey = hid ? e.seenY : e.y;      // 은신한 상대는 마지막으로 본 위치만 알 수 있음
@@ -824,4 +824,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 57;
+export const BUILD = 58;

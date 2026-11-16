@@ -20,7 +20,7 @@ export const mirrorSnap = s => {
     mm: 1, mn: (s.mn || []).map(m => { const o = m.slice(); o[1] = r1(W - m[1]); o[3] = r1(-m[3]); o[7] = 1 - m[7]; o[8] = r2(Math.PI - m[8]); return o; }), pw: (s.pw || []).map(w => [r1(W - w[0]), w[1], Math.round((Math.PI - w[2]) * 1000) / 1000, w[3], w[4], 1 - w[5], w[6], w[7]]), sc: [s.sc[1], s.sc[0]], rs: flip(s.rs), mw: flip(s.mw), ch: [s.ch[1], s.ch[0]], nk: [(s.nk || [])[1] || '', (s.nk || [])[0] || ''], p: [mp(s.p[1]), mp(s.p[0])],
     b: s.b.map(b => [b[0], r1(W - b[1]), b[2], r1(-b[3]), b[4], b[5], 1 - b[6], b[7], b[8]]),
     f: s.f.map(f => { const o = Object.assign({}, f, { x: r1(W - f.x) }); if (f.a != null) o.a = r2(Math.PI - f.a); if (f.f != null) o.f = flip(f.f); return o; }),
-    e: s.e.map(e => (e[1] === 'h' ? [e[0], 'h', r1(W - e[2]), e[3], e[4], 1 - e[5]] : [e[0], 't', r1(W - e[2]), e[3], e[4], e[5]])),
+    e: s.e.map(e => (e[1] === 'w' ? [e[0], 'w', 1 - e[2]] : e[1] === 'h' ? [e[0], 'h', r1(W - e[2]), e[3], e[4], 1 - e[5]] : [e[0], 't', r1(W - e[2]), e[3], e[4], e[5]])),
   });
 };
 
@@ -62,7 +62,7 @@ class Session {
     while (this.acc >= STEP) {
       for (let k = 0; k < 2; k++) { const stale = Date.now() - this.rx[k] > 1500, p = g.players[k]; p.inp = stale ? { mx: 0, my: 0 } : { mx: this.inp[k].mx, my: this.inp[k].my }; p.atkHold = stale ? false : !!this.inp[k].h; }
       g.update(STEP); this.acc -= STEP; this.ackQ = this.lastQ.slice();      // 입력은 계산에 반영된 다음 틱부터 "받았다"고 알림
-      for (const e of g.ev) if (e.k === 'hit') this.evBuf.push({ t: now, a: [++this.eid, 'h', r1(e.x), r1(e.y), e.d, e.to] }); else if (e.k === 'text') this.evBuf.push({ t: now, a: [++this.eid, 't', r1(e.x), r1(e.y), e.txt, e.col] });
+      for (const e of g.ev) if (e.k === 'hit') this.evBuf.push({ t: now, a: [++this.eid, 'h', r1(e.x), r1(e.y), e.d, e.to] }); else if (e.k === 'text') this.evBuf.push({ t: now, a: [++this.eid, 't', r1(e.x), r1(e.y), e.txt, e.col] }); else if (e.k === 'swap') this.evBuf.push({ t: now, a: [++this.eid, 'w', e.p] });
       g.ev = [];
     }
     this.evBuf = this.evBuf.filter(x => now - x.t < 1200);
@@ -128,7 +128,7 @@ class QuadSession {
     while (this.acc >= STEP) {
       for (let k = 0; k < 4; k++) { const stale = Date.now() - this.rx[k] > 1500, p = g.players[k]; p.inp = stale ? { mx: 0, my: 0 } : { mx: this.inp[k].mx, my: this.inp[k].my }; p.atkHold = stale ? false : !!this.inp[k].h; }
       g.update(STEP); this.acc -= STEP; this.ackQ = this.lastQ.slice();
-      for (const e of g.ev) if (e.k === 'hit') this.evBuf.push({ t: now, a: [++this.eid, 'h', r1(e.x), r1(e.y), e.d, e.to] }); else if (e.k === 'text') this.evBuf.push({ t: now, a: [++this.eid, 't', r1(e.x), r1(e.y), e.txt, e.col] });
+      for (const e of g.ev) if (e.k === 'hit') this.evBuf.push({ t: now, a: [++this.eid, 'h', r1(e.x), r1(e.y), e.d, e.to] }); else if (e.k === 'text') this.evBuf.push({ t: now, a: [++this.eid, 't', r1(e.x), r1(e.y), e.txt, e.col] }); else if (e.k === 'swap') this.evBuf.push({ t: now, a: [++this.eid, 'w', e.p] });
       g.ev = [];
     }
     this.evBuf = this.evBuf.filter(x => now - x.t < 1200);
@@ -158,7 +158,7 @@ class QuadSession {
         p: order.map(i => mp(pl[i])),
         b: bl.map(b => [b[0], X(b[1]), b[2], fx ? r1(-b[3]) : b[3], b[4], b[5], pos[b[6]], b[7], b[8]]),
         f: fl.map(f => { const o = Object.assign({}, f, { x: X(f.x) }); if (fx && f.a != null) o.a = r2(Math.PI - f.a); if (f.f != null && f.f >= 0) o.f = pos[f.f]; return o; }),
-        e: ev.map(e => (e[1] === 'h' ? [e[0], 'h', X(e[2]), e[3], e[4], pos[e[5]]] : [e[0], 't', X(e[2]), e[3], e[4], e[5]])),
+        e: ev.map(e => (e[1] === 'w' ? [e[0], 'w', pos[e[2]]] : e[1] === 'h' ? [e[0], 'h', X(e[2]), e[3], e[4], pos[e[5]]] : [e[0], 't', X(e[2]), e[3], e[4], e[5]])),
         mn: mn.map(m => { const o = m.slice(); o[1] = X(m[1]); if (fx) { o[3] = r1(-m[3]); o[8] = r2(Math.PI - m[8]); } o[7] = pos[m[7]]; return o; }),
         pw: pw.map(w => [X(w[0]), w[1], fx ? Math.round((Math.PI - w[2]) * 1000) / 1000 : w[2], w[3], w[4], pos[w[5]], w[6], w[7]]),
       });
