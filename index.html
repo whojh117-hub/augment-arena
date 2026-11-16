@@ -59,6 +59,7 @@
   .row { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
   #net { background: #0a0d13f5; }
   .netbox { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 300px; }
+  #nick { width: 190px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 15px var(--body); text-align: center; }
   #joinCode { width: 150px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 20px var(--body); text-align: center; letter-spacing: 3px; text-transform: lowercase; }
   #hostCode { font: 400 64px var(--display); letter-spacing: 8px; color: var(--me); }
   .rooms { display: flex; flex-direction: column; gap: 6px; min-width: 300px; color: var(--dim); font-size: 13px; text-align: center; }
@@ -135,6 +136,7 @@
     <div id="menu" class="panel">
       <h1 class="logo"><span class="a">증강</span> <span class="b">아레나</span></h1>
       <p class="tag">캐릭터를 고르고 대전 방식을 선택하세요</p>
+      <div class="row" style="margin:-2px 0 4px"><span class="tag">닉네임</span><input id="nick" maxlength="8" placeholder="닉네임 (최대 8글자)" autocomplete="off" spellcheck="false"></div>
       <div class="chars" id="chars"></div>
       <div class="info" id="info"></div>
       <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button><button class="btn ghost" id="btnCfg">🎮 조작 설정</button></div>
@@ -1559,6 +1561,9 @@ function drawAimPreview() {
   }
   ctx.restore();
 }
+let myNick = '';
+try { myNick = (localStorage.getItem('aa_nick') || '').slice(0, 8); } catch (e) { /* 무시 */ }
+{ const ni = document.getElementById('nick'); if (ni) { ni.value = myNick; ni.addEventListener('input', () => { myNick = ni.value.trim().slice(0, 8); try { localStorage.setItem('aa_nick', myNick); } catch (e) { /* 무시 */ } }); } }
 function drawPlayer(p, now) {
   const me0 = game.players[0], foeOf = p.team !== me0.team;
   if (foeOf && p.stl > 0) return;      // 은신한 상대는 보이지 않음
@@ -1584,6 +1589,10 @@ function drawPlayer(p, now) {
     const x0 = p.x + (p.kx || 0), y0 = p.y + (p.ky || 0), d = R * 0.8;
     ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = '#000b'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x0 - d, y0 - d); ctx.lineTo(x0 + d, y0 + d); ctx.moveTo(x0 + d, y0 - d); ctx.lineTo(x0 - d, y0 + d); ctx.stroke();
     ctx.strokeStyle = '#ff4a5a'; ctx.lineWidth = 5; ctx.stroke(); ctx.restore();
+  }
+  if (p.idx === 0 && myNick) {      // 내 닉네임: 내 캐릭터 머리 위(체력바 위)
+    ctx.save(); ctx.globalAlpha = p.alive ? 1 : 0.4; ctx.font = 'bold 13px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000c';
+    const ny = p.y - R - 22 - (p.alive && p.shieldT > 0 && p.shield > 0 ? 0 : 0); ctx.strokeText(myNick, p.x, ny); ctx.fillStyle = '#fff'; ctx.fillText(myNick, p.x, ny); ctx.restore();
   }
   if (p.alive) {
     const w = 56, x = p.x - w / 2, y = p.y - R - 16;
