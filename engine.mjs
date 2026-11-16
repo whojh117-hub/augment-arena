@@ -667,6 +667,24 @@ class Game {
         break;
       }
     }
+    {      // 상대 스킬 대응: 예고선(강타·돌진 등)·근거리 시전·돌진·구슬 접근을 알아채면 방어/반격/이동 스킬로 막거나 피함 (못 쓰면 대시)
+      let inc = false, pdx = 0, pdy = 0, tele = false;
+      for (const f of this.fx) {
+        if (f.k !== 'tele' || f.life <= 0 || Math.hypot(f.x - e.x, f.y - e.y) > 70) continue;
+        const c = Math.cos(f.a), sn = Math.sin(f.a), rx = p.x - f.x, ry = p.y - f.y, al = rx * c + ry * sn, pe = -rx * sn + ry * c;
+        if (al >= -R && al <= f.len + R && Math.abs(pe) <= f.w / 2 + R + 8) { inc = tele = true; const sd = pe >= 0 ? 1 : -1; pdx = -sn * sd; pdy = c * sd; break; }
+      }
+      const sc = e.skCd, pv = p._ecd || [0, 0, 0]; let cast = false; for (let i = 0; i < 3; i++) if (sc[i] > pv[i] + 0.5) cast = true; p._ecd = sc.slice();
+      if (cast && dist < 260) inc = true;
+      if (e.charge && dist < 380) inc = true;
+      for (const m of this.minions) if (m.kind === 'orb' && m.hp > 0 && this.players[m.owner].team !== p.team && Math.hypot(m.x - p.x, m.y - p.y) < 150) inc = true;
+      if (inc) {
+        danger = true; threat = true;
+        if (tele) { mx = pdx; my = pdy; }
+        const ans = [0, 1, 2].some(i => { const k = p.ch.skills[i]; return p.skCd[i] <= 0 && ['defend', 'block', 'escape'].includes((k.ai || {}).use) && !(isRoot(p) && moveSkill(k)); });
+        if (!dodged && (tele || e.charge) && (p.ch.dashN ? p.dashN > 0 : p.dashCd <= 0) && Math.random() < d.dodge * (ans ? 0.35 : 1)) { p.want.dash = 1; dodged = true; }
+      }
+    }
     p.inp = { mx, my };
     for (let i = 0; i < 3; i++) {
       const sk = p.ch.skills[i];
@@ -806,4 +824,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 55;
+export const BUILD = 56;
