@@ -46,7 +46,7 @@ const CHARS = {
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
     atk: { type: 'melee', dmg: 10, cd: 0.6, range: 72, arc: 2.2 },
     skills: [
-      { name: '강타', icon: '🗡️', desc: '직선 범위가 보이고 0.2초 뒤 25 피해', cd: 5, ai: { use: 'attack', maxD: 195 }, fx: [{ t: 'line', len: 215, w: 68, dmg: 25, delay: 0.2, col: '#ff8a4a' }] },
+      { name: '강타', icon: '🗡️', desc: '직선 범위가 보이고 0.4초 뒤 25 피해', cd: 5, ai: { use: 'attack', maxD: 195 }, fx: [{ t: 'line', len: 215, w: 68, dmg: 25, delay: 0.4, col: '#ff8a4a' }] },
       { name: '전사의 함성', icon: '📣', desc: '3초간 받는 피해 30% 감소, 최대 체력 +10(그 라운드 동안)', cd: 15, ai: { use: 'attack', maxD: 200 }, fx: [{ t: 'buff', dr: 0.3, dur: 3, maxHp: 10, col: '#ffd24a' }] },
       { name: '가로베기', icon: '🌙', desc: '0.6초간 120° 부채꼴로 투사체를 막고, 끝나면 범위 안의 적에게 15 피해', cd: 10, ai: { use: 'block', maxD: 125 }, fx: [{ t: 'cone', range: 128, arc: 2.094, dmg: 15, guard: 0.6, col: '#ff8a4a' }] },
     ] },
@@ -75,8 +75,8 @@ CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: 
     { name: '은신', icon: '🫥', desc: '3.5초간 은신: 이동속도 1.2배, 상대에게 보이지 않고 기본공격 투사체에 맞지 않음. 공격·스킬을 쓰면 풀림(피해를 받아도 유지). 쿨타임 9초는 은신이 끝난 뒤부터', cd: 9, ai: { use: 'gapclose', minD: 220, maxD: 9999 }, fx: [{ t: 'stealth', dur: 3.5, speed: STL_MUL }] },
   ] };
 CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '🪄', color: '#ffd24a', role: '원거리 · 소환', hp: 100, speed: 215, keep: 240,
-  passive: '기본 공격을 5번 적중시키면 다음 기본 공격이 \'강림\'(용 소환)으로 바뀜. 용이 살아 있으면 강림을 쓸 수 없음',
-  advent: { hits: 5, dist: 118, burst: { r: 110, dmg: 10, slowT: 1, slowMul: 0.5 }, dragon: { hp: 50, speed: 90, r: 26, range: 110, arc: 1.9, dmg: 5, every: 0.3 } },
+  passive: '기본 공격을 5번 적중시키면 다음 기본 공격이 \'강림\'(용 소환)으로 바뀜(게이지는 내 몸 둘레에 표시). 터치하면 내 자리에, 드래그하면 그 방향 앞에 소환. 용은 10초 뒤 사라지고, 살아 있으면 강림을 쓸 수 없음',
+  advent: { hits: 5, dist: 118, burst: { r: 110, dmg: 10, slowT: 1, slowMul: 0.5 }, dragon: { life: 10, hp: 50, speed: 90, r: 26, range: 110, arc: 1.9, dmg: 5, every: 0.3 } },
   atk: { type: 'ranged', dmg: 10, cd: 1.5, range: 210, speed: 300, r: 9, hom: 4, life: 0.95, pass: true, rangeCircle: true },
   skills: [
     { name: '추적 구슬', icon: '🔮', desc: '내 자리에 체력 10의 구슬 2개 소환(0.5초 뒤부터 움직임). 속도 230으로 쫓다가 4초 뒤 저절로 터짐. 쿨타임은 구슬이 모두 터진 뒤부터. 상대를 쫓아가 닿거나 죽으면 반지름 1칸 폭발(각 10 피해)', cd: 10, ai: { use: 'attack', maxD: 420 }, fx: [{ t: 'orbs', n: 2, hp: 10, speed: 230, r: 14, burst: 70, dmg: 10, life: 4 }] },
@@ -470,15 +470,13 @@ class Game {
   }
   advent(p) {      // 강림: 내 앞에 용 소환 + 넓은 범위 10 피해와 둔화. 소환 위치는 순간이동 조준과 같음
     const A = p.ch.advent, e = this.foe(p), m = Math.hypot(p.inp.mx, p.inp.my);
-    let dx, dy;
-    if (typeof p.atkAng === 'number') { dx = Math.cos(p.atkAng); dy = Math.sin(p.atkAng); }
-    else if (m > 0.2) { dx = p.inp.mx / m; dy = p.inp.my / m; }
-    else { dx = -Math.cos(p.aim); dy = -Math.sin(p.aim); }
+    let dx = 0, dy = 0, dist = 0;      // 터치만 하면 내 자리에 바로 소환, 드래그로 방향을 정하면 그 방향 앞에 소환
+    if (typeof p.atkAng === 'number') { dx = Math.cos(p.atkAng); dy = Math.sin(p.atkAng); dist = A.dist; }
     p.atkAng = null;
-    const D = A.dragon, o = { x: clamp(p.x + dx * A.dist, D.r, W - D.r), y: clamp(p.y + dy * A.dist, D.r, H - D.r), r: D.r };
+    const D = A.dragon, o = { x: clamp(p.x + dx * dist, D.r, W - D.r), y: clamp(p.y + dy * dist, D.r, H - D.r), r: D.r };
     for (const w of WALLS) resolveCircleRect(o, D.r, w);
     o.x = clamp(o.x, D.r, W - D.r); o.y = clamp(o.y, D.r, H - D.r);
-    this.minions.push({ id: ++this.mid, kind: 'dragon', owner: p.idx, x: o.x, y: o.y, vx: 0, vy: 0, hp: D.hp, maxHp: D.hp, r: D.r, speed: D.speed, guard: 0, slot: 0, aim: Math.atan2(e.y - o.y, e.x - o.x), fire: 0, fireT: 0.15, nv: null, nvT: 0 });
+    this.minions.push({ id: ++this.mid, kind: 'dragon', owner: p.idx, x: o.x, y: o.y, vx: 0, vy: 0, hp: D.hp, maxHp: D.hp, life: D.life, r: D.r, speed: D.speed, guard: 0, slot: 0, aim: Math.atan2(e.y - o.y, e.x - o.x), fire: 0, fireT: 0.15, nv: null, nvT: 0 });
     this.fx.push({ k: 'ring', x: o.x, y: o.y, r: A.burst.r, life: 0.5, max: 0.5, col: '#ff7a30' });
     for (const q of this.foes(p)) if (q.alive && Math.hypot(q.x - o.x, q.y - o.y) <= A.burst.r + R) this.dealDamage(p, q, A.burst.dmg, { slowT: A.burst.slowT, slowMul: A.burst.slowMul });
     p.hits = 0; p.adv = false; p.atkBuf = 0;
@@ -489,6 +487,7 @@ class Game {
     for (const m of this.minions) {
       if (m.hp <= 0 && m.kind === 'orb' && !m.done) this.orbBurst(m);
       if (m.hp <= 0) { if (m.kind === 'dragon') this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 40, life: 0.3, max: 0.3, col: '#ff7a30' }); continue; }
+      if (m.kind === 'dragon' && (m.life -= dt) <= 0) { this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 40, life: 0.3, max: 0.3, col: '#ff7a30' }); continue; }      // 용은 소환 10초 뒤 사라짐
       const own = this.players[m.owner], e = this.nearFoe(own.team, m.x, m.y);
       if (!own.alive || !e.alive) { keep.push(m); m.vx = m.vy = 0; continue; }
       let tx, ty, sp = m.speed;
@@ -573,7 +572,11 @@ class Game {
       }
     }
     if (p.shieldT > 0) { p.shieldT -= dt; if (p.shieldT <= 0) p.shield = 0; }
-    if (p.alive && !p.charge) p.aim = e.stl > 0 ? Math.atan2(e.seenY - p.y, e.seenX - p.x) : Math.atan2(e.y - p.y, e.x - p.x);
+    if (p.alive && !p.charge) {      // 조준: 가까운 적 또는 적 소환물(구슬·용) 중 가장 가까운 쪽 (소환물도 적 한 명처럼 취급)
+      let tx = e.stl > 0 ? e.seenX : e.x, ty = e.stl > 0 ? e.seenY : e.y, bd = Math.hypot(tx - p.x, ty - p.y);
+      for (const m of this.minions) if (m.hp > 0 && this.players[m.owner].team !== p.team) { const d = Math.hypot(m.x - p.x, m.y - p.y); if (d < bd) { bd = d; tx = m.x; ty = m.y; } }
+      p.aim = Math.atan2(ty - p.y, tx - p.x);
+    }
 
     if (p.alive && p.stun <= 0 && !p.charge && p.dashT <= 0 && !p.cnt) {
       if (p.want.dash && (p.ch.dashN ? p.dashN > 0 : p.dashCd <= 0) && !isRoot(p)) {
@@ -803,4 +806,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 54;
+export const BUILD = 55;
