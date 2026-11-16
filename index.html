@@ -1240,9 +1240,9 @@ $('cfgOp').oninput = e => { ctlCfg.op = Number(e.target.value); $('cfgOpV').text
 function cfgStart(src, id, x, y, target) {
   if (isDup(src, x, y)) return true;
   if (target && target.closest && target.closest('#cfgBar,#cfgTab')) return false;
-  if (target && target.closest && target.closest('#hintL')) { cfgSelect('hintL'); return true; }
+  if (target && target.closest && target.closest('#hintL')) { cfgSelect('hintL'); cfgFold(false); return true; }
   const b = target && target.closest ? target.closest('[data-act],[data-cfgbtn]') : null; if (!b) return true;
-  const r = b.getBoundingClientRect(); cfgSelect(b.id);
+  const r = b.getBoundingClientRect(); cfgSelect(b.id); cfgFold(false);      // 접어 둔 조절창도 버튼을 고르면 다시 나옴
   cfg.drag = { key: src + id, id: b.id, dx: x - (r.left + r.width / 2), dy: y - (r.top + r.height / 2) };
   return true;
 }
@@ -1836,7 +1836,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 60;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 61;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
