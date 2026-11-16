@@ -1563,7 +1563,7 @@ function drawPlayer(p, now) {
   const me0 = game.players[0], foeOf = p.team !== me0.team;
   if (foeOf && p.stl > 0) return;      // 은신한 상대는 보이지 않음
   const mine = p.idx === 0, ring = mine ? ME_COL : foeOf ? OPP_COL : ALLY_COL;
-  ctx.globalAlpha = p.alive ? 1 : 0.25;
+  ctx.globalAlpha = p.alive ? 1 : (game.players.length === 4 ? 0.35 : 0.25);
   ctx.save(); ctx.translate(p.x + (p.kx || 0), p.y + (p.ky || 0));
   if (p.kx || p.ky) { p.kx *= 0.78; p.ky *= 0.78; if (Math.abs(p.kx) + Math.abs(p.ky) < 0.3) p.kx = p.ky = 0; }
   if (p.dashT > 0) ctx.globalAlpha *= 0.4;
@@ -1580,6 +1580,11 @@ function drawPlayer(p, now) {
   if (isRoot(p)) { ctx.strokeStyle = '#6be08a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, R + 10, 0, 6.283); ctx.stroke(); }
   else if (p.slowT > 0) { ctx.strokeStyle = '#a9e6ff'; ctx.setLineDash([4, 4]); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, R + 10, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
   ctx.restore(); ctx.globalAlpha = 1;
+  if (!p.alive && game.players.length === 4) {      // 2대2: 쓰러진 사람은 반투명 + 빨간 X 표시
+    const x0 = p.x + (p.kx || 0), y0 = p.y + (p.ky || 0), d = R * 0.8;
+    ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = '#000b'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(x0 - d, y0 - d); ctx.lineTo(x0 + d, y0 + d); ctx.moveTo(x0 + d, y0 - d); ctx.lineTo(x0 - d, y0 + d); ctx.stroke();
+    ctx.strokeStyle = '#ff4a5a'; ctx.lineWidth = 5; ctx.stroke(); ctx.restore();
+  }
   if (p.alive) {
     const w = 56, x = p.x - w / 2, y = p.y - R - 16;
     ctx.fillStyle = '#000a'; ctx.fillRect(x, y, w, 5); ctx.fillStyle = ring; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, p.hp / p.maxHp)), 5);
