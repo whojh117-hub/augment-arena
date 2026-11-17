@@ -746,7 +746,7 @@ class Game {
       else if (f.t === 'pool') {      // 조류술사 웅덩이: 내 자리에 설치, 만들어질 때 안에 있는 적에게 피해
         const zx = clamp(p.x + Math.cos(ang) * f.dist, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * f.dist, 20, H - 20);
         this.pools.push({ kind: 'pool', owner: p.idx, x: zx, y: zy, r: f.r, t: f.dur, max: f.dur, f });
-        this.fx.push({ k: 'pool', x: zx, y: zy, r: f.r, life: f.dur, max: f.dur, col: f.col });
+        this.fx.push({ k: 'pool', x: zx, y: zy, r: f.r, life: f.dur, max: f.dur, col: f.col, follow: p.idx });
         if (f.dmg) { for (const e of this.foes(p)) if (e.alive && Math.hypot(e.x - zx, e.y - zy) <= f.r + R) this.dealDamage(p, e, f.dmg, null); this.hitMinions(p.idx, m => Math.hypot(m.x - zx, m.y - zy) <= f.r + m.r, f.dmg); }
       } else if (f.t === 'tornado') {      // 용오름: 작은 원이 먼저 보이고(번개처럼) 잠시 뒤 토네이도
         const [zx, zy] = tornPos(this, p, f, ang, aimed ? frArg : undefined), a2 = Math.atan2(zy - p.y, zx - p.x), len = Math.max(30, Math.hypot(zx - p.x, zy - p.y) - (R + 4));
@@ -1182,7 +1182,10 @@ class Game {
         if (dead) break;
         if (t.alive && t.dashT <= 0 && t.inv <= 0 && !((b.pierce || b.torn || b.carry) && b.hs && b.hs.has(t.idx)) && !(t.stl > 0 && b.basic)) {      // 은신 중엔 기본공격 투사체에 맞지 않음
           const dx = t.x - b.x, dy = t.y - b.y, rr = R + b.r;
-          if (dx * dx + dy * dy < rr * rr) {
+          let touch;
+          if (b.carry) { const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp, al = dx * ux + dy * uy, pe = Math.abs(-dx * uy + dy * ux); touch = al <= 10 + R && al >= -130 && pe <= b.r + R; }      // 밀물: 파도 앞의 하얀 선에 닿았을 때부터 (몸통 사각형 안)
+          else touch = dx * dx + dy * dy < rr * rr;
+          if (touch) {
             if (b.torn) { if (t.cnt) { dead = true; this.blockedBy(t); } else { this.tornPull(b, t); (b.hs || (b.hs = new Set())).add(t.idx); } continue; }
             const ok = this.dealDamage(ownP, t, b.dmg, b); b.hit = true; (b.hs || (b.hs = new Set())).add(t.idx);      // 직격 피해 (관통탄은 한 사람당 1번)
             if (ok && b.hom) { const o = ownP; if (o.ch.advent && !o.adv) o.hits = Math.min(o.ch.advent.hits, o.hits + 1); }      // 소환사 평타 적중 게이지
@@ -1738,7 +1741,8 @@ function drawFx() {
     } else if (f.k === 'pool') {      // 물웅덩이: 푸른 원 + 잔물결
       const fade = Math.min(1, f.life / 0.4, t * 8 + 0.2);
       ctx.globalAlpha = 0.26 * fade; ctx.fillStyle = f.col; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.fill();
-      ctx.globalAlpha = 0.8 * fade; ctx.strokeStyle = '#bfe4ff'; ctx.lineWidth = 3; ctx.setLineDash([10, 7]); ctx.stroke(); ctx.setLineDash([]);
+      const po = f.follow >= 0 && game.players[f.follow], pc = po && po.team === game.players[0].team ? '#4aa8ff' : '#ff5d6c';      // 테두리: 우리 팀 파랑, 상대 팀 빨강
+      ctx.globalAlpha = 0.9 * fade; ctx.strokeStyle = pc; ctx.lineWidth = 4; ctx.setLineDash([10, 7]); ctx.stroke(); ctx.setLineDash([]); ctx.strokeStyle = '#bfe4ff';
       for (let i = 0; i < 2; i++) { const ph = (performance.now() / 1400 + i / 2) % 1; ctx.globalAlpha = (1 - ph) * 0.45 * fade; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (0.25 + 0.7 * ph), 0, 6.283); ctx.stroke(); }
     } else if (f.k === 'whirl') {      // 소용돌이: 돌아가는 나선
       const fade = Math.min(1, f.life / 0.3, t * 8 + 0.2), rot = performance.now() / 260;
@@ -2035,7 +2039,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 72;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 73;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -2291,7 +2295,7 @@ function predictSkill(i, angArg, qid, fr) {      // 스킬을 누르는 즉시 �
     else if (f.t === 'cone' && f.guard) predFx({ k: 'cone', x: vp.x, y: vp.y, a: ang, arc: f.arc, r: f.range, life: f.guard + L, max: f.guard + L, col: f.col || '#e8edf7', follow: 0 });
     else if (f.t === 'line' && f.delay) predFx({ k: 'tele', x: vp.x, y: vp.y, a: ang, len: f.len, w: f.w, life: f.delay + L, max: f.delay + L, col: f.col || '#ff8a4a' });
     else if (f.t === 'counter') { const T = f.block + L; predFx({ k: 'tri', x: vp.x, y: vp.y, a: ang, len: f.len, w: f.w, life: T, max: T, col: f.col || '#ff6b6b' }); net.pcnt = now; }
-    else if (f.t === 'pool') predFx({ k: 'pool', x: clamp(vp.x + Math.cos(ang) * f.dist, 20, W - 20), y: clamp(vp.y + Math.sin(ang) * f.dist, 20, H - 20), r: f.r, life: f.dur, max: f.dur, col: f.col });
+    else if (f.t === 'pool') predFx({ k: 'pool', x: clamp(vp.x + Math.cos(ang) * f.dist, 20, W - 20), y: clamp(vp.y + Math.sin(ang) * f.dist, 20, H - 20), r: f.r, life: f.dur, max: f.dur, col: f.col, follow: 0 });
     else if (f.t === 'tornado') { const [tx, ty] = tornPos(g, vp, f, ang, aimed ? fr : undefined), a2 = Math.atan2(ty - vp.y, tx - vp.x), ln = Math.max(30, Math.hypot(tx - vp.x, ty - vp.y) - (R + 4)), keep = g.bullets; g.bullets = []; g.fireProj(vp, { dmg: 0, speed: f.speed, r: f.pr, life: ln / f.speed, col: f.col }, a2); for (const b of g.bullets) { b.qid = qid; b.t0 = now; net.pb.push(b); } g.bullets = keep; }
     else if (f.t === 'stealth') predFx({ k: 'ring', x: vp.x, y: vp.y, r: 44, life: 0.35, max: 0.35, col: '#9aa4b8' });
     else if (f.t === 'shield') { predFx({ k: 'ring', x: vp.x, y: vp.y, r: 50, life: 0.35, max: 0.35, col: f.col || '#6ec1ff' }); net.sh = { a: f.amount, d: f.dur, t: now }; }

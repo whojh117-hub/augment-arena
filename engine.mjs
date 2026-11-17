@@ -456,7 +456,7 @@ class Game {
       else if (f.t === 'pool') {      // 조류술사 웅덩이: 내 자리에 설치, 만들어질 때 안에 있는 적에게 피해
         const zx = clamp(p.x + Math.cos(ang) * f.dist, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * f.dist, 20, H - 20);
         this.pools.push({ kind: 'pool', owner: p.idx, x: zx, y: zy, r: f.r, t: f.dur, max: f.dur, f });
-        this.fx.push({ k: 'pool', x: zx, y: zy, r: f.r, life: f.dur, max: f.dur, col: f.col });
+        this.fx.push({ k: 'pool', x: zx, y: zy, r: f.r, life: f.dur, max: f.dur, col: f.col, follow: p.idx });
         if (f.dmg) { for (const e of this.foes(p)) if (e.alive && Math.hypot(e.x - zx, e.y - zy) <= f.r + R) this.dealDamage(p, e, f.dmg, null); this.hitMinions(p.idx, m => Math.hypot(m.x - zx, m.y - zy) <= f.r + m.r, f.dmg); }
       } else if (f.t === 'tornado') {      // 용오름: 작은 원이 먼저 보이고(번개처럼) 잠시 뒤 토네이도
         const [zx, zy] = tornPos(this, p, f, ang, aimed ? frArg : undefined), a2 = Math.atan2(zy - p.y, zx - p.x), len = Math.max(30, Math.hypot(zx - p.x, zy - p.y) - (R + 4));
@@ -892,7 +892,10 @@ class Game {
         if (dead) break;
         if (t.alive && t.dashT <= 0 && t.inv <= 0 && !((b.pierce || b.torn || b.carry) && b.hs && b.hs.has(t.idx)) && !(t.stl > 0 && b.basic)) {      // 은신 중엔 기본공격 투사체에 맞지 않음
           const dx = t.x - b.x, dy = t.y - b.y, rr = R + b.r;
-          if (dx * dx + dy * dy < rr * rr) {
+          let touch;
+          if (b.carry) { const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp, al = dx * ux + dy * uy, pe = Math.abs(-dx * uy + dy * ux); touch = al <= 10 + R && al >= -130 && pe <= b.r + R; }      // 밀물: 파도 앞의 하얀 선에 닿았을 때부터 (몸통 사각형 안)
+          else touch = dx * dx + dy * dy < rr * rr;
+          if (touch) {
             if (b.torn) { if (t.cnt) { dead = true; this.blockedBy(t); } else { this.tornPull(b, t); (b.hs || (b.hs = new Set())).add(t.idx); } continue; }
             const ok = this.dealDamage(ownP, t, b.dmg, b); b.hit = true; (b.hs || (b.hs = new Set())).add(t.idx);      // 직격 피해 (관통탄은 한 사람당 1번)
             if (ok && b.hom) { const o = ownP; if (o.ch.advent && !o.adv) o.hits = Math.min(o.ch.advent.hits, o.hits + 1); }      // 소환사 평타 적중 게이지
@@ -920,4 +923,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 72;
+export const BUILD = 73;
