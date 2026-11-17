@@ -33,15 +33,18 @@ export class GameHub {
   }
 }
 
+// 게임 서버(Durable Object)를 아시아 쪽에 만들도록 힌트를 줌. 힌트는 '처음 만들어질 때'만 적용되므로 이름을 새로 바꿔서(apac1) 새로 만들게 함
+const hub = env => env.HUB.get(env.HUB.idFromName('apac1'), { locationHint: 'apac' });
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/ws') {
-      const stub = env.HUB.get(env.HUB.idFromName('main'));
+      const stub = hub(env);
       return stub.fetch(request);
     }
     if (url.pathname === '/where') {
-      const stub = env.HUB.get(env.HUB.idFromName('main'));
+      const stub = hub(env);
       const doColo = await (await stub.fetch(new Request(url.origin + '/where'))).text();
       return new Response('내 쪽 Cloudflare 접속 도시: ' + ((request.cf && request.cf.colo) || '?') + '\n게임 서버가 있는 도시: ' + doColo + '\n(ICN=서울 NRT=도쿄 KIX=오사카 HKG=홍콩 SIN=싱가포르 LAX=미국 서부)\n', { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
     }
