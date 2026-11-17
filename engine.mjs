@@ -906,7 +906,7 @@ class Game {
           }
         }
       }
-      if (!dead) for (const m of this.minions) {      // 상대 소환물(용·구슬)도 맞을 수 있음
+      if (!dead && !b.carry) for (const m of this.minions) {      // 상대 소환물(용·구슬)도 맞을 수 있음 (밀물 파도는 소환물을 그냥 통과)
         if (this.players[m.owner].team === ownP.team || m.hp <= 0 || (b.pierce && b.hm && b.hm.has(m.id))) continue;
         const dx = m.x - b.x, dy = m.y - b.y, rr = m.r + b.r;
         if (dx * dx + dy * dy < rr * rr) {
@@ -923,4 +923,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 73;
+export const BUILD = 74;
