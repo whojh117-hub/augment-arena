@@ -186,8 +186,8 @@
     </div>
 
     <div id="pauseOv" class="panel" hidden>
-      <h2>⏸ 일시정지</h2>
-      <div style="display:flex;gap:12px"><button class="btn" id="btnResume">계속하기</button><button class="btn ghost" id="btnQuit2">나가기</button></div>
+      <h2>⚙️ 일시정지</h2>
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:stretch;min-width:220px"><button class="btn" id="btnResume">계속하기</button><button class="btn ghost" id="btnQuit2">나가기</button></div>
     </div>
     <div id="end" class="panel" hidden>
       <h2 id="endTitle"></h2>
@@ -198,7 +198,7 @@
 </div>
 
 <div id="updBar" hidden>새 버전이 나왔어요 <button id="btnUpd" type="button">지금 업데이트</button></div>
-<div id="gameBtns" hidden><button type="button" id="btnPause" aria-label="일시정지">⏸</button><button type="button" id="btnQuit" aria-label="나가기">🚪</button></div>
+<div id="gameBtns" hidden><button type="button" id="btnPause" aria-label="설정(일시정지)">⚙️</button></div>
 <div id="ctl" hidden>
   <button type="button" id="cfgTab" hidden>▶ 조절창</button>
   <div id="cfgBar" hidden>
@@ -1306,7 +1306,7 @@ function endBtns() {      // 랜덤으로 골랐다면: '같은 캐릭터로 다
 let paused = false;
 function setPause(p) { paused = !!p && !!game; $('pauseOv').hidden = !paused; if (paused) resetTouch(); }
 $('btnPause').onclick = () => setPause(true); $('btnResume').onclick = () => setPause(false);
-$('btnQuit').onclick = $('btnQuit2').onclick = () => { setPause(false); $('btnMenu').onclick(); };      // 나가기: 캐릭터 선택 화면으로
+$('btnQuit2').onclick = () => { setPause(false); $('btnMenu').onclick(); };      // 나가기: 캐릭터 선택 화면으로
 $('btnMenu').onclick = () => { paused = false; $('pauseOv').hidden = true; if (net.role !== 'none') netLeave(); setEndMode(); scene = 'menu'; game = null; $('end').hidden = true; $('menu').hidden = false; ctl.hidden = true; resetTouch(); };
 
 // 입력: 조이스틱과 화면 버튼만 사용 (키보드 조작 없음: 방 코드 입력과 충돌하지 않도록)
@@ -1850,7 +1850,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 62;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 63;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
