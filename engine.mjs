@@ -83,9 +83,16 @@ CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '�
     { name: '벽 소환', icon: '🧱', desc: '드래그한 방향 앞(70)에 1×2칸 벽을 5초간 설치(탭하면 상대 쪽). 다른 벽 위에는 설치 불가, 내 기본 공격은 통과. 쿨타임 10초는 벽이 사라진 뒤부터', cd: 10, ai: { use: 'wall', minD: 110, maxD: 330 }, fx: [{ t: 'pwall', w: 70, h: 140, dur: 5, dist: 70 }] },
     { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움(용이 없고 게이지가 가득이면 쓸 수 없음). 내 용이 살아 있으면 \'위치 교환\'으로 바뀌어 용과 위치를 맞바꿈(게이지는 안 참, 화면이 흔들림)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
   ] };
-const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner'];      // 플레이할 수 있는 캐릭터
+CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', color: '#3d3fd1', role: '중거리 · 위치 컨트롤', hp: 100, speed: 215, keep: 230,
+  atk: { type: 'ranged', dmg: 10, cd: 0.65, range: 440, speed: 560, r: 8 },
+  skills: [
+    { name: '파도', icon: '🌊', desc: '넓은 물결을 쏘아 맞은 적을 150 밀어내고 10 피해. 벽에 부딪히면 12 추가 피해', cd: 8, proj: 1, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 10, speed: 480, r: 34, life: 0.6, push: 150, wallDmg: 12, col: '#4aa8ff' }] },
+    { name: '물웅덩이', icon: '🫧', desc: '앞쪽(180)에 반경 90의 물웅덩이를 4초간 만듦. 안에 있는 적은 40% 느려지고, 안에 있는 우리 편은 초당 6씩 회복', cd: 11, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 180, r: 90, dur: 4, slow: 0.6, heal: 6, col: '#3aa8ff' }] },
+    { name: '소용돌이', icon: '🌀', desc: '앞쪽(190)에 반경 105의 소용돌이를 2.5초간 만듦. 안의 적을 한가운데로 끌어당기고 0.5초마다 5 피해', cd: 13, ai: { use: 'whirl', minD: 110, maxD: 330 }, fx: [{ t: 'whirl', dist: 190, r: 105, dur: 2.5, pull: 170, tick: 0.5, dmg: 5, col: '#7f7fff' }] },
+  ] };
+const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
-for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe', 'pwall'].includes(f.t));
+for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe', 'pwall', 'pool', 'whirl'].includes(f.t));
 
 const DIFFS = {
   easy:   { name: '쉬움',   react: 0.34, dodge: 0.10, skillP: 0.30 },
@@ -187,7 +194,7 @@ class Game {
     this.practice = false;    // true면 연습 모드: 1번은 가만히 서 있는 체력 무한 인형, 시간 제한·라운드 종료 없음
     this.auto0 = false;       // true면 0번(사람 자리)도 AI가 조작 (테스트용)
     this.remote = false;      // true면 1번도 사람(온라인 상대)이 조작: AI를 쓰지 않음
-    this.ev = []; this.fx = []; this.bullets = []; this.zones = []; this.minions = []; this.mid = 0;
+    this.ev = []; this.fx = []; this.bullets = []; this.zones = []; this.pools = []; this.minions = []; this.mid = 0;
     this.startMatch();
   }
   foes(p) { return this.players.filter(q => q.team !== p.team); }      // 상대 팀 사람들
@@ -209,10 +216,10 @@ class Game {
       const sp0 = (this.quad ? SPAWN4 : SPAWN)[p.idx]; p.x = sp0.x; p.y = sp0.y; p.vx = p.vy = 0; p.aim = p.team === 0 ? 0 : Math.PI;
       p.maxHp = p.ch.hp; p.hp = p.maxHp; p.alive = true; p.atkCd = 0.5;      // 함성 등으로 늘어난 최대 체력은 라운드가 끝나면 초기화
       p.atkBuf = 0; p.skCd = [0, 0, 0]; p.dashCd = 0; p.dashT = 0; p.inv = 0; p.stun = 0; p.dashN = p.ch.dashN || 0; p.stl = 0; p.stlI = -1; p.emp = false; p.cnt = null; p.taken = 0; p.rage = false; p.seenX = p.x; p.seenY = p.y;
-      p.slowT = 0; p.shield = 0; p.shieldT = 0; p.dr = 0; p.drT = 0; p.haste = 0; p.charge = null; p.guard = null; p.inp = { mx: 0, my: 0 }; p.want = freshWant();
+      p.slowT = 0; p.shield = 0; p.shieldT = 0; p.dr = 0; p.drT = 0; p.haste = 0; p.charge = null; p.guard = null; p.kb = null; p.inp = { mx: 0, my: 0 }; p.want = freshWant();
       p.think = 0.4; p.stuckT = 0; p.lx = p.x; p.ly = p.y; p.unstick = 0; p.atkAng = null; p.hits = 0; p.adv = false; p.orbSk = -1;
     }
-    this.minions = []; this.pw = []; this.rebuildWalls();
+    this.minions = []; this.pw = []; this.pools = []; this.rebuildWalls();
     this.bullets = []; this.fx = []; this.zones = []; this.fightT = 0; this.res = null; this.ph = 'count'; this.timer = COUNT_TIME;
     const m = this.map; this.bolts = []; this.boltT = m.bolt ? m.bolt.first : 0; this.heatT = m.heat ? m.heat.every : 0; this.ess = m.ess ? { up: false, t: m.ess.first } : null;
   }
@@ -319,8 +326,35 @@ class Game {
       const a = base + (k - (n - 1) / 2) * sp;
       this.bullets.push({ x: p.x + Math.cos(a) * (R + 4), y: p.y + Math.sin(a) * (R + 4), vx: Math.cos(a) * f.speed, vy: Math.sin(a) * f.speed,
         r: f.r || 5, dmg: f.dmg, owner: p.idx, pierce: !!f.pierce, aoe: f.aoe || 0, aoeDmg: f.aoeDmg, stun: f.stun || 0, slowT: f.slowT || 0, slowMul: f.slowMul != null ? f.slowMul : 1,
-        life: f.life || 1.4, col: f.col || null, hit: false, basic: !!f.basic, tp: !!f.tp, hom: f.hom || 0, pass: !!f.pass });
+        life: f.life || 1.4, col: f.col || null, hit: false, basic: !!f.basic, tp: !!f.tp, hom: f.hom || 0, pass: !!f.pass, push: f.push || 0, wallDmg: f.wallDmg || 0 });
     }
+  }
+  knock(src, t, b) {      // 밀치기: 투사체 방향으로 잠깐 밀려남. 벽(맵 가장자리 포함)에 막히면 추가 피해
+    const sp = Math.hypot(b.vx, b.vy) || 1;
+    t.kb = { dx: b.vx / sp, dy: b.vy / sp, left: 0.22, speed: b.push / 0.22, wall: b.wallDmg || 0, src, hitW: false };
+    t.charge = null; t.cnt = null; t.guard = null;
+  }
+  stepPools(dt) {      // 물웅덩이(적 둔화·우리 편 회복), 소용돌이(적 끌어당김 + 틱 피해)
+    if (!this.pools.length) return;
+    for (const z of this.pools) {
+      z.t -= dt; const o = this.players[z.owner], F = z.f;
+      if (z.kind === 'whirl') z.tk += dt;
+      const tick = z.kind === 'whirl' && z.tk >= F.tick; if (tick) z.tk -= F.tick;
+      for (const q of this.players) {
+        if (!q.alive) continue;
+        const dx = z.x - q.x, dy = z.y - q.y, d = Math.hypot(dx, dy);
+        if (d > z.r) continue;
+        const ally = q.team === o.team;
+        if (z.kind === 'pool') {
+          if (ally) { if (q.hp < q.maxHp) q.hp = Math.min(q.maxHp, q.hp + F.heal * dt); }
+          else if (q.dashT <= 0 && q.inv <= 0 && !(q.slowT > 0.3 && q.slowMul < F.slow)) { q.slowT = Math.max(q.slowT, 0.3); q.slowMul = F.slow; }
+        } else if (!ally && q.dashT <= 0 && q.inv <= 0) {
+          if (d > 4) { const st = Math.min(F.pull * dt, d); stepMove(q, dx / d * st, dy / d * st); }
+          if (tick) this.dealDamage(o, q, F.dmg, null);
+        }
+      }
+    }
+    this.pools = this.pools.filter(z => z.t > 0);
   }
   explode(b, noDmg) {      // noDmg: 직격으로 이미 피해를 줬을 때는 폭발 효과만(피해 2번 방지)
     this.fx.push({ k: 'ring', x: b.x, y: b.y, r: b.aoe, life: 0.3, max: 0.3, col: b.col || '#ff8a4a' });
@@ -382,6 +416,11 @@ class Game {
           this.zones.push({ owner: p.idx, x: p.x, y: p.y, a: ang, len: f.len, w: f.w, dmg: f.dmg, o: f, t: f.delay });
           this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: f.len, w: f.w, life: f.delay, max: f.delay, col: f.col || '#ff8a4a' });
         } else this.lineHit(p, f.len, f.w, f.dmg, f, ang);
+      }
+      else if (f.t === 'pool' || f.t === 'whirl') {      // 조류술사: 앞쪽에 물웅덩이/소용돌이 지대 설치
+        const zx = clamp(p.x + Math.cos(ang) * f.dist, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * f.dist, 20, H - 20);
+        this.pools.push({ kind: f.t, owner: p.idx, x: zx, y: zy, r: f.r, t: f.dur, max: f.dur, f, tk: 0 });
+        this.fx.push({ k: f.t, x: zx, y: zy, r: f.r, life: f.dur, max: f.dur, col: f.col });
       }
       else if (f.t === 'counter') {
         p.cnt = { a: ang, t: f.block, len: f.len, w: f.w, hit: f.hit, miss: f.miss, blocked: false, col: f.col };
@@ -600,6 +639,7 @@ class Game {
     let vx = 0, vy = 0;
     if (!p.alive) { /* 정지 */ }
     else if (p.charge) { const c = p.charge; vx = c.dx * c.speed; vy = c.dy * c.speed; c.left -= dt; if (c.left <= 0) { p.charge = null; this.chargeEnd(p, c); } }
+    else if (p.kb) { const k = p.kb; vx = k.dx * k.speed; vy = k.dy * k.speed; k.left -= dt; }
     else if (p.dashT > 0) { vx = p.dx * DASH.speed; vy = p.dy * DASH.speed; p.dashT -= dt; }
     else if (p.cnt) { /* 반격 중에는 제자리 */ }
     else if (p.stun <= 0) {
@@ -609,7 +649,13 @@ class Game {
       vx = mx * sp; vy = my * sp;
     }
     p.vx = vx; p.vy = vy;
+    const ox0 = p.x, oy0 = p.y;
     stepMove(p, vx * dt, vy * dt);
+    if (p.kb) {      // 밀려나다 벽에 막히면 추가 피해하고 멈춤
+      const k = p.kb, want = Math.hypot(vx, vy) * dt, got = Math.hypot(p.x - ox0, p.y - oy0);
+      if (want > 0.5 && got < want * 0.5) { if (k.wall > 0 && !k.hitW) { k.hitW = true; this.dealDamage(k.src, p, k.wall, null); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 36, life: 0.25, max: 0.25, col: '#4aa8ff' }); } p.kb = null; }
+      else if (k.left <= 0) p.kb = null;
+    }
 
     const dist = Math.hypot(e.x - p.x, e.y - p.y);
     if (p.charge) {      // 경로상 적 피해: 지나가며 부딪힌 적에게 한 사람당 1회 (돌진은 계속)
@@ -708,6 +754,8 @@ class Game {
       else if (h.use === 'wall') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && los && Math.random() < 0.5;
       else if (h.use === 'power') { const dr = this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0); use = dr ? (dist < 170 && Math.random() < 0.4) : p.hits < p.ch.advent.hits; }
       else if (h.use === 'gapclose') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999);
+      else if (h.use === 'pool') use = !this.pools.some(z => z.owner === p.idx && z.kind === 'pool') && (dist < 280 || p.hp < p.maxHp * 0.7) && (los || dist < 200);
+      else if (h.use === 'whirl') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && los;
       if (use) p.want.sk[i] = 1;
     }
   }
@@ -744,7 +792,7 @@ class Game {
     const P = this.players;
     if (!this.remote && !this.quad && !this.practice) this.ai(P[1], dt);
     if (this.auto0) this.ai(P[0], dt);
-    this.stepZones(dt); this.stepMapFx(dt);
+    this.stepZones(dt); this.stepPools(dt); this.stepMapFx(dt);
     this.stepPWalls(dt);
     for (const p of P) this.stepPlayer(p, dt);
     this.stepMinions(dt);
@@ -805,6 +853,7 @@ class Game {
           if (dx * dx + dy * dy < rr * rr) {
             const ok = this.dealDamage(ownP, t, b.dmg, b); b.hit = true; (b.hs || (b.hs = new Set())).add(t.idx);      // 직격 피해 (관통탄은 한 사람당 1번)
             if (ok && b.hom) { const o = ownP; if (o.ch.advent && !o.adv) o.hits = Math.min(o.ch.advent.hits, o.hits + 1); }      // 소환사 평타 적중 게이지
+            if (ok && b.push) this.knock(ownP, t, b);      // 파도: 맞은 적을 진행 방향으로 밀어냄
             if (ok && b.tp) this.tpBehind(ownP, t, b);      // 단검투척: 맞힌 적의 바로 뒤로 순간이동
             if (b.aoe > 0) { dead = true; this.explode(b, true); }               // 폭발은 모양만, 추가 피해 없음
             else if (!b.pierce) dead = true;
@@ -828,4 +877,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 64;
+export const BUILD = 65;
