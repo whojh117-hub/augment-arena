@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>증강 아레나</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -353,7 +353,7 @@ CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: 
   atk: { type: 'melee', dmg: 15, cd: 0.5, range: 56, arc: 2.4, lunge: 30 },
   skills: [
     { name: '단검투척', icon: '🗡️', desc: '단검을 던져 적중하면 10 피해 + 그 적의 바로 뒤로 순간이동', cd: 6, proj: 1, ai: { use: 'attack', maxD: 360 }, fx: [{ t: 'proj', dmg: 10, speed: 760, r: 8, life: 0.5, tp: true, col: '#ff6b6b' }] },
-    { name: '반격', icon: '🤺', desc: '0.5초간 삼각형 범위로 오는 공격을 막고(제자리), 끝나면 범위 안의 적에게 피해: 막았으면 20 / 못 막았으면 10', cd: 10, ai: { use: 'block', maxD: 130 }, fx: [{ t: 'counter', len: 140, w: 70, block: 0.5, hit: 20, miss: 10, col: '#ff6b6b' }] },
+    { name: '반격', icon: '🤺', desc: '0.5초간 모든 공격을 막고(제자리), 끝나면 범위 안의 적에게 피해: 막았으면 20 / 못 막았으면 10', cd: 10, ai: { use: 'block', maxD: 130 }, fx: [{ t: 'counter', len: 140, w: 70, block: 0.5, hit: 20, miss: 10, col: '#ff6b6b' }] },
     { name: '은신', icon: '🫥', desc: '3.5초간 은신: 이동속도 1.2배, 상대에게 보이지 않고 기본공격 투사체에 맞지 않음. 공격·스킬을 쓰면 풀림(피해를 받아도 유지). 쿨타임 9초는 은신이 끝난 뒤부터', cd: 9, ai: { use: 'gapclose', minD: 220, maxD: 9999 }, fx: [{ t: 'stealth', dur: 3.5, speed: STL_MUL }] },
   ] };
 CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '🪄', color: '#ffd24a', role: '원거리 · 소환', hp: 100, speed: 215, keep: 240,
@@ -366,10 +366,10 @@ CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '�
     { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움(용이 없고 게이지가 가득이면 쓸 수 없음). 내 용이 살아 있으면 \'위치 교환\'으로 바뀌어 용과 위치를 맞바꿈(게이지는 안 참, 화면이 흔들림)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
   ] };
 CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', color: '#3d3fd1', role: '중거리 · 위치 컨트롤', hp: 110, speed: 220, keep: 300,
-  atk: { type: 'ranged', dmg: 11, cd: 0.55, range: 400, speed: 600, r: 8 },
+  atk: { type: 'ranged', dmg: 9, cd: 0.55, range: 400, speed: 600, r: 8 },
   skills: [
     { name: '썰물', icon: '🌀', desc: '수류 채찍을 쏘아 맞은 적을 내 쪽으로 250 끌어당기고 8 피해. 쓰고 7초 뒤 이 버튼이 \'밀물\'로 바뀜', cd: 7, proj: 1, ai: { use: 'attack', minD: 130, maxD: 340 }, fx: [{ t: 'proj', dmg: 8, speed: 520, r: 16, life: 0.65, pull: 250, col: '#7fd3ff' }],
-      alt: { name: '밀물', icon: '🌊', desc: '넓은 해일을 쏘아 맞은 적을 200 밀어내고 12 피해, 벽에 부딪히면 15 추가 피해. 쓰고 7초 뒤 다시 \'썰물\'로 바뀜', cd: 7, proj: 1, aimed: true, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 12, speed: 480, r: 34, life: 0.6, push: 200, wallDmg: 15, col: '#4aa8ff' }] } },
+      alt: { name: '밀물', icon: '🌊', desc: '넓은 해일을 쏘아 맞은 적을 200 밀어내고 12 피해, 벽에 부딪히면 15 추가 피해. 쓰고 7초 뒤 다시 \'썰물\'로 바뀜', cd: 7, proj: 1, aimed: true, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 12, speed: 480, r: 68, life: 0.6, push: 200, wallDmg: 15, col: '#4aa8ff' }] } },
     { name: '웅덩이', icon: '🫧', desc: '내 자리에 반경 90의 웅덩이를 3초간 만들고 안의 적에게 8 피해. 안에 들어온 적은 20% 느려지고, 안에 있는 나는 20% 빨라짐', cd: 10, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 90, dur: 3, slow: 0.8, haste: 1.2, dmg: 8, col: '#3aa8ff' }] },
     { name: '용오름', icon: '🌪️', desc: '드래그한 방향·거리(최대 330, 탭하면 200)의 원하는 곳에 작은 원(반경 55)이 먼저 표시되고, 0.5초 뒤 토네이도가 솟아 20 피해 + 0.5초간 그 자리에 붙잡음', cd: 9, ai: { use: 'tornado', minD: 100, maxD: 330 }, fx: [{ t: 'tornado', dist: 200, min: 40, max: 330, r: 55, delay: 0.5, dmg: 20, hold: 0.5, col: '#9fe8ff' }] },
   ] };
@@ -448,6 +448,7 @@ function inTri(c, o, x, y, pad) {
   const ca = Math.cos(c.a), sa = Math.sin(c.a), dx = x - o.x, dy = y - o.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
   return along >= -pad && along <= c.len + pad && perp <= (c.w / 2) * (1 - Math.max(0, along) / c.len) + pad;
 }
+const LAG = 0.12;      // 온라인 판정 보정(초)
 const isRoot = p => p.slowT > 0 && p.slowMul === 0;      // 속박: 이동·대시·이동기 불가, 공격·그 밖의 스킬은 가능
 const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge');
 const tornDist = (f, fr) => (typeof fr === 'number' ? f.min + (f.max - f.min) * clamp(fr, 0, 1) : f.dist);      // 드래그 길이(0~1)로 정한 설치 거리
@@ -587,7 +588,7 @@ class Game {
 
   dealDamage(src, t, dmg, o) {
     if (!t.alive || t.dashT > 0 || t.inv > 0) return false;
-    if (t.cnt && src && src !== t && inTri(t.cnt, t, src.x, src.y, R)) { this.blockedBy(t); return false; }      // 반격: 삼각형 안에서 오는 피해를 막음
+    if (t.cnt && src !== t) { this.blockedBy(t); return false; }      // 반격 중에는 어떤 공격(방향·거리 상관없이)도 막음
     let a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1);   // 서든데스 규칙: 모든 데미지 2배
     if (t.drT > 0) a *= 1 - t.dr;      // 받는 피해 감소 버프(전사의 함성)
     if (t.ch.rageAt && !t.rage) { t.taken += a; if (t.taken >= t.ch.rageAt) { t.rage = true; t.taken = 0; this.ev.push({ k: 'text', x: t.x, y: t.y - 36, txt: '분노!', col: '#ffd24a' }); } }      // 탱커: 받은 피해(보호막이 막은 양 포함)가 쌓이면 분노
@@ -623,6 +624,7 @@ class Game {
     else { const sp = Math.hypot(b.vx, b.vy) || 1; dx = b.vx / sp; dy = b.vy / sp; dist = b.push; }
     if (dist <= 0) return;
     t.kb = { dx, dy, left: 0.2, speed: dist / 0.2, wall: b.pull ? 0 : (b.wallDmg || 0), src, hitW: false };
+    if (b.pull) { b.pulled = true; this.fx.push({ k: 'tether', x: t.x, y: t.y, follow: src.idx, len: dist, w: 0, life: 0.28, max: 0.28, col: '#7fd3ff' }); }
     t.charge = null; t.cnt = null; t.guard = null;
   }
   stepPools(dt) {      // 웅덩이(적 둔화·내 이속 증가), 용오름(예고 뒤 토네이도)
@@ -661,18 +663,21 @@ class Game {
       if (!e.alive) continue;
       e.stun = Math.max(e.stun, c.endStun); e.charge = null; this.ev.push({ k: 'text', x: e.x, y: e.y - 30, txt: '기절!', col: '#ffd24a' }); }
   }
+  hitT(e, f) {      // 범위 판정. 온라인(서버)에서는 지연 때문에 화면과 서버 위치가 어긋나므로: 몸 판정을 줄이고, 현재 위치와 '조금 앞선 위치' 둘 다 범위 안일 때만 맞음
+    if (!this.remote) return f(e.x, e.y, R);
+    const pd = R * 0.6; return f(e.x, e.y, pd) && f(e.x + (e.vx || 0) * LAG, e.y + (e.vy || 0) * LAG, pd);
+  }
   coneHit(p, range, arc, dmg, o, ang) {
     const A = typeof ang === 'number' ? ang : p.aim, life = (o && o.guard) || 0.2;
     this.fx.push({ k: 'cone', x: p.x, y: p.y, a: A, arc, r: range, life, max: life, col: (o && o.col) || '#e8edf7', follow: o && o.guard ? p.idx : -1, fist: !o && !!p.ch.atk.fist });
-    for (const e of this.foes(p)) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (e.alive && d <= range + R && Math.abs(normAng(Math.atan2(e.y - p.y, e.x - p.x) - A)) <= arc / 2) this.dealDamage(p, e, dmg, o); }
+    for (const e of this.foes(p)) { if (e.alive && this.hitT(e, (x, y, pd) => Math.hypot(x - p.x, y - p.y) <= range + pd && Math.abs(normAng(Math.atan2(y - p.y, x - p.x) - A)) <= arc / 2)) this.dealDamage(p, e, dmg, o); }
     this.hitMinions(p.idx, m => Math.hypot(m.x - p.x, m.y - p.y) <= range + m.r && Math.abs(normAng(Math.atan2(m.y - p.y, m.x - p.x) - A)) <= arc / 2, dmg);
   }
   lineArea(src, x, y, A, len, width, dmg, o) {      // 고정 위치의 직선 범위를 지금 판정
     this.fx.push({ k: 'line', x, y, a: A, len, w: width, life: 0.25, max: 0.25, col: (o && o.col) || '#e8edf7' });
     const c = Math.cos(A), s = Math.sin(A);
     for (const e of this.foes(src)) {
-      const ex = e.x - x, ey = e.y - y, along = ex * c + ey * s, perp = Math.abs(-ex * s + ey * c);
-      if (e.alive && along >= -R && along <= len + R && perp <= width / 2 + R) this.dealDamage(src, e, dmg, o);
+      if (e.alive && this.hitT(e, (qx, qy, pd) => { const ex = qx - x, ey = qy - y, along = ex * c + ey * s, perp = Math.abs(-ex * s + ey * c); return along >= -pd && along <= len + pd && perp <= width / 2 + pd; })) this.dealDamage(src, e, dmg, o);
     }
     this.hitMinions(src.idx, m => { const mx = m.x - x, my = m.y - y, al = mx * c + my * s, pe = Math.abs(-mx * s + my * c); return al >= -m.r && al <= len + m.r && pe <= width / 2 + m.r; }, dmg);
   }
@@ -717,7 +722,7 @@ class Game {
       } else if (f.t === 'tornado') {      // 용오름: 작은 원이 먼저 보이고(번개처럼) 잠시 뒤 토네이도
         const td = tornDist(f, frArg), zx = clamp(p.x + Math.cos(ang) * td, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * td, 20, H - 20);
         this.pools.push({ kind: 'tornado', owner: p.idx, x: zx, y: zy, r: f.r, t: f.delay, max: f.delay, f });
-        this.fx.push({ k: 'bolt', x: zx, y: zy, r: f.r, life: f.delay, max: f.delay, tz: p.idx });
+        this.fx.push({ k: 'bolt', x: zx, y: zy, r: f.r, life: f.delay, max: f.delay, tz: p.idx, follow: p.idx, col: '#4aa8ff' });
       }
       else if (f.t === 'counter') {
         p.cnt = { a: ang, t: f.block, len: f.len, w: f.w, hit: f.hit, miss: f.miss, blocked: false, col: f.col };
@@ -896,7 +901,7 @@ class Game {
       if (p.cnt.t <= 0) {      // 막기가 끝남: 삼각형 안의 적에게 피해 (막았으면 12, 못 막았으면 6)
         const c = p.cnt; p.cnt = null;
         this.fx.push({ k: 'tri', x: p.x, y: p.y, a: c.a, len: c.len, w: c.w, life: 0.2, max: 0.2, col: c.blocked ? '#ffd24a' : c.col });
-        if (p.alive) for (const q of this.foes(p)) if (q.alive && inTri(c, p, q.x, q.y, R)) this.dealDamage(p, q, c.blocked ? c.hit : c.miss, null);
+        if (p.alive) for (const q of this.foes(p)) if (q.alive && this.hitT(q, (x, y, pd) => inTri(c, p, x, y, pd))) this.dealDamage(p, q, c.blocked ? c.hit : c.miss, null);
         if (p.alive) this.hitMinions(p.idx, m => inTri(c, p, m.x, m.y, m.r), c.blocked ? c.hit : c.miss);
       }
     }
@@ -1168,7 +1173,7 @@ class Game {
         }
       }
       if (boom) this.explode(b);
-      if (dead) b.dead = true;
+      if (dead) { b.dead = true; if (b.pull && !b.pulled) this.fx.push({ k: 'tether', x: b.x, y: b.y, follow: ownP.idx, len: 9999, w: 0, life: 0.25, max: 0.25, col: '#7fd3ff' }); }
     }
     this.bullets = this.bullets.filter(b => !b.dead);
   }
@@ -1202,6 +1207,10 @@ function fit() {
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
 }
 addEventListener('resize', fit); fit();
+// 확대(핀치·더블탭) 막기: 한 번 확대되면 돌아올 수 없던 문제
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 
 // 메뉴
 // 메인 화면 카드: 선택 색은 암살자 빨강·전사 주황·소환사 노랑·궁수 초록·탱커 파랑·조류술사 남색·마법사 보라·미출시 회색 (soon = 아직 선택 불가)
@@ -1310,6 +1319,7 @@ function applyLayout() {
   for (const id of CTL_IDS) $(id).style.opacity = ctlCfg.op / 100;
 }
 addEventListener('resize', applyLayout);
+{ const relay = () => { fit(); applyLayout(); }; if (window.visualViewport) visualViewport.addEventListener('resize', relay); addEventListener('orientationchange', relay); addEventListener('pageshow', relay); document.addEventListener('visibilitychange', () => { if (!document.hidden) relay(); }); }
 function cfgSelect(id) {
   cfg.sel = id; CTL_IDS.concat('hintL').forEach(k => $(k).classList.toggle('sel', k === id));
   const v = id === 'hintL' ? (ctlCfg.st || 100) : ((ctlCfg.b[id] && ctlCfg.b[id].s) || 100); $('cfgSize').value = v; $('cfgSizeV').textContent = v + '%';
@@ -1643,8 +1653,14 @@ function drawFx() {
     const t = 1 - f.life / f.max;
     ctx.save();
     if (f.k === 'bolt') {      // 번개 경고: 빨간 원 테두리 + 중심에서 바깥으로 차오르는 면
-      ctx.globalAlpha = 0.9; ctx.strokeStyle = '#ff4a4a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.stroke();
-      ctx.globalAlpha = 0.38; ctx.fillStyle = '#ff3a3a'; ctx.beginPath(); ctx.arc(f.x, f.y, Math.max(1, f.r * t), 0, 6.283); ctx.fill();
+      const bc = f.follow >= 0 && game.players[f.follow] && game.players[f.follow].team === game.players[0].team ? '#4aa8ff' : '#ff4a4a';      // 용오름 범위: 내(아군) 것은 파랑, 상대 것은 빨강
+      ctx.globalAlpha = 0.9; ctx.strokeStyle = bc; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.stroke();
+      ctx.globalAlpha = 0.38; ctx.fillStyle = bc; ctx.beginPath(); ctx.arc(f.x, f.y, Math.max(1, f.r * t), 0, 6.283); ctx.fill();
+    } else if (f.k === 'tether') {      // 썰물: 물줄기가 나갔다가 맞은 상대를 달고 내게 돌아옴
+      const o = game.players[f.follow]; if (o) {
+        const dx = o.x - f.x, dy = o.y - f.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, e = 1 - Math.pow(1 - Math.min(1, t * 1.25), 3), mv = Math.min(f.len, L) * e;
+        waterRope(o.x, o.y, f.x + ux * mv, f.y + uy * mv, (1 - t * 0.5), performance.now() / 1000);
+      }
     } else if (f.k === 'bstar') {      // 번개 적중: 노란 별
       ctx.globalAlpha = Math.min(1, (1 - t) * 1.6); ctx.fillStyle = '#ffe14a'; ctx.strokeStyle = '#fff6b0'; ctx.lineWidth = 3;
       ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -1.5708 + i * 0.6283, rr0 = (i % 2 ? 0.45 : 1) * f.r * (0.8 + 0.25 * t); ctx.lineTo(f.x + Math.cos(a) * rr0, f.y + Math.sin(a) * rr0); } ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -1842,8 +1858,24 @@ function drawStatus(p) {      // 캐릭터 바로 아래에 지속 효과의 남
   });
   ctx.restore();
 }
+function waterRope(x0, y0, x1, y1, a, tm) {      // 구불구불한 물줄기 (x0,y0 → x1,y1)
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy); if (L < 4) return; const nx = -dy / L, ny = dx / L, n = Math.max(6, Math.round(L / 14));
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.shadowColor = '#7fd3ff'; ctx.shadowBlur = 10;
+  for (const [w, col, al] of [[9, '#2a7fd0', 0.55], [4, '#bfeaff', 0.95]]) {
+    ctx.globalAlpha = Math.max(0, a) * al; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath();
+    for (let i = 0; i <= n; i++) { const u = i / n, off = Math.sin(u * 9 - tm * 14) * 5 * Math.sin(u * Math.PI); const px = x0 + dx * u + nx * off, py = y0 + dy * u + ny * off; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawBullets() {
   for (const b of game.bullets) {
+    if (b.col === '#4aa8ff' && b.r > 40) {      // 밀물: 폭 넓은 파도가 밀려 나감
+      const an = Math.atan2(b.vy, b.vx), tm = performance.now() / 1000; ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(an); ctx.lineCap = 'round'; ctx.shadowColor = '#4aa8ff'; ctx.shadowBlur = 14;
+      for (const [k, al, w] of [[0, 0.85, 12], [-18, 0.5, 8], [-36, 0.28, 6]]) { ctx.globalAlpha = al; ctx.strokeStyle = k ? '#9fd8ff' : '#e6f6ff'; ctx.lineWidth = w; ctx.beginPath(); for (let i = 0; i <= 16; i++) { const u = i / 8 - 1, yy = u * b.r, xx = k + 20 * (1 - u * u) - 0 + Math.sin(u * 6 + tm * 10 + k) * 3; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); }
+      ctx.globalAlpha = 0.18; ctx.fillStyle = '#4aa8ff'; ctx.beginPath(); ctx.arc(0, 0, b.r, -1.5708, 1.5708); ctx.fill(); ctx.restore(); continue;
+    }
+    if (b.col === '#7fd3ff' && game.players[b.owner]) { const o = game.players[b.owner]; waterRope(o.x, o.y, b.x, b.y, 1, performance.now() / 1000); }
     const bt = game.players[b.owner] ? game.players[b.owner].team : b.owner, mt = game.players[0].team, ally = bt === mt, col = b.col || (b.owner === 0 ? '#8ed0ff' : ally ? '#a6f3d2' : '#ff9aa5');
     ctx.shadowColor = col; ctx.shadowBlur = 12; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = b.owner === 0 ? ME_COL : ally ? ALLY_COL : OPP_COL; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 1, 0, 6.283); ctx.stroke();
@@ -2217,7 +2249,7 @@ function predictSkill(i, angArg, qid, fr) {      // 스킬을 누르는 즉시 �
     else if (f.t === 'line' && f.delay) predFx({ k: 'tele', x: vp.x, y: vp.y, a: ang, len: f.len, w: f.w, life: f.delay + L, max: f.delay + L, col: f.col || '#ff8a4a' });
     else if (f.t === 'counter') { const T = f.block + L; predFx({ k: 'tri', x: vp.x, y: vp.y, a: ang, len: f.len, w: f.w, life: T, max: T, col: f.col || '#ff6b6b' }); net.pcnt = now; }
     else if (f.t === 'pool') predFx({ k: 'pool', x: clamp(vp.x + Math.cos(ang) * f.dist, 20, W - 20), y: clamp(vp.y + Math.sin(ang) * f.dist, 20, H - 20), r: f.r, life: f.dur, max: f.dur, col: f.col });
-    else if (f.t === 'tornado') { const td = tornDist(f, fr); predFx({ k: 'bolt', x: clamp(vp.x + Math.cos(ang) * td, 20, W - 20), y: clamp(vp.y + Math.sin(ang) * td, 20, H - 20), r: f.r, life: f.delay + L, max: f.delay + L, tz: 0 }); }
+    else if (f.t === 'tornado') { const td = tornDist(f, fr); predFx({ k: 'bolt', x: clamp(vp.x + Math.cos(ang) * td, 20, W - 20), y: clamp(vp.y + Math.sin(ang) * td, 20, H - 20), r: f.r, life: f.delay + L, max: f.delay + L, tz: 0, follow: 0, col: '#4aa8ff' }); }
     else if (f.t === 'stealth') predFx({ k: 'ring', x: vp.x, y: vp.y, r: 44, life: 0.35, max: 0.35, col: '#9aa4b8' });
     else if (f.t === 'shield') { predFx({ k: 'ring', x: vp.x, y: vp.y, r: 50, life: 0.35, max: 0.35, col: f.col || '#6ec1ff' }); net.sh = { a: f.amount, d: f.dur, t: now }; }
     else if (f.t === 'buff') predFx({ k: 'ring', x: vp.x, y: vp.y, r: 60, life: 0.4, max: 0.4, col: f.col || '#ffd24a' });
@@ -2384,10 +2416,12 @@ function setEndMode() { net.ended = false; $('btnAgain').hidden = false; endBtns
 function oppLabel() { return game.practice ? '🎯' : net.role === 'none' ? 'AI(' + game.diff.name + ')' : '상대'; }
 
 let last = performance.now(), acc = 0; const STEP = 1 / 60;
+let lyW = 0, lyH = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   fit();
+  if (innerWidth !== lyW || innerHeight !== lyH) { lyW = innerWidth; lyH = innerHeight; applyLayout(); }      // 화면 크기가 바뀌었거나 복귀했을 때 조이스틱·스킬 버튼 위치를 다시 잡음
   ctx.setTransform(cv.width / CW, 0, 0, cv.height / CH, 0, 0); ctx.clearRect(0, 0, CW, CH);
   { const sb = scene === 'play' && !!game && net.role === 'none' && !game.practice && game.ph !== 'over'; if ($('gameBtns').hidden === sb) $('gameBtns').hidden = !sb; if (!sb && paused) setPause(false); }
   if (scene !== 'play' || !game) { ctx.save(); ctx.translate(0, OY); drawArena(); ctx.restore(); return; }

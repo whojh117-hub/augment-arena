@@ -71,7 +71,7 @@ CHARS.assassin = { id: 'assassin', name: '암살자', icon: '🗡️', atkIcon: 
   atk: { type: 'melee', dmg: 15, cd: 0.5, range: 56, arc: 2.4, lunge: 30 },
   skills: [
     { name: '단검투척', icon: '🗡️', desc: '단검을 던져 적중하면 10 피해 + 그 적의 바로 뒤로 순간이동', cd: 6, proj: 1, ai: { use: 'attack', maxD: 360 }, fx: [{ t: 'proj', dmg: 10, speed: 760, r: 8, life: 0.5, tp: true, col: '#ff6b6b' }] },
-    { name: '반격', icon: '🤺', desc: '0.5초간 삼각형 범위로 오는 공격을 막고(제자리), 끝나면 범위 안의 적에게 피해: 막았으면 20 / 못 막았으면 10', cd: 10, ai: { use: 'block', maxD: 130 }, fx: [{ t: 'counter', len: 140, w: 70, block: 0.5, hit: 20, miss: 10, col: '#ff6b6b' }] },
+    { name: '반격', icon: '🤺', desc: '0.5초간 모든 공격을 막고(제자리), 끝나면 범위 안의 적에게 피해: 막았으면 20 / 못 막았으면 10', cd: 10, ai: { use: 'block', maxD: 130 }, fx: [{ t: 'counter', len: 140, w: 70, block: 0.5, hit: 20, miss: 10, col: '#ff6b6b' }] },
     { name: '은신', icon: '🫥', desc: '3.5초간 은신: 이동속도 1.2배, 상대에게 보이지 않고 기본공격 투사체에 맞지 않음. 공격·스킬을 쓰면 풀림(피해를 받아도 유지). 쿨타임 9초는 은신이 끝난 뒤부터', cd: 9, ai: { use: 'gapclose', minD: 220, maxD: 9999 }, fx: [{ t: 'stealth', dur: 3.5, speed: STL_MUL }] },
   ] };
 CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '🪄', color: '#ffd24a', role: '원거리 · 소환', hp: 100, speed: 215, keep: 240,
@@ -84,10 +84,10 @@ CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '�
     { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움(용이 없고 게이지가 가득이면 쓸 수 없음). 내 용이 살아 있으면 \'위치 교환\'으로 바뀌어 용과 위치를 맞바꿈(게이지는 안 참, 화면이 흔들림)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
   ] };
 CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', color: '#3d3fd1', role: '중거리 · 위치 컨트롤', hp: 110, speed: 220, keep: 300,
-  atk: { type: 'ranged', dmg: 11, cd: 0.55, range: 400, speed: 600, r: 8 },
+  atk: { type: 'ranged', dmg: 9, cd: 0.55, range: 400, speed: 600, r: 8 },
   skills: [
     { name: '썰물', icon: '🌀', desc: '수류 채찍을 쏘아 맞은 적을 내 쪽으로 250 끌어당기고 8 피해. 쓰고 7초 뒤 이 버튼이 \'밀물\'로 바뀜', cd: 7, proj: 1, ai: { use: 'attack', minD: 130, maxD: 340 }, fx: [{ t: 'proj', dmg: 8, speed: 520, r: 16, life: 0.65, pull: 250, col: '#7fd3ff' }],
-      alt: { name: '밀물', icon: '🌊', desc: '넓은 해일을 쏘아 맞은 적을 200 밀어내고 12 피해, 벽에 부딪히면 15 추가 피해. 쓰고 7초 뒤 다시 \'썰물\'로 바뀜', cd: 7, proj: 1, aimed: true, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 12, speed: 480, r: 34, life: 0.6, push: 200, wallDmg: 15, col: '#4aa8ff' }] } },
+      alt: { name: '밀물', icon: '🌊', desc: '넓은 해일을 쏘아 맞은 적을 200 밀어내고 12 피해, 벽에 부딪히면 15 추가 피해. 쓰고 7초 뒤 다시 \'썰물\'로 바뀜', cd: 7, proj: 1, aimed: true, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 12, speed: 480, r: 68, life: 0.6, push: 200, wallDmg: 15, col: '#4aa8ff' }] } },
     { name: '웅덩이', icon: '🫧', desc: '내 자리에 반경 90의 웅덩이를 3초간 만들고 안의 적에게 8 피해. 안에 들어온 적은 20% 느려지고, 안에 있는 나는 20% 빨라짐', cd: 10, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 90, dur: 3, slow: 0.8, haste: 1.2, dmg: 8, col: '#3aa8ff' }] },
     { name: '용오름', icon: '🌪️', desc: '드래그한 방향·거리(최대 330, 탭하면 200)의 원하는 곳에 작은 원(반경 55)이 먼저 표시되고, 0.5초 뒤 토네이도가 솟아 20 피해 + 0.5초간 그 자리에 붙잡음', cd: 9, ai: { use: 'tornado', minD: 100, maxD: 330 }, fx: [{ t: 'tornado', dist: 200, min: 40, max: 330, r: 55, delay: 0.5, dmg: 20, hold: 0.5, col: '#9fe8ff' }] },
   ] };
@@ -166,6 +166,7 @@ function inTri(c, o, x, y, pad) {
   const ca = Math.cos(c.a), sa = Math.sin(c.a), dx = x - o.x, dy = y - o.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca);
   return along >= -pad && along <= c.len + pad && perp <= (c.w / 2) * (1 - Math.max(0, along) / c.len) + pad;
 }
+const LAG = 0.12;      // 온라인 판정 보정(초)
 const isRoot = p => p.slowT > 0 && p.slowMul === 0;      // 속박: 이동·대시·이동기 불가, 공격·그 밖의 스킬은 가능
 const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge');
 const tornDist = (f, fr) => (typeof fr === 'number' ? f.min + (f.max - f.min) * clamp(fr, 0, 1) : f.dist);      // 드래그 길이(0~1)로 정한 설치 거리
@@ -305,7 +306,7 @@ class Game {
 
   dealDamage(src, t, dmg, o) {
     if (!t.alive || t.dashT > 0 || t.inv > 0) return false;
-    if (t.cnt && src && src !== t && inTri(t.cnt, t, src.x, src.y, R)) { this.blockedBy(t); return false; }      // 반격: 삼각형 안에서 오는 피해를 막음
+    if (t.cnt && src !== t) { this.blockedBy(t); return false; }      // 반격 중에는 어떤 공격(방향·거리 상관없이)도 막음
     let a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1);   // 서든데스 규칙: 모든 데미지 2배
     if (t.drT > 0) a *= 1 - t.dr;      // 받는 피해 감소 버프(전사의 함성)
     if (t.ch.rageAt && !t.rage) { t.taken += a; if (t.taken >= t.ch.rageAt) { t.rage = true; t.taken = 0; this.ev.push({ k: 'text', x: t.x, y: t.y - 36, txt: '분노!', col: '#ffd24a' }); } }      // 탱커: 받은 피해(보호막이 막은 양 포함)가 쌓이면 분노
@@ -341,6 +342,7 @@ class Game {
     else { const sp = Math.hypot(b.vx, b.vy) || 1; dx = b.vx / sp; dy = b.vy / sp; dist = b.push; }
     if (dist <= 0) return;
     t.kb = { dx, dy, left: 0.2, speed: dist / 0.2, wall: b.pull ? 0 : (b.wallDmg || 0), src, hitW: false };
+    if (b.pull) { b.pulled = true; this.fx.push({ k: 'tether', x: t.x, y: t.y, follow: src.idx, len: dist, w: 0, life: 0.28, max: 0.28, col: '#7fd3ff' }); }
     t.charge = null; t.cnt = null; t.guard = null;
   }
   stepPools(dt) {      // 웅덩이(적 둔화·내 이속 증가), 용오름(예고 뒤 토네이도)
@@ -379,18 +381,21 @@ class Game {
       if (!e.alive) continue;
       e.stun = Math.max(e.stun, c.endStun); e.charge = null; this.ev.push({ k: 'text', x: e.x, y: e.y - 30, txt: '기절!', col: '#ffd24a' }); }
   }
+  hitT(e, f) {      // 범위 판정. 온라인(서버)에서는 지연 때문에 화면과 서버 위치가 어긋나므로: 몸 판정을 줄이고, 현재 위치와 '조금 앞선 위치' 둘 다 범위 안일 때만 맞음
+    if (!this.remote) return f(e.x, e.y, R);
+    const pd = R * 0.6; return f(e.x, e.y, pd) && f(e.x + (e.vx || 0) * LAG, e.y + (e.vy || 0) * LAG, pd);
+  }
   coneHit(p, range, arc, dmg, o, ang) {
     const A = typeof ang === 'number' ? ang : p.aim, life = (o && o.guard) || 0.2;
     this.fx.push({ k: 'cone', x: p.x, y: p.y, a: A, arc, r: range, life, max: life, col: (o && o.col) || '#e8edf7', follow: o && o.guard ? p.idx : -1, fist: !o && !!p.ch.atk.fist });
-    for (const e of this.foes(p)) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (e.alive && d <= range + R && Math.abs(normAng(Math.atan2(e.y - p.y, e.x - p.x) - A)) <= arc / 2) this.dealDamage(p, e, dmg, o); }
+    for (const e of this.foes(p)) { if (e.alive && this.hitT(e, (x, y, pd) => Math.hypot(x - p.x, y - p.y) <= range + pd && Math.abs(normAng(Math.atan2(y - p.y, x - p.x) - A)) <= arc / 2)) this.dealDamage(p, e, dmg, o); }
     this.hitMinions(p.idx, m => Math.hypot(m.x - p.x, m.y - p.y) <= range + m.r && Math.abs(normAng(Math.atan2(m.y - p.y, m.x - p.x) - A)) <= arc / 2, dmg);
   }
   lineArea(src, x, y, A, len, width, dmg, o) {      // 고정 위치의 직선 범위를 지금 판정
     this.fx.push({ k: 'line', x, y, a: A, len, w: width, life: 0.25, max: 0.25, col: (o && o.col) || '#e8edf7' });
     const c = Math.cos(A), s = Math.sin(A);
     for (const e of this.foes(src)) {
-      const ex = e.x - x, ey = e.y - y, along = ex * c + ey * s, perp = Math.abs(-ex * s + ey * c);
-      if (e.alive && along >= -R && along <= len + R && perp <= width / 2 + R) this.dealDamage(src, e, dmg, o);
+      if (e.alive && this.hitT(e, (qx, qy, pd) => { const ex = qx - x, ey = qy - y, along = ex * c + ey * s, perp = Math.abs(-ex * s + ey * c); return along >= -pd && along <= len + pd && perp <= width / 2 + pd; })) this.dealDamage(src, e, dmg, o);
     }
     this.hitMinions(src.idx, m => { const mx = m.x - x, my = m.y - y, al = mx * c + my * s, pe = Math.abs(-mx * s + my * c); return al >= -m.r && al <= len + m.r && pe <= width / 2 + m.r; }, dmg);
   }
@@ -435,7 +440,7 @@ class Game {
       } else if (f.t === 'tornado') {      // 용오름: 작은 원이 먼저 보이고(번개처럼) 잠시 뒤 토네이도
         const td = tornDist(f, frArg), zx = clamp(p.x + Math.cos(ang) * td, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * td, 20, H - 20);
         this.pools.push({ kind: 'tornado', owner: p.idx, x: zx, y: zy, r: f.r, t: f.delay, max: f.delay, f });
-        this.fx.push({ k: 'bolt', x: zx, y: zy, r: f.r, life: f.delay, max: f.delay, tz: p.idx });
+        this.fx.push({ k: 'bolt', x: zx, y: zy, r: f.r, life: f.delay, max: f.delay, tz: p.idx, follow: p.idx, col: '#4aa8ff' });
       }
       else if (f.t === 'counter') {
         p.cnt = { a: ang, t: f.block, len: f.len, w: f.w, hit: f.hit, miss: f.miss, blocked: false, col: f.col };
@@ -614,7 +619,7 @@ class Game {
       if (p.cnt.t <= 0) {      // 막기가 끝남: 삼각형 안의 적에게 피해 (막았으면 12, 못 막았으면 6)
         const c = p.cnt; p.cnt = null;
         this.fx.push({ k: 'tri', x: p.x, y: p.y, a: c.a, len: c.len, w: c.w, life: 0.2, max: 0.2, col: c.blocked ? '#ffd24a' : c.col });
-        if (p.alive) for (const q of this.foes(p)) if (q.alive && inTri(c, p, q.x, q.y, R)) this.dealDamage(p, q, c.blocked ? c.hit : c.miss, null);
+        if (p.alive) for (const q of this.foes(p)) if (q.alive && this.hitT(q, (x, y, pd) => inTri(c, p, x, y, pd))) this.dealDamage(p, q, c.blocked ? c.hit : c.miss, null);
         if (p.alive) this.hitMinions(p.idx, m => inTri(c, p, m.x, m.y, m.r), c.blocked ? c.hit : c.miss);
       }
     }
@@ -886,7 +891,7 @@ class Game {
         }
       }
       if (boom) this.explode(b);
-      if (dead) b.dead = true;
+      if (dead) { b.dead = true; if (b.pull && !b.pulled) this.fx.push({ k: 'tether', x: b.x, y: b.y, follow: ownP.idx, len: 9999, w: 0, life: 0.25, max: 0.25, col: '#7fd3ff' }); }
     }
     this.bullets = this.bullets.filter(b => !b.dead);
   }
