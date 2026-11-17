@@ -30,6 +30,11 @@
   #menuHead { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
   #btnAug { display: flex; align-items: center; gap: 8px; background: linear-gradient(180deg, #1a2540, #121a2e); border: 1px solid #3a4c7a; border-radius: 14px; padding: 10px 24px; color: #cfe3ff; font: 900 17px var(--body); letter-spacing: 1px; cursor: pointer; box-shadow: 0 0 18px #4aa8ff33; }
   #menuMain { display: flex; gap: 16px; flex: 1; min-height: 0; }
+  #noticeOv { position: fixed; inset: 0; z-index: 90; background: #05070bd9; display: flex; align-items: center; justify-content: center; }
+  #noticeOv .nbox { width: min(520px, 92vw); background: var(--surface); border: 2px solid #4aa8ff; border-radius: 18px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  #noticeOv .nh { font: 900 24px var(--body); color: #cfe3ff; } #noticeOv .nh small { font-size: 13px; color: var(--dim); margin-left: 6px; }
+  #noticeOv ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  #noticeOv li b { display: block; font-size: 18px; color: var(--fg); } #noticeOv li span { display: block; font-size: 15px; color: #c3cde0; margin-top: 2px; }
   #augOv { position: absolute; inset: 0; z-index: 5; background: #0a0d13; border-radius: 10px; padding: 18px 26px; display: flex; flex-direction: column; gap: 16px; }
   #augOv .augH { display: flex; align-items: center; gap: 16px; font: 900 26px var(--body); color: #cfe3ff; }
   #augOv .augB { flex: 1; border: 1px dashed var(--line); border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #c9d2e4; font: 700 20px var(--body); }
@@ -54,12 +59,14 @@
   .info .h b { font-family: var(--display); font-size: 24px; font-weight: 400; color: var(--ic, var(--fg)); }
   .info .h span { color: var(--dim); font-size: 12px; }
   .info .st { display: flex; gap: 18px; font-size: 14px; font-weight: 700; color: var(--good); }
-  .info .pv { font-size: 12.5px; color: #ffd24a; line-height: 1.4; }
+  .info .pv { font-size: 15px; color: #ffd24a; line-height: 1.4; }
+  .info.det { overflow-y: auto; } .info.det .pv, .info.det li { font-size: 13px; }
+  .info .more { align-self: flex-end; margin-top: auto; background: #141a26; border: 1px solid var(--line); color: #cfe3ff; border-radius: 10px; padding: 6px 14px; font: 700 14px var(--body); }
   .info ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 3px; }
-  .info li { font-size: 12.5px; color: #c3cde0; display: flex; gap: 8px; align-items: baseline; line-height: 1.4; }
+  .info li { font-size: 15.5px; color: #c3cde0; display: flex; gap: 8px; align-items: baseline; line-height: 1.4; }
   .info li i { font-style: normal; width: 20px; text-align: center; }
-  .info li b { font-weight: 700; color: var(--fg); min-width: 76px; }
-  .info li s { text-decoration: none; margin-left: auto; color: var(--dim); font-size: 11px; white-space: nowrap; }
+  .info li b { font-weight: 700; color: var(--fg); min-width: 84px; }
+  .info li s { text-decoration: none; margin-left: auto; color: var(--dim); font-size: 13px; white-space: nowrap; }
   .info .na { margin: auto; color: #ff7a7a; font: 700 20px var(--body); text-align: center; }
   .btn.blue { background: var(--me); color: #04101f; }
   .btn:disabled { opacity: .35; cursor: not-allowed; }
@@ -167,6 +174,7 @@
       <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심 · <b>오른쪽</b> 큰 버튼은 공격(톡=1회, 꾹=자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(탭하면 상대 쪽) · 초록 버튼은 대시(무적, 쿨 5초) · 3라운드 먼저 이기면 승리</div>
       <div class="note" id="verTag" style="font-size:11px;opacity:.7"></div>
       <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
+      <div id="noticeOv" hidden><div class="nbox"><div class="nh">📢 업데이트 안내 <small>v67</small></div><ul><li><b>🌊 새 캐릭터 조류술사 추가</b><span>썰물·밀물로 끌고 밀고, 웅덩이와 용오름으로 위치를 다룹니다</span></li><li><b>🔮 마법사 화염구 하향</b><span>직격 30 → 25, 터지는 피해 20 → 15</span></li></ul><button type="button" class="btn" id="btnNoticeOk">확인</button></div></div>
       <div id="augOv" hidden><div class="augH"><button type="button" class="btn ghost" id="btnAugBack">← 뒤로</button>✨ 증강 목록</div><div class="augB"><i>✨</i>아직 증강이 출시되지 않았습니다</div></div>
     </div>
 
@@ -336,13 +344,13 @@ const CHARS = {
     atk: { type: 'ranged', dmg: 8, cd: 0.4, range: 560, speed: 620, r: 5 },
     skills: [
       { name: '삼연사', icon: '🎯', desc: '화살 3발 부채꼴 발사', cd: 6, proj: 1, ai: { use: 'attack', maxD: 450 }, fx: [{ t: 'proj', n: 3, spread: 0.22, dmg: 9, speed: 640, r: 5 }] },
-      { name: '후퇴 사격', icon: '↩️', desc: '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박(이동·대시 불가, 공격은 가능)', cd: 10, proj: 1, ai: { use: 'escape', minD: 150 }, fx: [{ t: 'blink', dist: 150, dir: 'away' }, { t: 'proj', dmg: 10, speed: 520, r: 14, slowT: 1, slowMul: 0 }] },
+      { name: '후퇴 사격', icon: '↩️', desc: '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박: 이동·대시 불가, 공격은 가능', cd: 10, proj: 1, ai: { use: 'escape', minD: 150 }, fx: [{ t: 'blink', dist: 150, dir: 'away' }, { t: 'proj', dmg: 10, speed: 520, r: 14, slowT: 1, slowMul: 0 }] },
       { name: '관통 화살', icon: '➳', desc: '적과 벽을 꿰뚫는 강한 화살', cd: 7, proj: 1, ai: { use: 'attack', maxD: 520 }, fx: [{ t: 'proj', dmg: 20, speed: 950, r: 8, pierce: true, life: 1.0, col: '#4cff7a' }] },
     ] },
   mage: { id: 'mage', name: '마법사', icon: '🔮', atkIcon: '🔮', color: '#c36bff', role: '원거리 · 범위 마법', hp: 95, speed: 225, keep: 280,
     atk: { type: 'ranged', dmg: 11, cd: 0.7, range: 520, speed: 540, r: 8 },
     skills: [
-      { name: '화염구', icon: '🔥', desc: '직격 30 피해, 직격하지 못하고 터지면 범위 20 피해', cd: 5, proj: 1, ai: { use: 'attack', maxD: 480 }, fx: [{ t: 'proj', dmg: 30, aoeDmg: 20, speed: 540, r: 14, aoe: 96, life: 1.4, col: '#ff8a4a' }] },
+      { name: '화염구', icon: '🔥', desc: '직격 25 피해, 직격하지 못하고 터지면 범위 15 피해', cd: 5, proj: 1, ai: { use: 'attack', maxD: 480 }, fx: [{ t: 'proj', dmg: 25, aoeDmg: 15, speed: 540, r: 14, aoe: 96, life: 1.4, col: '#ff8a4a' }] },
       { name: '빙결', icon: '❄️', desc: '맞으면 2초간 둔화', cd: 8, proj: 1, ai: { use: 'attack', maxD: 480 }, fx: [{ t: 'proj', dmg: 10, speed: 720, r: 15, life: 1.1, slowT: 2, slowMul: 0.5, col: '#8fd8ff' }] },
       { name: '순간이동', icon: '✨', desc: '드래그한 방향(탭하면 이동 방향, 없으면 뒤)으로 순간이동', cd: 10, ai: { use: 'escape', minD: 130 }, fx: [{ t: 'blink', dist: 147, dir: 'move', thru: true }] },
     ] },
@@ -366,14 +374,22 @@ CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '�
     { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움(용이 없고 게이지가 가득이면 쓸 수 없음). 내 용이 살아 있으면 \'위치 교환\'으로 바뀌어 용과 위치를 맞바꿈(게이지는 안 참, 화면이 흔들림)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
   ] };
 CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', color: '#3d3fd1', role: '중거리 · 위치 컨트롤', hp: 110, speed: 220, keep: 300,
-  atk: { type: 'ranged', dmg: 9, cd: 0.55, range: 400, speed: 600, r: 8 },
+  atk: { type: 'ranged', dmg: 10, cd: 0.55, range: 400, speed: 600, r: 8 },
   skills: [
     { name: '썰물', icon: '🌀', desc: '수류 채찍을 쏘아 맞은 적을 내 쪽으로 250 끌어당기고 8 피해. 쓰고 7초 뒤 이 버튼이 \'밀물\'로 바뀜', cd: 7, proj: 1, ai: { use: 'attack', minD: 130, maxD: 340 }, fx: [{ t: 'proj', dmg: 8, speed: 520, r: 16, life: 0.65, pull: 250, col: '#7fd3ff' }],
       alt: { name: '밀물', icon: '🌊', desc: '넓은 해일을 쏘아 맞은 적을 200 밀어내고 12 피해, 벽에 부딪히면 15 추가 피해. 쓰고 7초 뒤 다시 \'썰물\'로 바뀜', cd: 7, proj: 1, aimed: true, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 12, speed: 480, r: 68, life: 0.6, push: 200, wallDmg: 15, col: '#4aa8ff' }] } },
     { name: '웅덩이', icon: '🫧', desc: '내 자리에 반경 90의 웅덩이를 3초간 만들고 안의 적에게 8 피해. 안에 들어온 적은 20% 느려지고, 안에 있는 나는 20% 빨라짐', cd: 10, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 90, dur: 3, slow: 0.8, haste: 1.2, dmg: 8, col: '#3aa8ff' }] },
     { name: '용오름', icon: '🌪️', desc: '드래그한 방향·거리(최대 330, 탭하면 200)의 원하는 곳에 작은 원(반경 55)이 먼저 표시되고, 0.5초 뒤 토네이도가 솟아 20 피해 + 0.5초간 그 자리에 붙잡음', cd: 9, ai: { use: 'tornado', minD: 100, maxD: 330 }, fx: [{ t: 'tornado', dist: 200, min: 40, max: 330, r: 55, delay: 0.5, dmg: 20, hold: 0.5, col: '#9fe8ff' }] },
   ] };
-CHARS.tide.soon = true;      // 아직 출시 전: 메뉴·랜덤·상대 선택에서 제외 (엔진에는 구현되어 있음, 이 줄만 지우면 출시)
+const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에서는 위 desc/passive 전체 설명)
+  assassin: { p: '대시를 2번 할 수 있음, 스킬을 쓰면 다음 기본공격이 강화됨', s: ['단검을 던져 맞으면 상대 뒤로 이동함', '자신에게 오는 모든 피해를 막았다가 반격함', '상대에게 보이지 않으며 평타를 맞지 않음'] },
+  warrior: { s: ['상대를 25 피해로 강타함', '최대 체력이 10 증가하며 3초간 받는 피해를 30% 줄임', '날아오는 투사체를 막고 범위 안 상대에게 15 피해'] },
+  summoner: { p: '강림 스택을 5개 쌓으면 평타가 강림으로 변하여 용을 소환함 (강림 스택: 평타, 용의 힘으로 쌓음)', s: ['적을 따라가 폭발하며 10의 피해를 주는 체력 10의 구슬 소환', '자신의 기본공격만 통과하는 벽을 5초간 소환', '강림 스택을 1스택 쌓음, 용이 있으면 용과 위치를 교환함'] },
+  tank: { p: '총합 70 피해를 받으면 대지강타가 분노 강타로 변함', s: ['3초간 내구도 40의 방패를 듦', '돌진 시 15의 피해, 돌진이 끝나면 원형 범위 기절', '주변 적에게 15의 피해를 주며 둔화 (분노 강타 시 25 피해)'] },
+  archer: { s: ['화살 3발을 부채꼴로 발사', '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박', '적과 벽을 꿰뚫는 강한 화살'] },
+  mage: { s: ['직격 25 피해, 터지면 15 피해', '맞으면 2초간 둔화', '드래그한 방향으로 순간이동'] },
+  tide: { s: ['적을 내 쪽으로 끌어당기고 8 피해, 쓰면 7초 뒤 밀물로 변함', '3초간 내 자리에 웅덩이: 적은 20% 느려지고 나는 20% 빨라짐', '원하는 곳에 원이 나타나고 0.5초 뒤 토네이도: 20 피해 + 붙잡음'] },
+};
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
 for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe', 'pwall', 'pool', 'tornado'].includes(f.t));
@@ -1217,7 +1233,7 @@ document.addEventListener('dblclick', e => e.preventDefault(), { passive: false 
 const MENU_CARDS = [
   { id: 'assassin', col: '#ff3b3b' }, { id: 'warrior', col: '#ff8a1f' }, { id: 'summoner', col: '#ffd92e' },
   { id: 'archer', col: '#3ddc6a' }, { id: 'tank', col: '#2f9bff' },
-  { id: 'tide', col: '#3d3fd1', txt: '#8f94ff', soon: true, icon: '🌊', name: '조류술사', role: '중거리 · 위치 컨트롤' },
+  { id: 'tide', col: '#3d3fd1', txt: '#8f94ff', icon: '🌊', name: '조류술사', role: '중거리 · 위치 컨트롤' },
   { id: 'mage', col: '#b04bff' },
   { id: 'soon1', col: '#6b7690', soon: true, icon: '❔', name: '???', role: '출시 예정' }, { id: 'soon2', col: '#6b7690', soon: true, icon: '❔', name: '???', role: '출시 예정' }];
 const menuCol = k => (MENU_CARDS.find(c => c.id === k) || { col: '#9aa4b8' }).col;
@@ -1240,13 +1256,17 @@ function renderInfo() {
     box.innerHTML = '<div class="h"><b>' + CHARS[k].icon + ' ' + CHARS[k].name + '</b><span>' + CHARS[k].role + '</span></div><div class="na">아직 사용할 수 없어요</div>';
   } else {
     const c = CHARS[k];
-    box.innerHTML = '<div class="h"><b>' + c.icon + ' ' + c.name + '</b><span>' + c.role + '</span></div><div class="st"><span>기본 체력 ' + c.hp + '</span><span>공격력 ' + c.atk.dmg + '</span></div>' + (c.passive ? '<div class="pv">✨ 패시브: ' + c.passive + '</div>' : '') + '<ul>' +
-      c.skills.map(s => '<li><i>' + s.icon + '</i><b>' + s.name + '</b><span>' + s.desc + '</span><s>쿨 ' + s.cd + '초</s></li>').join('') + '</ul>';
+    const sh = SHORT[k] || { s: [] }, det = infoDetail, ps = det ? c.passive : (sh.p || c.passive);
+    box.classList.toggle('det', det);
+    box.innerHTML = '<div class="h"><b>' + c.icon + ' ' + c.name + '</b><span>' + c.role + '</span></div><div class="st"><span>기본 체력 ' + c.hp + '</span><span>공격력 ' + c.atk.dmg + '</span></div>' + (ps ? '<div class="pv">✨ 패시브: ' + ps + '</div>' : '') + '<ul>' +
+      c.skills.map((s, i) => '<li><i>' + s.icon + '</i><b>' + s.name + '</b><span>' + (det ? s.desc + (s.alt ? ' ▶ 밀물: ' + s.alt.desc : '') : (sh.s[i] || s.desc)) + '</span><s>쿨 ' + s.cd + '초</s></li>').join('') + '</ul><button type="button" class="more" id="btnMore">' + (det ? '간단히 보기 ▲' : '자세히 보기 ▼') + '</button>';
+    $('btnMore').onclick = () => { infoDetail = !infoDetail; renderInfo(); };
   }
   $('btnStart').disabled = $('btnOnline').disabled = isLocked(k);
 }
+let infoDetail = false;
 function setSel(k) {
-  selKey = k; try { localStorage.setItem('aa_sel', k); } catch (e) { /* 무시 */ }
+  infoDetail = false; selKey = k; try { localStorage.setItem('aa_sel', k); } catch (e) { /* 무시 */ }
   $('chars').querySelectorAll('.ch').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === k ? 'true' : 'false'));
   $('btnRand').classList.toggle('on', k === 'random');
   renderInfo();
@@ -1265,6 +1285,7 @@ function buildChars() {
 $('btnRand').onclick = () => setSel('random');
 $('btnAug').onclick = () => { const t = $('menuToast'); if (t) t.remove(); $('augOv').hidden = false; };
 $('btnAugBack').onclick = () => { $('augOv').hidden = true; };
+{ let seen = ''; try { seen = localStorage.getItem('aa_notice') || ''; } catch (e) { /* 무시 */ } if (seen !== '67') $('noticeOv').hidden = false; $('btnNoticeOk').onclick = () => { $('noticeOv').hidden = true; try { localStorage.setItem('aa_notice', '67'); } catch (e) { /* 무시 */ } }; }      // 업데이트 공지: 버전마다 한 번
 buildChars();
 function setDiff(d) {
   diffKey = d;
@@ -1992,7 +2013,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 66;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 67;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
