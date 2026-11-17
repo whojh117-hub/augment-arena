@@ -26,19 +26,30 @@
   #stage { position: absolute; left: 50%; top: 50%; width: 960px; height: 600px; transform-origin: center center; }
   #cv { position: absolute; inset: 0; width: 960px; height: 600px; display: block; background: #0e1118; border-radius: 10px; box-shadow: 0 0 0 1px var(--line); }
   .panel { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border-radius: 10px; }
-  #menu { background: #0a0d13f2; gap: 10px; }
-  .logo { margin: 0; font-family: var(--display); font-size: 50px; font-weight: 400; letter-spacing: 2px; line-height: 1; }
+  #menu { background: #0a0d13f2; gap: 10px; justify-content: flex-start; align-items: stretch; padding: 16px 26px 10px; }
+  #menuHead { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  #btnAug { display: flex; align-items: center; gap: 8px; background: linear-gradient(180deg, #1a2540, #121a2e); border: 1px solid #3a4c7a; border-radius: 14px; padding: 10px 24px; color: #cfe3ff; font: 900 17px var(--body); letter-spacing: 1px; cursor: pointer; box-shadow: 0 0 18px #4aa8ff33; }
+  #menuMain { display: flex; gap: 16px; flex: 1; min-height: 0; }
+  #augOv { position: absolute; inset: 0; z-index: 5; background: #0a0d13; border-radius: 10px; padding: 18px 26px; display: flex; flex-direction: column; gap: 16px; }
+  #augOv .augH { display: flex; align-items: center; gap: 16px; font: 900 26px var(--body); color: #cfe3ff; }
+  #augOv .augB { flex: 1; border: 1px dashed var(--line); border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #c9d2e4; font: 700 20px var(--body); }
+  #augOv .augB i { font-style: normal; font-size: 54px; line-height: 1; }
+  #menuToast { position: absolute; left: 50%; top: 52%; transform: translateX(-50%); z-index: 6; background: #0c1220f2; border: 1px solid #6b7690; color: #fff; font: 700 16px var(--body); padding: 14px 26px; border-radius: 14px; pointer-events: none; animation: mtoast 1.8s ease forwards; box-shadow: 0 10px 30px #000a; }
+  @keyframes mtoast { 0% { opacity: 0; } 12% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+  .logo { margin: 0; font-family: var(--display); font-size: 44px; font-weight: 400; letter-spacing: 2px; line-height: 1.05; }
   .logo .a { color: var(--me); } .logo .b { color: var(--opp); }
   .tag { margin: 0; color: var(--dim); font-size: 15px; }
-  .chars { display: flex; gap: 10px; }
-  .ch { width: 132px; padding: 12px 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; cursor: pointer;
+  .chars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 500px; flex-shrink: 0; align-content: start; }
+  .ch { height: 104px; justify-content: center; padding: 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; cursor: pointer;
     background: var(--surface); color: var(--fg); border: 2px solid var(--line); border-radius: 14px; }
   .ch[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 20%, var(--surface)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
   .ch .ic { font-size: 40px; line-height: 1.1; }
-  .ch .nm { font-family: var(--display); font-size: 22px; }
+  .ch .nm { font-family: var(--display); font-size: 22px; color: #9aa6bd; }
+  .ch[aria-pressed="true"] .nm { color: var(--t, var(--c)); }
+  .ch.soon { opacity: .6; } .ch.soon .nm { color: #6b7690; }
   .ch .ro { font-size: 11px; color: var(--dim); }
   .ch.lock .ic { filter: grayscale(.4); }
-  .info { width: 780px; min-height: 150px; background: var(--surface); border: 2px solid var(--ic, var(--line)); border-radius: 14px; padding: 12px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .info { flex: 1; min-width: 0; min-height: 0; overflow: hidden; background: var(--surface); border: 2px solid var(--ic, var(--line)); border-radius: 14px; padding: 12px 18px; display: flex; flex-direction: column; gap: 6px; }
   .info .h { display: flex; align-items: baseline; gap: 12px; }
   .info .h b { font-family: var(--display); font-size: 24px; font-weight: 400; color: var(--ic, var(--fg)); }
   .info .h span { color: var(--dim); font-size: 12px; }
@@ -59,9 +70,9 @@
   .row { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
   #net { background: #0a0d13f5; }
   .netbox { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 300px; }
-  #nickBox { position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px; z-index: 3; }
+  #nickBox { display: flex; align-items: center; gap: 8px; justify-content: flex-end; z-index: 3; }
   #nickBox .tag { margin: 0; font-size: 12px; }
-  #nick { width: 130px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 15px var(--body); text-align: center; }
+  #nick { width: 190px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 15px var(--body); text-align: center; }
   #joinCode { width: 150px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 20px var(--body); text-align: center; letter-spacing: 3px; text-transform: lowercase; }
   #hostCode { font: 400 64px var(--display); letter-spacing: 8px; color: var(--me); }
   .rooms { display: flex; flex-direction: column; gap: 6px; min-width: 300px; color: var(--dim); font-size: 13px; text-align: center; }
@@ -77,8 +88,9 @@
   .seg button[aria-pressed="true"] { background: var(--me); color: #04101f; }
   .btn { background: var(--opp); color: #1d0508; border: 0; border-radius: 10px; padding: 13px 44px; font: 900 20px var(--body); cursor: pointer; }
   .btn:active { transform: scale(.97); }
+  #menu .row .btn { padding: 11px 30px; font-size: 18px; } #menu .row .btn.ghost { padding: 10px 20px; font-size: 15px; } #btnRand.on { border-color: #9aa4b8; box-shadow: 0 0 0 2px #9aa4b855; }
   .btn.ghost { background: var(--surface); color: var(--fg); border: 1px solid var(--line); font-weight: 700; font-size: 17px; padding: 12px 26px; }
-  .note { color: var(--dim); font-size: 12px; text-align: center; line-height: 1.6; max-width: 900px; }
+  .note { color: var(--dim); font-size: 11px; text-align: center; line-height: 1.5; max-width: 900px; align-self: center; }
   .note b { color: var(--fg); }
   #end { background: #05070bd9; } #pauseOv { background: #05070be6; z-index: 70; }
   #gameBtns { position: fixed; right: max(8px, env(safe-area-inset-right, 0px)); top: 118px; z-index: 40; display: flex; gap: 8px; pointer-events: auto; }
@@ -145,15 +157,17 @@
     <canvas id="cv" width="960" height="600"></canvas>
 
     <div id="menu" class="panel">
-      <h1 class="logo"><span class="a">증강</span> <span class="b">아레나</span></h1>
-      <p class="tag">캐릭터를 고르고 대전 방식을 선택하세요</p>
-      <div id="nickBox"><span class="tag">닉네임</span><input id="nick" maxlength="8" placeholder="최대 8글자" autocomplete="off" spellcheck="false"></div>
-      <div class="chars" id="chars"></div>
-      <div class="info" id="info"></div>
-      <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button><button class="btn ghost" id="btnCfg">🎮 조작 설정</button></div>
-      <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심(손 떼면 정지) · <b>오른쪽</b> 큰 버튼은 공격(톡 누르면 1회, 꾹 누르면 자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(그냥 탭하면 상대 쪽) · 작은 초록 버튼은 대시(무적, 쿨타임 5초)<br>3라운드 먼저 이기면 승리 · 캐릭터를 고르거나 랜덤으로 정할 수 있어요</div>
+      <div id="menuHead">
+        <div><h1 class="logo"><span class="a">증강</span> <span class="b">아레나</span></h1><p class="tag" style="font-size:13px">캐릭터를 고르고 대전 방식을 선택하세요</p></div>
+        <button type="button" id="btnAug">✨ 증강</button>
+        <div id="nickBox"><span class="tag">닉네임</span><input id="nick" maxlength="8" placeholder="최대 8글자" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <div id="menuMain"><div class="chars" id="chars"></div><div class="info" id="info"></div></div>
+      <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button><button class="btn ghost" id="btnCfg">🎮 조작 설정</button><button class="btn ghost" id="btnRand">🎲 랜덤</button></div>
+      <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심 · <b>오른쪽</b> 큰 버튼은 공격(톡=1회, 꾹=자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(탭하면 상대 쪽) · 초록 버튼은 대시(무적, 쿨 5초) · 3라운드 먼저 이기면 승리</div>
       <div class="note" id="verTag" style="font-size:11px;opacity:.7"></div>
       <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
+      <div id="augOv" hidden><div class="augH"><button type="button" class="btn ghost" id="btnAugBack">← 뒤로</button>✨ 증강 목록</div><div class="augB"><i>✨</i>아직 증강이 출시되지 않았습니다</div></div>
     </div>
 
     <div id="vs" class="panel" hidden>
@@ -1125,14 +1139,27 @@ function fit() {
 addEventListener('resize', fit); fit();
 
 // 메뉴
-const MENU_ORDER = [...CHAR_ORDER];
+// 메인 화면 카드: 선택 색은 암살자 빨강·전사 주황·소환사 노랑·궁수 초록·탱커 파랑·조류술사 남색·마법사 보라·미출시 회색 (soon = 아직 선택 불가)
+const MENU_CARDS = [
+  { id: 'assassin', col: '#ff3b3b' }, { id: 'warrior', col: '#ff8a1f' }, { id: 'summoner', col: '#ffd92e' },
+  { id: 'archer', col: '#3ddc6a' }, { id: 'tank', col: '#2f9bff' },
+  { id: 'tide', col: '#3d3fd1', txt: '#8f94ff', soon: true, icon: '🌊', name: '조류술사', role: '중거리 · 위치 컨트롤' },
+  { id: 'mage', col: '#b04bff' },
+  { id: 'soon1', col: '#6b7690', soon: true, icon: '❔', name: '???', role: '출시 예정' }, { id: 'soon2', col: '#6b7690', soon: true, icon: '❔', name: '???', role: '출시 예정' }];
+const menuCol = k => (MENU_CARDS.find(c => c.id === k) || { col: '#9aa4b8' }).col;
+let menuToastT = 0;
+function menuToast() {
+  const old = $('menuToast'); if (old) old.remove();
+  const t = document.createElement('div'); t.id = 'menuToast'; t.textContent = '아직 출시 전입니다'; $('menu').appendChild(t);
+  clearTimeout(menuToastT); menuToastT = setTimeout(() => t.remove(), 1850);
+}
 let selKey = 'random';      // 'random' 또는 캐릭터 id (암살자는 선택만 되고 아직 사용 불가)
 try { const k = localStorage.getItem('aa_sel'); if (k === 'random' || CHARS[k]) selKey = k; } catch (e) { /* 무시 */ }
 const isLocked = k => k !== 'random' && !!CHARS[k].locked;
 function resolveMy() { myChar = selKey === 'random' || isLocked(selKey) ? CHAR_ORDER[Math.floor(Math.random() * CHAR_ORDER.length)] : selKey; }
 function renderInfo() {
   const box = $('info'), k = selKey;
-  box.style.setProperty('--ic', k === 'random' ? '#9aa4b8' : CHARS[k].color);
+  box.style.setProperty('--ic', k === 'random' ? '#9aa4b8' : menuCol(k));
   if (k === 'random') {
     box.innerHTML = '<div class="h"><b>🎲 랜덤</b><span>시작할 때 ' + CHAR_ORDER.length + '명 중 하나가 무작위로 정해져요</span></div><div class="na" style="color:#9aa4b8">누를 때마다 다른 캐릭터로 시작!</div>';
   } else if (CHARS[k].locked) {
@@ -1147,19 +1174,23 @@ function renderInfo() {
 function setSel(k) {
   selKey = k; try { localStorage.setItem('aa_sel', k); } catch (e) { /* 무시 */ }
   $('chars').querySelectorAll('.ch').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === k ? 'true' : 'false'));
+  $('btnRand').classList.toggle('on', k === 'random');
   renderInfo();
 }
 function buildChars() {
   const box = $('chars'); box.innerHTML = '';
-  for (const id of [...MENU_ORDER, 'random']) {
-    const c = id === 'random' ? { icon: '🎲', name: '랜덤', role: '무작위', color: '#9aa4b8' } : CHARS[id], el = document.createElement('button');
-    el.type = 'button'; el.className = 'ch' + (c.locked ? ' lock' : ''); el.dataset.id = id; el.style.setProperty('--c', c.color);
+  for (const m of MENU_CARDS) {
+    const c = m.soon ? m : CHARS[m.id], el = document.createElement('button');
+    el.type = 'button'; el.className = 'ch' + (m.soon ? ' soon' : ''); el.dataset.id = m.id; el.style.setProperty('--c', m.col); if (m.txt) el.style.setProperty('--t', m.txt);
     el.innerHTML = '<div class="ic">' + c.icon + '</div><div class="nm">' + c.name + '</div><div class="ro">' + c.role + '</div>';
-    el.onclick = () => setSel(id);
+    el.onclick = () => { if (m.soon) menuToast(); else setSel(m.id); };
     box.appendChild(el);
   }
   setSel(selKey);
 }
+$('btnRand').onclick = () => setSel('random');
+$('btnAug').onclick = () => { const t = $('menuToast'); if (t) t.remove(); $('augOv').hidden = false; };
+$('btnAugBack').onclick = () => { $('augOv').hidden = true; };
 buildChars();
 function setDiff(d) {
   diffKey = d;
