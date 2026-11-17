@@ -39,7 +39,7 @@ class Session {
     for (const q of Array.isArray(i.q) ? i.q.slice(-8) : []) {
       if (!Array.isArray(q) || !(q[0] > this.lastQ[k])) continue; this.lastQ[k] = q[0];
       if (q[1] === 'd') g.pressDashP(k, typeof q[2] === 'number' ? (k === 0 ? -q[2] : q[2]) : 0, +q[3] || 0); else if (q[1] === 'a') g.pressAttackP(k, typeof q[2] === 'number' ? (k === 0 ? Math.PI - q[2] : q[2]) : undefined);
-      else if (q[1] === 's') g.pressSkillP(k, q[2] | 0, typeof q[3] === 'number' ? (k === 0 ? Math.PI - q[3] : q[3]) : undefined);
+      else if (q[1] === 's') g.pressSkillP(k, q[2] | 0, typeof q[3] === 'number' ? (k === 0 ? Math.PI - q[3] : q[3]) : undefined, typeof q[4] === 'number' ? q[4] : undefined);
     }
   }
   stat() {      // 진단: 최근 3초 상태 전송 간격 (평균/최대, ms)
@@ -74,7 +74,7 @@ class Session {
   send() {
     const g = this.game, P = g.players;
     const pl = P.map(p => [r1(p.x), r1(p.y), r1(p.vx), r1(p.vy), r2(p.aim), r1(p.hp), p.maxHp, p.alive ? 1 : 0, r2(p.stun), r2(p.slowT), r1(p.shield), p.shieldMax, r2(p.shieldT), r2(p.drT), r2(p.haste), r2(p.dashT),
-      p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0, p.rage ? 1 : 0, p.hits | 0, p.adv ? 1 : 0]);      // 23~26: 대시 충전, 은신 남은 시간, 기본공격 강화, 반격 남은 시간
+      p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0, p.rage ? 1 : 0, p.hits | 0, p.adv ? 1 : 0, p.tm | 0]);      // 23~26: 대시 충전, 은신 남은 시간, 기본공격 강화, 반격 남은 시간
     const bl = g.bullets.slice(0, 18).map(b => [b._i || (b._i = ++this.bid), r1(b.x), r1(b.y), r1(b.vx), r1(b.vy), b.r, b.owner, b.col || 0, b.pierce ? 1 : 0]);
     const fl = g.fx.slice(0, 10).map(f => { if (!f._i) f._i = ++this.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; if (f.fist) o.fi = 1; return o; });
     const mn = g.minions.slice(0, 10).map(m => [m.id, r1(m.x), r1(m.y), r1(m.vx), r1(m.vy), r1(m.hp), m.kind === 'orb' ? 1 : 0, m.owner, r2(m.aim), m.fire ? 1 : 0, m.maxHp, m.r, m.guard > 0 ? 1 : 0]);
@@ -109,7 +109,7 @@ class QuadSession {
     for (const q of Array.isArray(i.q) ? i.q.slice(-8) : []) {
       if (!Array.isArray(q) || !(q[0] > this.lastQ[k])) continue; this.lastQ[k] = q[0];
       if (q[1] === 'd') g.pressDashP(k, typeof q[2] === 'number' ? (A ? -q[2] : q[2]) : 0, +q[3] || 0); else if (q[1] === 'a') g.pressAttackP(k, typeof q[2] === 'number' ? (A ? Math.PI - q[2] : q[2]) : undefined);
-      else if (q[1] === 's') g.pressSkillP(k, q[2] | 0, typeof q[3] === 'number' ? (A ? Math.PI - q[3] : q[3]) : undefined);
+      else if (q[1] === 's') g.pressSkillP(k, q[2] | 0, typeof q[3] === 'number' ? (A ? Math.PI - q[3] : q[3]) : undefined, typeof q[4] === 'number' ? q[4] : undefined);
     }
   }
   stat() { const g = this.gaps; if (g.length < 5) return null; let sum = 0, mx = 0; for (const x of g) { sum += x[1]; if (x[1] > mx) mx = x[1]; } return [Math.round(sum / g.length), Math.round(mx)]; }
@@ -140,7 +140,7 @@ class QuadSession {
   send() {
     const g = this.game, P = g.players;
     const pl = P.map(p => [r1(p.x), r1(p.y), r1(p.vx), r1(p.vy), r2(p.aim), r1(p.hp), p.maxHp, p.alive ? 1 : 0, r2(p.stun), r2(p.slowT), r1(p.shield), p.shieldMax, r2(p.shieldT), r2(p.drT), r2(p.haste), r2(p.dashT),
-      p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0, p.rage ? 1 : 0, p.hits | 0, p.adv ? 1 : 0]);
+      p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0, p.rage ? 1 : 0, p.hits | 0, p.adv ? 1 : 0, p.tm | 0]);
     const bl = g.bullets.slice(0, 30).map(b => [b._i || (b._i = ++this.bid), r1(b.x), r1(b.y), r1(b.vx), r1(b.vy), b.r, b.owner, b.col || 0, b.pierce ? 1 : 0]);
     const fl = g.fx.slice(0, 14).map(f => { if (!f._i) f._i = ++this.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; if (f.fist) o.fi = 1; return o; });
     const mn = g.minions.slice(0, 14).map(m => [m.id, r1(m.x), r1(m.y), r1(m.vx), r1(m.vy), r1(m.hp), m.kind === 'orb' ? 1 : 0, m.owner, r2(m.aim), m.fire ? 1 : 0, m.maxHp, m.r, m.guard > 0 ? 1 : 0]);
