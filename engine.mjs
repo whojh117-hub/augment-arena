@@ -89,7 +89,7 @@ CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', 
     { name: '썰물', icon: '🌀', desc: '수류 채찍을 쏘아 맞은 적을 내 쪽으로 250 끌어당기고 15 피해. 쓰고 7초 뒤 이 버튼이 \'밀물\'로 바뀜', cd: 7, proj: 1, ai: { use: 'attack', minD: 130, maxD: 340 }, fx: [{ t: 'proj', dmg: 15, speed: 520, r: 21, life: 0.65, pull: 250, col: '#7fd3ff' }],
       alt: { name: '밀물', icon: '🌊', desc: '벽을 넘는 넓은 해일을 쏘아 맞은 적을 200 밀어내고 10 피해, 벽에 부딪히면 10 피해 + 1초 기절. 쓰고 7초 뒤 다시 \'썰물\'로 바뀜', cd: 7, proj: 1, aimed: true, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 10, speed: 480, r: 68, life: 0.6, push: 200, wallDmg: 10, wallStun: 1, wp: true, col: '#4aa8ff' }] } },
     { name: '웅덩이', icon: '🫧', desc: '내 자리에 반경 90의 웅덩이를 3초간 만들고 안의 적에게 8 피해. 안에 들어온 적은 20% 느려지고, 안에 있는 나는 20% 빨라짐', cd: 10, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 90, dur: 3, slow: 0.8, haste: 1.2, dmg: 8, col: '#3aa8ff' }] },
-    { name: '용오름', icon: '🌪️', desc: '소용돌이가 직선으로 날아가 끝나는 곳에 작은 원(반경 55)이 생기고 0.5초 뒤(직선에 맞췄으면 0.2초 뒤) 토네이도가 솟아 20 피해 + 0.5초간 붙잡음. 직선에 맞은 상대는 원 중심으로 빨려 들어감. 탭하면 가장 가까운 상대 쪽(최대 330), 드래그하면 그 방향·거리(상대 근처면 자석)', cd: 9, ai: { use: 'tornado', minD: 100, maxD: 330 }, fx: [{ t: 'tornado', dist: 200, min: 60, max: 330, r: 55, delay: 0.5, dmg: 20, hold: 0.5, hitDelay: 0.2, speed: 640, pr: 16, col: '#9fe8ff' }] },
+    { name: '용오름', icon: '🌪️', desc: '소용돌이가 직선으로 날아가 끝나는 곳에 작은 원(반경 55)이 생기고 0.5초 뒤(직선에 맞췄으면 0.2초 뒤) 토네이도가 솟아 20 피해 + 0.5초간 붙잡음. 직선에 맞은 상대는 원 중심으로 빨려 들어감. 탭하면 상대 쪽, 드래그하면 그 방향으로 사거리 231 끝에 원이 고정됨', cd: 9, ai: { use: 'tornado', minD: 90, maxD: 231 }, fx: [{ t: 'tornado', dist: 231, min: 231, max: 231, r: 55, delay: 0.5, dmg: 20, hold: 0.5, hitDelay: 0.2, speed: 640, pr: 16, col: '#9fe8ff' }] },
   ] };
 const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에서는 위 desc/passive 전체 설명)
   assassin: { p: '대시를 2번 할 수 있음, 스킬을 쓰면 다음 기본공격이 강화됨', s: ['단검을 던져 맞으면 상대 뒤로 이동함', '자신에게 오는 모든 피해를 막았다가 반격함', '상대에게 보이지 않으며 평타를 맞지 않음'] },
@@ -177,15 +177,7 @@ function inTri(c, o, x, y, pad) {
 const LAG = 0.12;      // 온라인 판정 보정(초)
 const isRoot = p => p.slowT > 0 && p.slowMul === 0;      // 속박: 이동·대시·이동기 불가, 공격·그 밖의 스킬은 가능
 const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge');
-const tornPos = (g, p, f, ang, fr) => {      // 용오름 설치 위치: 탭하면 가장 가까운 상대 쪽(범위 안), 드래그하면 방향·거리, 상대가 근처(70)면 상대 위치로 붙음(자석)
-  const foes = g.foes(p).filter(e => e.alive); let best = null, bd = 1e9;
-  const lim = (x, y) => { const d = Math.hypot(x - p.x, y - p.y); if (d > f.max) { x = p.x + (x - p.x) / d * f.max; y = p.y + (y - p.y) / d * f.max; } return [clamp(x, 20, W - 20), clamp(y, 20, H - 20)]; };
-  if (typeof fr !== 'number') { for (const e of foes) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; best = e; } } if (best) return lim(best.x, best.y); }
-  const td = tornDist(f, fr); let x = p.x + Math.cos(ang) * td, y = p.y + Math.sin(ang) * td;
-  for (const e of foes) { const d = Math.hypot(e.x - x, e.y - y); if (d < 70 && d < bd) { bd = d; best = e; } }
-  if (best && typeof fr === 'number') return lim(best.x, best.y);
-  return [clamp(x, 20, W - 20), clamp(y, 20, H - 20)];
-};
+const tornPos = (g, p, f, ang) => [clamp(p.x + Math.cos(ang) * f.max, 20, W - 20), clamp(p.y + Math.sin(ang) * f.max, 20, H - 20)];      // 용오름: 사거리 끝(231)에 고정, 방향만 정함
 const tornDist = (f, fr) => (typeof fr === 'number' ? f.min + (f.max - f.min) * clamp(fr, 0, 1) : f.dist);      // 드래그 길이(0~1)로 정한 설치 거리
 const skOf = (p, i) => (i === 0 && p.tm && p.ch.skills[0].alt) ? p.ch.skills[0].alt : p.ch.skills[i];      // 1번 스킬이 둘로 바뀌는 캐릭터(조류술사: 썰물↔밀물)
 // 돌진 경로: 벽에 닿으면 거기서 멈춤. 실제로 갈 수 있는 거리와 도착 지점을 돌려줌
@@ -927,4 +919,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 70;
+export const BUILD = 71;
