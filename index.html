@@ -1220,7 +1220,7 @@ class Game {
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d'), stage = $('stage'), app = $('app'), ctl = $('ctl');
 const CW = 960, CH = 600, OY = 60;
-const ME_COL = '#4aa3ff', OPP_COL = '#ff5d6c', ALLY_COL = '#4ae0a0';
+let ME_COL = '#4aa3ff', OPP_COL = '#ff5d6c', ALLY_COL = '#4ae0a0';      // 2대2에서는 나=초록, 팀원=파랑 (frame에서 바꿈)
 const FONT = '"Noto Sans KR", system-ui, sans-serif';
 const EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
 
@@ -1922,7 +1922,7 @@ function drawBullets() {
       ctx.globalAlpha = 0.18; ctx.fillStyle = '#4aa8ff'; ctx.beginPath(); ctx.arc(0, 0, b.r, -1.5708, 1.5708); ctx.fill(); ctx.restore(); continue;
     }
     if (b.col === '#7fd3ff' && game.players[b.owner]) { const o = game.players[b.owner]; waterRope(o.x, o.y, b.x, b.y, 1, performance.now() / 1000); }
-    const bt = game.players[b.owner] ? game.players[b.owner].team : b.owner, mt = game.players[0].team, ally = bt === mt, col = b.col || (b.owner === 0 ? '#8ed0ff' : ally ? '#a6f3d2' : '#ff9aa5');
+    const bt = game.players[b.owner] ? game.players[b.owner].team : b.owner, mt = game.players[0].team, ally = bt === mt, q4 = game.players.length === 4, col = b.col || (b.owner === 0 ? (q4 ? '#a6f3d2' : '#8ed0ff') : ally ? (q4 ? '#8ed0ff' : '#a6f3d2') : '#ff9aa5');
     ctx.shadowColor = col; ctx.shadowBlur = 12; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = b.owner === 0 ? ME_COL : ally ? ALLY_COL : OPP_COL; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 1, 0, 6.283); ctx.stroke();
   }
@@ -2467,6 +2467,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   fit();
+  { const q = !!game && game.players.length === 4; ME_COL = q ? '#4ae0a0' : '#4aa3ff'; ALLY_COL = q ? '#4aa3ff' : '#4ae0a0'; }
   if (innerWidth !== lyW || innerHeight !== lyH) { lyW = innerWidth; lyH = innerHeight; applyLayout(); }      // 화면 크기가 바뀌었거나 복귀했을 때 조이스틱·스킬 버튼 위치를 다시 잡음
   ctx.setTransform(cv.width / CW, 0, 0, cv.height / CH, 0, 0); ctx.clearRect(0, 0, CW, CH);
   { const sb = scene === 'play' && !!game && net.role === 'none' && !game.practice && game.ph !== 'over'; if ($('gameBtns').hidden === sb) $('gameBtns').hidden = !sb; if (!sb && paused) setPause(false); }
