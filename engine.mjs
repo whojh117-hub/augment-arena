@@ -90,9 +90,12 @@ CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', 
     { name: '물웅덩이', icon: '🫧', desc: '앞쪽(180)에 반경 90의 물웅덩이를 4초간 만듦. 안에 있는 적은 40% 느려지고, 안에 있는 우리 편은 초당 6씩 회복', cd: 11, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 180, r: 90, dur: 4, slow: 0.6, heal: 6, col: '#3aa8ff' }] },
     { name: '소용돌이', icon: '🌀', desc: '앞쪽(190)에 반경 105의 소용돌이를 2.5초간 만듦. 안의 적을 한가운데로 끌어당기고 0.5초마다 5 피해', cd: 13, ai: { use: 'whirl', minD: 110, maxD: 330 }, fx: [{ t: 'whirl', dist: 190, r: 105, dur: 2.5, pull: 170, tick: 0.5, dmg: 5, col: '#7f7fff' }] },
   ] };
+CHARS.tide.soon = true;      // 아직 출시 전: 메뉴·랜덤·상대 선택에서 제외 (엔진에는 구현되어 있음, 이 줄만 지우면 출시)
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
 for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe', 'pwall', 'pool', 'whirl'].includes(f.t));
+
+const PLAY_ORDER = CHAR_ORDER.filter(k => !CHARS[k].soon);      // 지금 고를 수 있는 캐릭터
 
 const DIFFS = {
   easy:   { name: '쉬움',   react: 0.34, dodge: 0.10, skillP: 0.30 },
@@ -877,4 +880,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 65;
+export const BUILD = 66;

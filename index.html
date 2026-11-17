@@ -372,9 +372,12 @@ CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', 
     { name: '물웅덩이', icon: '🫧', desc: '앞쪽(180)에 반경 90의 물웅덩이를 4초간 만듦. 안에 있는 적은 40% 느려지고, 안에 있는 우리 편은 초당 6씩 회복', cd: 11, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 180, r: 90, dur: 4, slow: 0.6, heal: 6, col: '#3aa8ff' }] },
     { name: '소용돌이', icon: '🌀', desc: '앞쪽(190)에 반경 105의 소용돌이를 2.5초간 만듦. 안의 적을 한가운데로 끌어당기고 0.5초마다 5 피해', cd: 13, ai: { use: 'whirl', minD: 110, maxD: 330 }, fx: [{ t: 'whirl', dist: 190, r: 105, dur: 2.5, pull: 170, tick: 0.5, dmg: 5, col: '#7f7fff' }] },
   ] };
+CHARS.tide.soon = true;      // 아직 출시 전: 메뉴·랜덤·상대 선택에서 제외 (엔진에는 구현되어 있음, 이 줄만 지우면 출시)
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
 for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe', 'pwall', 'pool', 'whirl'].includes(f.t));
+
+const PLAY_ORDER = CHAR_ORDER.filter(k => !CHARS[k].soon);      // 지금 고를 수 있는 캐릭터
 
 const DIFFS = {
   easy:   { name: '쉬움',   react: 0.34, dodge: 0.10, skillP: 0.30 },
@@ -1174,7 +1177,7 @@ try {
   const d = localStorage.getItem('aa_diff'); if (DIFFS[d]) diffKey = d;
   const c = localStorage.getItem('aa_char'); if (CHARS[c]) myChar = c;
   const mk = localStorage.getItem('aa_map'); if (MAPS[mk]) mapKey = mk;
-  const o = localStorage.getItem('aa_opp'); if (o === 'random' || CHAR_ORDER.includes(o)) oppKey = o;
+  const o = localStorage.getItem('aa_opp'); if (o === 'random' || (CHAR_ORDER.includes(o) && !CHARS[o].soon)) oppKey = o;
 } catch (e) { /* 무시 */ }
 if (window.matchMedia && matchMedia('(pointer: coarse)').matches) touchMode = true;
 
@@ -1192,7 +1195,7 @@ addEventListener('resize', fit); fit();
 const MENU_CARDS = [
   { id: 'assassin', col: '#ff3b3b' }, { id: 'warrior', col: '#ff8a1f' }, { id: 'summoner', col: '#ffd92e' },
   { id: 'archer', col: '#3ddc6a' }, { id: 'tank', col: '#2f9bff' },
-  { id: 'tide', col: '#3d3fd1', txt: '#8f94ff' },
+  { id: 'tide', col: '#3d3fd1', txt: '#8f94ff', soon: true, icon: '🌊', name: '조류술사', role: '중거리 · 위치 컨트롤' },
   { id: 'mage', col: '#b04bff' },
   { id: 'soon1', col: '#6b7690', soon: true, icon: '❔', name: '???', role: '출시 예정' }, { id: 'soon2', col: '#6b7690', soon: true, icon: '❔', name: '???', role: '출시 예정' }];
 const menuCol = k => (MENU_CARDS.find(c => c.id === k) || { col: '#9aa4b8' }).col;
@@ -1205,12 +1208,12 @@ function menuToast() {
 let selKey = 'random';      // 'random' 또는 캐릭터 id (암살자는 선택만 되고 아직 사용 불가)
 try { const k = localStorage.getItem('aa_sel'); if (k === 'random' || CHARS[k]) selKey = k; } catch (e) { /* 무시 */ }
 const isLocked = k => k !== 'random' && !!CHARS[k].locked;
-function resolveMy() { myChar = selKey === 'random' || isLocked(selKey) ? CHAR_ORDER[Math.floor(Math.random() * CHAR_ORDER.length)] : selKey; }
+function resolveMy() { myChar = selKey === 'random' || isLocked(selKey) ? PLAY_ORDER[Math.floor(Math.random() * PLAY_ORDER.length)] : selKey; }
 function renderInfo() {
   const box = $('info'), k = selKey;
   box.style.setProperty('--ic', k === 'random' ? '#9aa4b8' : menuCol(k));
   if (k === 'random') {
-    box.innerHTML = '<div class="h"><b>🎲 랜덤</b><span>시작할 때 ' + CHAR_ORDER.length + '명 중 하나가 무작위로 정해져요</span></div><div class="na" style="color:#9aa4b8">누를 때마다 다른 캐릭터로 시작!</div>';
+    box.innerHTML = '<div class="h"><b>🎲 랜덤</b><span>시작할 때 ' + PLAY_ORDER.length + '명 중 하나가 무작위로 정해져요</span></div><div class="na" style="color:#9aa4b8">누를 때마다 다른 캐릭터로 시작!</div>';
   } else if (CHARS[k].locked) {
     box.innerHTML = '<div class="h"><b>' + CHARS[k].icon + ' ' + CHARS[k].name + '</b><span>' + CHARS[k].role + '</span></div><div class="na">아직 사용할 수 없어요</div>';
   } else {
@@ -1267,7 +1270,7 @@ function setOpp(o) {      // 상대 캐릭터: 랜덤(기본) 또는 직접 선�
 }
 (function buildOpp() {
   const box = $('oppSeg'); box.innerHTML = '';
-  for (const [id, label] of [['random', '🎲 랜덤'], ...CHAR_ORDER.map(k => [k, CHARS[k].icon + ' ' + CHARS[k].name])]) {
+  for (const [id, label] of [['random', '🎲 랜덤'], ...PLAY_ORDER.map(k => [k, CHARS[k].icon + ' ' + CHARS[k].name])]) {
     const b = document.createElement('button'); b.type = 'button'; b.dataset.o = id; b.textContent = label; b.onclick = () => setOpp(id); box.appendChild(b);
   }
   setOpp(oppKey);
@@ -1353,7 +1356,7 @@ function startGame() {
   if (typeof net !== 'undefined' && net.role !== 'none') netLeave();
   if (isLocked(selKey)) return;
   if (scene === 'menu') resolveMy();
-  const aiChar = oppKey === 'random' ? CHAR_ORDER[Math.floor(Math.random() * CHAR_ORDER.length)] : oppKey;
+  const aiChar = oppKey === 'random' ? PLAY_ORDER[Math.floor(Math.random() * PLAY_ORDER.length)] : oppKey;
   game = new Game(myChar, aiChar, diffKey, mapKey === 'random' ? pickMap() : mapKey); scene = 'play'; lastPh = ''; floats = []; parts = [];
   setupButtons(); resetTouch(); setEndMode();
   $('menu').hidden = true; $('vs').hidden = true; $('end').hidden = true;
@@ -1370,7 +1373,7 @@ function rematch(rand) {
   if (net.role === 'host') { net.hostRm = true; $('btnAgain').textContent = '상대 대기 중…'; $('btnAgainR').hidden = true; if (net.guestRm) hostRematch(); return; }
   if (net.role === 'guest') {
     if (net.rmSent) return; net.rmSent = true;
-    if (isSA()) { const ch = rand ? CHAR_ORDER[Math.floor(Math.random() * CHAR_ORDER.length)] : game.players[0].ch.id; window.claude.sa.send({ t: 'rm', c: ch }); }
+    if (isSA()) { const ch = rand ? PLAY_ORDER[Math.floor(Math.random() * PLAY_ORDER.length)] : game.players[0].ch.id; window.claude.sa.send({ t: 'rm', c: ch }); }
     else net.m.presence({ rm: 1 }).catch(() => {});
     $('btnAgain').textContent = isSA() ? '상대 대기 중…' : '방장 대기 중…'; $('btnAgainR').hidden = true; return;
   }
@@ -1942,7 +1945,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 65;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 66;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
