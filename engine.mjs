@@ -84,12 +84,12 @@ CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '�
     { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움(용이 없고 게이지가 가득이면 쓸 수 없음). 내 용이 살아 있으면 \'위치 교환\'으로 바뀌어 용과 위치를 맞바꿈(게이지는 안 참, 화면이 흔들림)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
   ] };
 CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', color: '#3d3fd1', role: '중거리 · 위치 컨트롤', hp: 110, speed: 220, keep: 300,
-  atk: { type: 'ranged', dmg: 10, cd: 0.55, range: 400, speed: 600, r: 8 },
+  atk: { type: 'ranged', dmg: 9, cd: 0.55, range: 400, speed: 600, r: 8 },
   skills: [
-    { name: '썰물', icon: '🌀', desc: '수류 채찍을 쏘아 맞은 적을 내 쪽으로 250 끌어당기고 8 피해. 쓰고 7초 뒤 이 버튼이 \'밀물\'로 바뀜', cd: 7, proj: 1, ai: { use: 'attack', minD: 130, maxD: 340 }, fx: [{ t: 'proj', dmg: 8, speed: 520, r: 21, life: 0.65, pull: 250, col: '#7fd3ff' }],
-      alt: { name: '밀물', icon: '🌊', desc: '벽을 넘는 넓은 해일을 쏘아 맞은 적을 200 밀어내고 12 피해, 벽에 부딪히면 15 추가 피해. 쓰고 7초 뒤 다시 \'썰물\'로 바뀜', cd: 7, proj: 1, aimed: true, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 12, speed: 480, r: 68, life: 0.6, push: 200, wallDmg: 15, wp: true, col: '#4aa8ff' }] } },
+    { name: '썰물', icon: '🌀', desc: '수류 채찍을 쏘아 맞은 적을 내 쪽으로 250 끌어당기고 15 피해. 쓰고 7초 뒤 이 버튼이 \'밀물\'로 바뀜', cd: 7, proj: 1, ai: { use: 'attack', minD: 130, maxD: 340 }, fx: [{ t: 'proj', dmg: 15, speed: 520, r: 21, life: 0.65, pull: 250, col: '#7fd3ff' }],
+      alt: { name: '밀물', icon: '🌊', desc: '벽을 넘는 넓은 해일을 쏘아 맞은 적을 200 밀어내고 10 피해, 벽에 부딪히면 10 피해 + 1초 기절. 쓰고 7초 뒤 다시 \'썰물\'로 바뀜', cd: 7, proj: 1, aimed: true, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 10, speed: 480, r: 68, life: 0.6, push: 200, wallDmg: 10, wallStun: 1, wp: true, col: '#4aa8ff' }] } },
     { name: '웅덩이', icon: '🫧', desc: '내 자리에 반경 90의 웅덩이를 3초간 만들고 안의 적에게 8 피해. 안에 들어온 적은 20% 느려지고, 안에 있는 나는 20% 빨라짐', cd: 10, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 90, dur: 3, slow: 0.8, haste: 1.2, dmg: 8, col: '#3aa8ff' }] },
-    { name: '용오름', icon: '🌪️', desc: '소용돌이가 직선으로 날아가 끝나는 곳에 작은 원(반경 55)이 생기고 0.5초 뒤 토네이도가 솟아 20 피해 + 0.5초간 붙잡음. 직선에 맞은 상대는 원 중심으로 빨려 들어감. 탭하면 가장 가까운 상대 쪽(최대 330), 드래그하면 그 방향·거리(상대 근처면 자석)', cd: 9, ai: { use: 'tornado', minD: 100, maxD: 330 }, fx: [{ t: 'tornado', dist: 200, min: 60, max: 330, r: 55, delay: 0.5, dmg: 20, hold: 0.5, speed: 640, pr: 16, col: '#9fe8ff' }] },
+    { name: '용오름', icon: '🌪️', desc: '소용돌이가 직선으로 날아가 끝나는 곳에 작은 원(반경 55)이 생기고 0.5초 뒤(직선에 맞췄으면 0.2초 뒤) 토네이도가 솟아 20 피해 + 0.5초간 붙잡음. 직선에 맞은 상대는 원 중심으로 빨려 들어감. 탭하면 가장 가까운 상대 쪽(최대 330), 드래그하면 그 방향·거리(상대 근처면 자석)', cd: 9, ai: { use: 'tornado', minD: 100, maxD: 330 }, fx: [{ t: 'tornado', dist: 200, min: 60, max: 330, r: 55, delay: 0.5, dmg: 20, hold: 0.5, hitDelay: 0.2, speed: 640, pr: 16, col: '#9fe8ff' }] },
   ] };
 const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에서는 위 desc/passive 전체 설명)
   assassin: { p: '대시를 2번 할 수 있음, 스킬을 쓰면 다음 기본공격이 강화됨', s: ['단검을 던져 맞으면 상대 뒤로 이동함', '자신에게 오는 모든 피해를 막았다가 반격함', '상대에게 보이지 않으며 평타를 맞지 않음'] },
@@ -98,7 +98,7 @@ const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에�
   tank: { p: '총합 70 피해를 받으면 대지강타가 분노 강타로 변함', s: ['3초간 내구도 40의 방패를 듦', '돌진 시 15의 피해, 돌진이 끝나면 원형 범위 기절', '주변 적에게 15의 피해를 주며 둔화 (분노 강타 시 25 피해)'] },
   archer: { s: ['화살 3발을 부채꼴로 발사', '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박', '적과 벽을 꿰뚫는 강한 화살'] },
   mage: { s: ['직격 25 피해, 터지면 15 피해', '맞으면 2초간 둔화', '드래그한 방향으로 순간이동'] },
-  tide: { s: ['적을 내 쪽으로 끌어당기고 8 피해, 쓰면 7초 뒤 밀물로 변함', '3초간 내 자리에 웅덩이: 적은 20% 느려지고 나는 20% 빨라짐', '직선으로 날아가 원이 되고 0.5초 뒤 토네이도: 맞은 상대는 빨려 들어가 20 피해 + 붙잡힘'] },
+  tide: { s: ['적을 내 쪽으로 끌어당기고 15 피해, 쓰면 7초 뒤 밀물로 변함', '3초간 내 자리에 웅덩이: 적은 20% 느려지고 나는 20% 빨라짐', '직선으로 날아가 원이 되고 0.5초 뒤 토네이도: 맞은 상대는 빨려 들어가 20 피해 + 붙잡힘'] },
 };
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
@@ -350,7 +350,7 @@ class Game {
       const a = base + (k - (n - 1) / 2) * sp;
       this.bullets.push({ x: p.x + Math.cos(a) * (R + 4), y: p.y + Math.sin(a) * (R + 4), vx: Math.cos(a) * f.speed, vy: Math.sin(a) * f.speed,
         r: f.r || 5, dmg: f.dmg, owner: p.idx, pierce: !!f.pierce, aoe: f.aoe || 0, aoeDmg: f.aoeDmg, stun: f.stun || 0, slowT: f.slowT || 0, slowMul: f.slowMul != null ? f.slowMul : 1,
-        life: f.life || 1.4, col: f.col || null, hit: false, basic: !!f.basic, tp: !!f.tp, hom: f.hom || 0, pass: !!f.pass, push: f.push || 0, pull: f.pull || 0, wallDmg: f.wallDmg || 0, wp: !!f.wp });
+        life: f.life || 1.4, col: f.col || null, hit: false, basic: !!f.basic, tp: !!f.tp, hom: f.hom || 0, pass: !!f.pass, push: f.push || 0, pull: f.pull || 0, wallDmg: f.wallDmg || 0, wp: !!f.wp, wallStun: f.wallStun || 0 });
     }
   }
   knock(src, t, b) {      // 밀치기/끌어당기기: 잠깐 움직이게 함. 벽(맵 가장자리 포함)에 막히면 추가 피해(밀물)
@@ -358,14 +358,15 @@ class Game {
     if (b.pull) { dx = src.x - t.x; dy = src.y - t.y; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; dist = Math.min(b.pull, Math.max(0, l - (2 * R + 6))); }
     else { const sp = Math.hypot(b.vx, b.vy) || 1; dx = b.vx / sp; dy = b.vy / sp; dist = b.push; }
     if (dist <= 0) return;
-    t.kb = { dx, dy, left: 0.2, speed: dist / 0.2, wall: b.pull ? 0 : (b.wallDmg || 0), src, hitW: false };
+    t.kb = { dx, dy, left: 0.2, speed: dist / 0.2, wall: b.pull ? 0 : (b.wallDmg || 0), stun: b.pull ? 0 : (b.wallStun || 0), src, hitW: false };
     if (b.pull) { b.pulled = true; this.fx.push({ k: 'tether', x: t.x, y: t.y, follow: src.idx, len: dist, w: 0, life: 0.28, max: 0.28, col: '#7fd3ff' }); }
     t.charge = null; t.cnt = null; t.guard = null;
   }
-  makeTornado(p, x, y, f) {      // 직선이 끝난 자리에 원(예고 0.5초) → 토네이도
+  makeTornado(p, x, y, f, delay) {      // 직선이 끝난 자리에 원(예고 0.5초) → 토네이도
     const zx = clamp(x, 20, W - 20), zy = clamp(y, 20, H - 20);
-    this.pools.push({ kind: 'tornado', owner: p.idx, x: zx, y: zy, r: f.r, t: f.delay, max: f.delay, f });
-    this.fx.push({ k: 'bolt', x: zx, y: zy, r: f.r, life: f.delay, max: f.delay, tz: p.idx, follow: p.idx, col: '#4aa8ff' });
+    const dl = delay != null ? delay : f.delay;
+    this.pools.push({ kind: 'tornado', owner: p.idx, x: zx, y: zy, r: f.r, t: dl, max: dl, f });
+    this.fx.push({ k: 'bolt', x: zx, y: zy, r: f.r, life: dl, max: dl, tz: p.idx, follow: p.idx, col: '#4aa8ff' });
   }
   tornPull(b, t) {      // 직선에 맞은 상대는 원 중심으로 빨려 들어감
     const dx = b.ex - t.x, dy = b.ey - t.y, d = Math.hypot(dx, dy); if (d < 6) return;
@@ -700,7 +701,7 @@ class Game {
     stepMove(p, vx * dt, vy * dt);
     if (p.kb) {      // 밀려나다 벽에 막히면 추가 피해하고 멈춤
       const k = p.kb, want = Math.hypot(vx, vy) * dt, got = Math.hypot(p.x - ox0, p.y - oy0);
-      if (want > 0.5 && got < want * 0.5) { if (k.wall > 0 && !k.hitW) { k.hitW = true; this.dealDamage(k.src, p, k.wall, null); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 36, life: 0.25, max: 0.25, col: '#4aa8ff' }); } p.kb = null; }
+      if (want > 0.5 && got < want * 0.5) { if (k.wall > 0 && !k.hitW) { k.hitW = true; this.dealDamage(k.src, p, k.wall, k.stun ? { stun: k.stun } : null); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 36, life: 0.25, max: 0.25, col: '#4aa8ff' }); } p.kb = null; }
       else if (k.left <= 0) p.kb = null;
     }
 
@@ -919,11 +920,11 @@ class Game {
         }
       }
       if (boom) this.explode(b);
-      if (dead) { b.dead = true; if (b.torn) this.makeTornado(ownP, b.x, b.y, b.torn); if (b.pull && !b.pulled) this.fx.push({ k: 'tether', x: b.x, y: b.y, follow: ownP.idx, len: 9999, w: 0, life: 0.25, max: 0.25, col: '#7fd3ff' }); }
+      if (dead) { b.dead = true; if (b.torn) this.makeTornado(ownP, b.x, b.y, b.torn, b.hs && b.hs.size ? b.torn.hitDelay : b.torn.delay); if (b.pull && !b.pulled) this.fx.push({ k: 'tether', x: b.x, y: b.y, follow: ownP.idx, len: 9999, w: 0, life: 0.25, max: 0.25, col: '#7fd3ff' }); }
     }
     this.bullets = this.bullets.filter(b => !b.dead);
   }
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 69;
+export const BUILD = 70;
