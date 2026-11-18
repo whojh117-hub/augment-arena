@@ -174,7 +174,7 @@
       <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심 · <b>오른쪽</b> 큰 버튼은 공격(톡=1회, 꾹=자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(탭하면 상대 쪽) · 초록 버튼은 대시(무적, 쿨 5초) · 3라운드 먼저 이기면 승리</div>
       <div class="note" id="verTag" style="font-size:11px;opacity:.7"></div>
       <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
-      <div id="noticeOv" hidden><div class="nbox"><div class="nh">📢 업데이트 안내 <small>v67</small></div><ul><li><b>🌊 새 캐릭터 조류술사 추가</b><span>썰물·밀물로 끌고 밀고, 웅덩이와 용오름으로 위치를 다룹니다</span></li><li><b>🔮 마법사 화염구 하향</b><span>직격 30 → 25, 터지는 피해 20 → 15</span></li></ul><button type="button" class="btn" id="btnNoticeOk">확인</button></div></div>
+      <div id="noticeOv" hidden><div class="nbox"><div class="nh">📢 업데이트 안내 <small>v78</small></div><ul><li><b>🧱 소환사 벽 개선</b><span>다른 벽 위나 맵 가장자리에도 설치할 수 있어요</span></li><li><b>⚡ 초반 렉 최적화</b><span>로비에서 미리 핑을 재서 판 시작 때 덜 끊겨요</span></li><li><b>🌊 조류술사 밀물 이미지 개선</b><span>파도가 쏜 방향대로 나가고 모양도 더 파도답게 바뀌었어요</span></li></ul><button type="button" class="btn" id="btnNoticeOk">확인</button></div></div>
       <div id="augOv" hidden><div class="augH"><button type="button" class="btn ghost" id="btnAugBack">← 뒤로</button>✨ 증강 목록</div><div class="augB"><i>✨</i>아직 증강이 출시되지 않았습니다</div></div>
     </div>
 
@@ -1306,7 +1306,7 @@ function buildChars() {
 $('btnRand').onclick = () => setSel('random');
 $('btnAug').onclick = () => { const t = $('menuToast'); if (t) t.remove(); $('augOv').hidden = false; };
 $('btnAugBack').onclick = () => { $('augOv').hidden = true; };
-{ let seen = ''; try { seen = localStorage.getItem('aa_notice') || ''; } catch (e) { /* 무시 */ } if (seen !== '67') $('noticeOv').hidden = false; $('btnNoticeOk').onclick = () => { $('noticeOv').hidden = true; try { localStorage.setItem('aa_notice', '67'); } catch (e) { /* 무시 */ } }; }      // 업데이트 공지: 버전마다 한 번
+{ let seen = ''; try { seen = localStorage.getItem('aa_notice') || ''; } catch (e) { /* 무시 */ } if (seen !== '78') $('noticeOv').hidden = false; $('btnNoticeOk').onclick = () => { $('noticeOv').hidden = true; try { localStorage.setItem('aa_notice', '78'); } catch (e) { /* 무시 */ } }; }      // 업데이트 공지: 버전마다 한 번
 buildChars();
 function setDiff(d) {
   diffKey = d;
