@@ -370,7 +370,7 @@ CHARS.summoner = { id: 'summoner', name: '소환사', icon: '🪄', atkIcon: '�
   atk: { type: 'ranged', dmg: 10, cd: 1.5, range: 210, speed: 300, r: 9, hom: 4, life: 0.95, pass: true, rangeCircle: true },
   skills: [
     { name: '추적 구슬', icon: '🔮', desc: '내 자리에 체력 10의 구슬 2개 소환(0.5초 뒤부터 움직임). 속도 230으로 쫓다가 4초 뒤 저절로 터짐. 쿨타임은 구슬이 모두 터진 뒤부터. 상대를 쫓아가 닿거나 죽으면 반지름 1칸 폭발(각 10 피해)', cd: 10, ai: { use: 'attack', maxD: 420 }, fx: [{ t: 'orbs', n: 2, hp: 10, speed: 230, r: 14, burst: 70, dmg: 10, life: 4 }] },
-    { name: '벽 소환', icon: '🧱', desc: '드래그한 방향 앞(70)에 1×2칸 벽을 5초간 설치(탭하면 상대 쪽). 다른 벽 위에는 설치 불가, 내 기본 공격은 통과. 쿨타임 10초는 벽이 사라진 뒤부터', cd: 10, ai: { use: 'wall', minD: 110, maxD: 330 }, fx: [{ t: 'pwall', w: 70, h: 140, dur: 5, dist: 70 }] },
+    { name: '벽 소환', icon: '🧱', desc: '드래그한 방향 앞(70)에 1×2칸 벽을 5초간 설치(탭하면 상대 쪽). 다른 벽 위에도 설치 가능(맵 가장자리는 안쪽으로 밀려 설치). 내 기본 공격은 소환 벽만 통과하고 원래 벽은 통과 못 함. 쿨타임 10초는 벽이 사라진 뒤부터', cd: 10, ai: { use: 'wall', minD: 110, maxD: 330 }, fx: [{ t: 'pwall', w: 70, h: 140, dur: 5, dist: 70 }] },
     { name: '용의 힘', icon: '🐉', desc: '강림 게이지를 1칸 채움(용이 없고 게이지가 가득이면 쓸 수 없음). 내 용이 살아 있으면 \'위치 교환\'으로 바뀌어 용과 위치를 맞바꿈(게이지는 안 참, 화면이 흔들림)', cd: 12, ai: { use: 'power' }, fx: [{ t: 'dpower' }] },
   ] };
 CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', color: '#3d3fd1', role: '중거리 · 위치 컨트롤', hp: 110, speed: 220, keep: 300,
@@ -813,10 +813,14 @@ class Game {
     }
   }
   // ── 소환사: 벽·소환물 ──
-  wallRect(p, f, ang, force) {      // 벽이 설 자리(자유 각도). 겹치거나 맵 밖이면 null(설치 불가)
-    const r = makeWall(p.x + Math.cos(ang) * f.dist, p.y + Math.sin(ang) * f.dist, ang, f.w, f.h);
-    let bad = wallCorners(r).some(q => q[0] < 0 || q[1] < 0 || q[0] > W || q[1] > H);
-    if (!bad) for (const q of this.walls) if (wallsOverlap(r, q)) { bad = true; break; }
+  wallRect(p, f, ang, force) {      // 벽이 설 자리(자유 각도). 다른 벽(맵 벽·소환 벽) 위에도 설치 가능, 맵 밖으로 나가면 안쪽으로 밀어 넣음
+    let cx = p.x + Math.cos(ang) * f.dist, cy = p.y + Math.sin(ang) * f.dist, r = makeWall(cx, cy, ang, f.w, f.h);
+    for (let k = 0; k < 3; k++) {
+      const cs = wallCorners(r), mnx = Math.min(...cs.map(q => q[0])), mxx = Math.max(...cs.map(q => q[0])), mny = Math.min(...cs.map(q => q[1])), mxy = Math.max(...cs.map(q => q[1]));
+      const sx = mnx < 0 ? -mnx : mxx > W ? W - mxx : 0, sy = mny < 0 ? -mny : mxy > H ? H - mxy : 0;
+      if (!sx && !sy) break; cx += sx; cy += sy; r = makeWall(cx, cy, ang, f.w, f.h);
+    }
+    const bad = wallCorners(r).some(q => q[0] < -0.5 || q[1] < -0.5 || q[0] > W + 0.5 || q[1] > H + 0.5);
     if (bad) { if (!force) return null; r.bad = true; }
     return r;
   }
@@ -2039,7 +2043,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 77;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 78;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
