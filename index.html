@@ -2039,7 +2039,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 76;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 77;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -2065,6 +2065,11 @@ async function netBoot() {
     if (!r) return null;
     net.room = r; r.presence({ v: BUILD, o: null }).catch(() => {});
     if (isSA()) window.claude.sa.h = m => { if (m.t === 'pong') { net.sv = m.sv || null; const t0 = net.pingAt && net.pingAt[m.id]; if (t0) { const v = performance.now() - t0; net.pong = net.pong ? net.pong * 0.7 + v * 0.3 : v; delete net.pingAt[m.id]; } } else if (m.t === 'snap') onSnap(m.s); else if (m.t === 'verr') versionBlock(m.v); else if (m.t === 'left') opponentLeft(); };
+    if (isSA() && !net.pingTimer) net.pingTimer = setInterval(() => {      // 로비에서 미리 핑을 재 둠: 판이 시작되자마자 실제 핑으로 예측을 시작하기 위해
+      if (net.started || document.hidden) return; const now = performance.now(); net.pingAt = net.pingAt || {}; const id = (net.pid = (net.pid || 0) + 1); net.pingAt[id] = now;
+      for (const k of Object.keys(net.pingAt)) if (now - net.pingAt[k] > 5000) delete net.pingAt[k];
+      try { window.claude.sa.send({ t: 'ping', id }); } catch (e) { /* 무시 */ }
+    }, 1000);
     net.offLobby = r.onPeers(() => { renderRooms(); checkUpdate(); }, () => {});
   } catch (e) { /* 온라인 사용 불가 */ }
   return net.room;
@@ -2264,7 +2269,7 @@ function startOnlineGuest(s) {
   else game = new Game(myChar, s.ch[0], 'normal');
   game.remote = true; applyMapClient(s);
   game.setMove = (mx, my) => { net.mv = [-mx, my]; };                                   // 화면이 좌우 반전이라 이동 방향도 반전해서 보냄
-  net.pd = null; net.hold = null; net.cdo = {}; net.dq = []; net.pcnt = 0; net.pfx = []; net.pb = []; net.sh = null; net.qt = {}; net.rtt = 0.15; net.atkBuf = 0; net.ownPrev = new Set(); net.pbSn = -1;
+  net.pd = null; net.hold = null; net.cdo = {}; net.dq = []; net.pcnt = 0; net.pfx = []; net.pb = []; net.sh = null; net.qt = {}; net.rtt = net.pong > 0 ? Math.min(0.4, Math.max(0.04, net.pong / 1000)) : 0.15; net.atkBuf = 0; net.ownPrev = new Set(); net.pbSn = -1;
   game.pressDash = () => {
     const vp = game.players[0], now = performance.now();      // 대시는 누르는 즉시 내 화면에서 먼저 움직임 (예측)
     { const m0 = readMove(), l0 = Math.hypot(m0[0], m0[1]); qpush(l0 > 0.2 ? [++net.qid, 'd', Math.round(-m0[0] / l0 * 100) / 100, Math.round(m0[1] / l0 * 100) / 100] : [++net.qid, 'd']); }      // 누른 순간의 방향을 같이 보냄
