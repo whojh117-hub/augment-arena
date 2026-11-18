@@ -2039,7 +2039,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 75;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 76;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -2423,7 +2423,7 @@ function guestFrame(now, dt) {
       for (let i = 0; i < 3; i++) { const c = co['s' + i]; if (c) { if (now - c.t > 700) co['s' + i] = null; else vp.skCd[i] = Math.max(vp.skCd[i], c.v - (now - c.t) / 1000); } }
     }
   }
-  g.bullets = s.b.map(b => { const e = extrap(W - b[1], b[2], -b[3], b[4], b[5], age + lead, b[8]); return { x: e[0], y: e[1], r: b[5], owner: NP - 1 - b[6], col: b[7] || null, pierce: !!b[8] }; });
+  g.bullets = s.b.map(b => { const e = extrap(W - b[1], b[2], -b[3], b[4], b[5], age + lead, b[8]); return { x: e[0], y: e[1], vx: -b[3], vy: b[4], r: b[5], owner: NP - 1 - b[6], col: b[7] || null, pierce: !!b[8] }; });
   net.pfx = net.pfx.filter(p => now - p.t < 1200);
   if (net.pbSn !== s.n) {
     net.pbSn = s.n; const cur = new Set(); let fresh = 0;
