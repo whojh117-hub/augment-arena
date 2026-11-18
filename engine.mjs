@@ -88,7 +88,7 @@ CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', 
   skills: [
     { name: '썰물', icon: '🌀', desc: '수류 채찍을 쏘아 맞은 적을 내 쪽으로 250 끌어당기고 15 피해. 쓰고 7초 뒤 이 버튼이 \'밀물\'로 바뀜', cd: 7, proj: 1, ai: { use: 'attack', minD: 130, maxD: 340 }, fx: [{ t: 'proj', dmg: 15, speed: 520, r: 21, life: 0.65, pull: 250, col: '#7fd3ff' }],
       alt: { name: '밀물', icon: '🌊', desc: '벽을 넘는 넓은 해일을 쏘아 느리게 밀려오는 파도: 맞은 적은 10 피해를 받고 파도 끝까지 함께 밀려남(관통). 도중에 벽에 부딪히면 멈추며 10 피해 + 1초 기절. 쓰고 7초 뒤 다시 \'썰물\'로 바뀜', cd: 7, proj: 1, aimed: true, ai: { use: 'attack', maxD: 300 }, fx: [{ t: 'proj', dmg: 10, speed: 300, r: 68, life: 1.0, push: 200, carry: true, wallDmg: 10, wallStun: 1, wp: true, col: '#4aa8ff' }] } },
-    { name: '웅덩이', icon: '🫧', desc: '내 자리에 반경 90의 웅덩이를 3초간 만들고 안의 적에게 8 피해. 안에 들어온 적은 20% 느려지고, 안에 있는 나는 20% 빨라짐', cd: 10, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 90, dur: 3, slow: 0.8, haste: 1.2, dmg: 8, col: '#3aa8ff' }] },
+    { name: '웅덩이', icon: '🫧', desc: '내 자리에 반경 90의 웅덩이를 3초간 만들고 안의 적에게 8 피해. 안에 들어온 적은 20% 느려지고, 안에 있는 나는 20%, 같은 팀은 10% 빨라짐', cd: 10, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 90, dur: 3, slow: 0.8, haste: 1.2, allyHaste: 1.1, dmg: 8, col: '#3aa8ff' }] },
     { name: '용오름', icon: '🌪️', desc: '소용돌이가 직선으로 날아가 끝나는 곳에 작은 원(반경 55)이 생기고 0.5초 뒤(직선에 맞췄으면 0.2초 뒤) 토네이도가 솟아 20 피해 + 0.5초간 붙잡음. 직선에 맞은 상대는 원 중심으로 빨려 들어감. 탭하면 상대 쪽, 드래그하면 그 방향으로 사거리 231 끝에 원이 고정됨', cd: 9, ai: { use: 'tornado', minD: 90, maxD: 231 }, fx: [{ t: 'tornado', dist: 231, min: 231, max: 231, r: 55, delay: 0.5, dmg: 20, hold: 0.5, hitDelay: 0.2, speed: 640, pr: 16, col: '#9fe8ff' }] },
   ] };
 const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에서는 위 desc/passive 전체 설명)
@@ -98,7 +98,7 @@ const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에�
   tank: { p: '총합 70 피해를 받으면 대지강타가 분노 강타로 변함', s: ['3초간 내구도 40의 방패를 듦', '돌진 시 15의 피해, 돌진이 끝나면 원형 범위 기절', '주변 적에게 15의 피해를 주며 둔화 (분노 강타 시 25 피해)'] },
   archer: { s: ['화살 3발을 부채꼴로 발사', '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박', '적과 벽을 꿰뚫는 강한 화살'] },
   mage: { s: ['직격 25 피해, 터지면 15 피해', '맞으면 2초간 둔화', '드래그한 방향으로 순간이동'] },
-  tide: { s: ['적을 내 쪽으로 끌어당기고 15 피해, 쓰면 7초 뒤 밀물로 변함', '3초간 내 자리에 웅덩이: 적은 20% 느려지고 나는 20% 빨라짐', '직선으로 날아가 원이 되고 0.5초 뒤 토네이도: 맞은 상대는 빨려 들어가 20 피해 + 붙잡힘'] },
+  tide: { s: ['적을 내 쪽으로 끌어당기고 15 피해, 쓰면 7초 뒤 밀물로 변함', '3초간 내 자리에 웅덩이: 적은 20% 느려지고 나는 20%, 팀원은 10% 빨라짐', '직선으로 날아가 원이 되고 0.5초 뒤 토네이도: 맞은 상대는 빨려 들어가 20 피해 + 붙잡힘'] },
 };
 const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
@@ -382,7 +382,7 @@ class Game {
       for (const q of this.players) {
         if (!q.alive) continue;
         if (Math.hypot(z.x - q.x, z.y - q.y) > z.r) continue;
-        if (q.team === o.team) { if (q === o && !(q.haste > 0.3 && q.hasteMul > F.haste)) { q.haste = Math.max(q.haste, 0.3); q.hasteMul = F.haste; } }
+        if (q.team === o.team) { const hm = q === o ? F.haste : F.allyHaste; if (hm && !(q.haste > 0.3 && q.hasteMul > hm)) { q.haste = Math.max(q.haste, 0.3); q.hasteMul = hm; } }      // 시전자 +20%, 같은 팀 +10%
         else if (q.dashT <= 0 && q.inv <= 0 && !(q.slowT > 0.3 && q.slowMul < F.slow)) { q.slowT = Math.max(q.slowT, 0.3); q.slowMul = F.slow; }
       }
     }
@@ -923,4 +923,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 74;
+export const BUILD = 75;
