@@ -94,11 +94,11 @@ CHARS.tide = { id: 'tide', name: '조류술사', icon: '🌊', atkIcon: '💧', 
 const GAVEL = '<svg viewBox="0 0 32 32" width="1em" height="1em" style="vertical-align:-0.12em;display:inline-block"><g transform="translate(22.5 9.5) rotate(-45)"><path d="M-5 0H-27" stroke="#7a3f17" stroke-width="4.2" stroke-linecap="round"/><path d="M-21 -2.4V2.4M-25 -2.4V2.4" stroke="#e8c04a" stroke-width="2"/><rect x="-5.2" y="-11" width="10.4" height="5" rx="2" fill="#b8591f" stroke="#5a2c0e" stroke-width="0.8"/><rect x="-5.2" y="6" width="10.4" height="5" rx="2" fill="#b8591f" stroke="#5a2c0e" stroke-width="0.8"/><rect x="-5.2" y="-6.4" width="10.4" height="12.8" fill="#f6e7a1" stroke="#c9a83c" stroke-width="0.8"/></g></svg>';      // 심판의 재판 망치 아이콘
 CHARS.angel = { id: 'angel', name: '천사', icon: '😇', atkIcon: '✨', color: '#fdfdff', role: '원거리 · 회복 지원', hp: 100, speed: 225, keep: 300, stackMax: 10, noIcon: true,
   passive: '평타를 적중할 때마다 구원 스택이 1 쌓임(최대 10, 체력 아래 노란 바). 스택 1마다 구원의 회복 +3, 피해 +2',
-  atk: { type: 'ranged', dmg: 6, cd: 0.6, range: 320, speed: 560, r: 7 },
+  atk: { type: 'ranged', dmg: 6, cd: 0.6, range: 320, speed: 560, r: 7, col: '#ffffff' },
   hammer: { dur: 5, stack: 2, atk: { type: 'melee', dmg: 12, cd: 0.8, range: 70, arc: 2.2, col: '#ffd24a' } },
   skills: [
     { name: '구원', icon: '✨', desc: '내 주변 큰 원(반경 150): 나와 팀원은 10 + 3×스택 회복, 적은 10 + 2×스택 피해. 쓰면 스택을 모두 잃음', cd: 10, ai: { use: 'salv' }, fx: [{ t: 'salv', radius: 150, base: 10, healPer: 3, dmgPer: 2, col: '#ffe58a' }] },
-    { name: '날개짓', icon: '🪽', desc: '드래그한 방향으로 날아감(이동 중 무적). 도착하면 가까운 적을 밀쳐냄', cd: 9, ai: { use: 'escape', minD: 120 }, fx: [{ t: 'charge', dist: 190, speed: 720, w: 40, dmg: 0, soft: true, inv: true, endR: 80, push: 170, col: '#fff3b0' }] },
+    { name: '날개짓', icon: '🪽', desc: '드래그한 방향으로 날아감(이동 중 무적). 도착하면 가까운 적을 살짝 밀쳐냄(점점 느려지며 넉백)', cd: 9, ai: { use: 'escape', minD: 120 }, fx: [{ t: 'charge', dist: 190, speed: 720, w: 40, dmg: 0, soft: true, inv: true, endR: 80, push: 90, col: '#fff3b0' }] },
     { name: '심판', icon: GAVEL, desc: '5초간 금 망치를 듦: 평타가 근접(피해 12, 0.8초, 사거리 70)으로 바뀌고, 적중하면 스택 +2. 쿨타임은 쓴 때부터 12초', cd: 12, ai: { use: 'gapclose', minD: 0, maxD: 150 }, fx: [{ t: 'hammer', dur: 5 }] },
   ] };
 const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에서는 위 desc/passive 전체 설명)
@@ -411,7 +411,8 @@ class Game {
       this.fx.push({ k: 'ring', x: p.x, y: p.y, r: c.endR, life: 0.35, max: 0.35, col: c.col || '#fff3b0' });
       for (const e of this.foes(p)) if (e.alive && e.dashT <= 0 && e.inv <= 0 && Math.hypot(e.x - p.x, e.y - p.y) <= c.endR + R) {
         const dx = e.x - p.x, dy = e.y - p.y, l = Math.hypot(dx, dy) || 1;
-        e.kb = { dx: dx / l, dy: dy / l, left: 0.2, speed: c.push / 0.2, wall: 0, stun: 0, src: p, hitW: false }; e.charge = null; e.cnt = null; e.guard = null;
+        e.kb = { dx: dx / l, dy: dy / l, left: 0.4, tot: 0.4, ease: true, speed: c.push / 0.4, wall: 0, stun: 0, src: p, hitW: false }; e.charge = null; e.cnt = null; e.guard = null;      // 처음엔 빠르게 밀리다 점점 느려지며 멈춤(넉백)
+        this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 34, life: 0.3, max: 0.3, col: '#ffffff' });
       }
       return;
     }
@@ -518,7 +519,7 @@ class Game {
         this.hitMinions(p.idx, m => Math.hypot(m.x - p.x, m.y - p.y) <= f.radius + m.r, dmg);
         p.hits = 0;
       } else if (f.t === 'hammer') {      // 천사 심판: 금 망치(근접 평타)로 변신, 지속시간이 끝나면 원래대로
-        p.tm = 1; p.hm = f.dur; p.atkCd = Math.min(p.atkCd, 0.15);
+        p.hm = f.dur; p.tm = Math.ceil(f.dur * 10); p.atkCd = Math.min(p.atkCd, 0.15);      // tm = 남은 시간(0.1초 단위, 온라인 화면에도 전해짐)
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 54, life: 0.4, max: 0.4, col: '#ffd24a' });
       }
       else if (f.t === 'orbs') {      // 추적 구슬: 내 자리에서 n개 소환
@@ -661,7 +662,7 @@ class Game {
       if (mv > 0) { stepMove(p, dx / d * mv, dy / d * mv); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 26, life: 0.18, max: 0.18, col: p.ch.color }); }
     }
     if (a.type === 'melee') { const n = this.coneHit(p, a.range, a.arc, dmg, a.col ? { col: a.col } : null); if (n && p.ch.hammer) p.hits = Math.min(p.ch.stackMax, p.hits + p.ch.hammer.stack); }      // 금 망치 적중: 스택 +2
-    else this.fireProj(p, { dmg, speed: a.speed, r: a.r, basic: true, hom: a.hom, life: a.life, pass: a.pass });
+    else this.fireProj(p, { dmg, speed: a.speed, r: a.r, basic: true, hom: a.hom, life: a.life, pass: a.pass, col: a.col });
     p.atkCd = a.cd;
   }
 
@@ -686,7 +687,7 @@ class Game {
         if (p.alive) this.hitMinions(p.idx, m => inTri(c, p, m.x, m.y, m.r), c.blocked ? c.hit : c.miss);
       }
     }
-    if (p.hm > 0) { p.hm -= dt; if (p.hm <= 0) { p.hm = 0; p.tm = 0; } }      // 금 망치 지속시간
+    if (p.hm > 0) { p.hm -= dt; if (p.hm <= 0) { p.hm = 0; p.tm = 0; } else p.tm = Math.ceil(p.hm * 10); }      // 금 망치 지속시간
     if (p.stun > 0) p.stun -= dt;
     if (p.slowT > 0) p.slowT -= dt;
     if (p.haste > 0) p.haste -= dt;
@@ -723,7 +724,7 @@ class Game {
     let vx = 0, vy = 0;
     if (!p.alive) { /* 정지 */ }
     else if (p.charge) { const c = p.charge; vx = c.dx * c.speed; vy = c.dy * c.speed; c.left -= dt; if (c.left <= 0) { p.charge = null; this.chargeEnd(p, c); } }
-    else if (p.kb) { const k = p.kb; vx = k.dx * k.speed; vy = k.dy * k.speed; k.left -= dt; }
+    else if (p.kb) { const k = p.kb, m = k.ease ? 2 * Math.max(0, k.left) / k.tot : 1; vx = k.dx * k.speed * m; vy = k.dy * k.speed * m; k.left -= dt; }
     else if (p.dashT > 0) { vx = p.dx * DASH.speed; vy = p.dy * DASH.speed; p.dashT -= dt; }
     else if (p.cnt) { /* 반격 중에는 제자리 */ }
     else if (p.stun <= 0) {
@@ -969,4 +970,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 79;
+export const BUILD = 80;
