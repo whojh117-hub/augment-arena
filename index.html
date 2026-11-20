@@ -1727,6 +1727,7 @@ function handleEvents() {
 }
 
 // ===== 소리 (효과음·배경음악): 음원 파일 없이 WebAudio로 직접 합성 =====
+const SOUND_ON = false;      // 소리 기능: 아직 공개하지 않음(코드는 그대로 두고 꺼 둠). 켤 때 true
 const SND = (() => {
   let ac = null, bgmG = null, sfxG = null, uiG = null, revIn = null, noiseBuf = null, timer = null, mode = 'menu', nextT = 0, stp = 0;
   const st = { bgm: 1, sfx: 1, bv: 0.5, sv: 0.8 }, last = {}, rnd = (a, b) => a + Math.random() * (b - a);
@@ -1873,6 +1874,7 @@ const SND = (() => {
     ready: () => !!ac && ac.state === 'running', names: Object.keys(FX)
   };
 })();
+if (!SOUND_ON) for (const k of ['sfx', 'hit', 'resume', 'setMode', 'set']) SND[k] = () => {};      // 소리 끔: 모든 호출을 무시
 function sndFrame(now) {      // 매 프레임: 상태 변화를 보고 공격·스킬·대시·카운트다운·승패 소리를 냄 (오프라인·온라인 공통)
   SND.setMode(scene === 'play' && game && game.ph !== 'over' ? 'fight' : 'menu');
   const S = sndFrame; if (scene !== 'play' || !game) { S.prev = null; return; }
@@ -1904,6 +1906,7 @@ document.addEventListener('pointerdown', e => {      // 첫 터치에서 소리�
   };
   for (const id of ['btnSnd', 'btnSnd2']) $(id).onclick = () => { upd(); o.hidden = false; };
   $('btnSndOk').onclick = () => { o.hidden = true; };
+  if (!SOUND_ON) for (const id of ['btnSnd', 'btnSnd2']) $(id).hidden = true;      // 🔊 버튼 숨김
   $('sndBgmT').onclick = () => { SND.set('bgm', SND.st.bgm ? 0 : 1); upd(); }; $('sndSfxT').onclick = () => { SND.set('sfx', SND.st.sfx ? 0 : 1); upd(); };
   $('sndBgmV').oninput = e => SND.set('bv', e.target.value / 100); $('sndSfxV').oninput = e => SND.set('sv', e.target.value / 100);
   $('sndSfxV').onchange = () => SND.sfx('mage:1');
@@ -2391,7 +2394,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 86;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 87;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
