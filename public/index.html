@@ -392,7 +392,7 @@ CHARS.angel = { id: 'angel', name: '천사', icon: '😇', atkIcon: '✨', color
   hammer: { dur: 5, stack: 2, atk: { type: 'melee', dmg: 12, cd: 0.8, range: 70, arc: 2.2, col: '#ffd24a' } },
   skills: [
     { name: '구원', icon: '✨', desc: '내 주변 큰 원(반경 150): 나와 팀원은 10 + 3×스택 회복, 적은 10 + 2×스택 피해. 쓰면 스택을 모두 잃음', cd: 10, ai: { use: 'salv' }, fx: [{ t: 'salv', radius: 150, base: 10, healPer: 3, dmgPer: 2, col: '#ffe58a' }] },
-    { name: '법률', icon: '⚖️', desc: '내 자리에 반경 130의 판결 구역을 3초간 펼침. 안에 있는 적은 40% 느려지고 스킬을 쓸 수 없음(평타·대시는 가능). 나와 팀원은 영향 없음. 쿨타임은 구역이 끝난 뒤부터', cd: 9, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 130, dur: 3, slow: 0.6, sil: true, col: '#ffd24a' }] },
+    { name: '법률', icon: '⚖️', desc: '내 자리에 반경 130의 판결 구역을 3초간 펼침. 안에 있는 적은 40% 느려지고 스킬을 쓸 수 없음(평타·대시는 가능). 우리 팀은 구역 안에서 받는 피해 0.8배. 쿨타임은 구역이 끝난 뒤부터', cd: 13, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 130, dur: 3, slow: 0.6, sil: true, col: '#ffd24a' }] },
     { name: '심판', icon: GAVEL, desc: '5초간 금 망치를 듦: 평타가 근접(피해 12, 0.8초, 사거리 70)으로 바뀌고, 적중하면 스택 +2. 쿨타임은 쓴 때부터 12초', cd: 12, ai: { use: 'gapclose', minD: 0, maxD: 150 }, fx: [{ t: 'hammer', dur: 5 }] },
   ] };
 CHARS.ninja = { id: 'ninja', name: '닌자', icon: '🥷', atkIcon: '🗡️', color: '#23262e', role: '원·근접 · 인술 연계', hp: 90, speed: 235, keep: 260, chainMax: 3, noIcon: true,
@@ -411,7 +411,7 @@ const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에�
   tank: { p: '총합 70 피해를 받으면 대지강타가 분노 강타로 변함', s: ['3초간 내구도 40의 방패를 듦', '돌진 시 15의 피해, 돌진이 끝나면 원형 범위 기절', '주변 적에게 15의 피해를 주며 둔화 (분노 강타 시 25 피해)'] },
   archer: { s: ['화살 3발을 부채꼴로 발사', '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박', '적과 벽을 꿰뚫는 강한 화살'] },
   mage: { s: ['직격 25 피해, 터지면 15 피해', '맞으면 2초간 둔화', '드래그한 방향으로 순간이동'] },
-  angel: { p: '평타를 맞힐 때마다 구원 스택(최대 10): 스택당 구원의 회복 +3 · 피해 +2', s: ['내 주변 큰 원: 나·팀원 10+3×스택 회복, 적 10+2×스택 피해 (스택 소모)', '내 자리에 3초간 판결 구역: 안의 적은 40% 느려지고 스킬 사용 불가', '5초간 금 망치 근접 평타 (피해 12, 적중 시 스택 +2)'] },
+  angel: { p: '평타를 맞힐 때마다 구원 스택(최대 10): 스택당 구원의 회복 +3 · 피해 +2', s: ['내 주변 큰 원: 나·팀원 10+3×스택 회복, 적 10+2×스택 피해 (스택 소모)', '내 자리에 3초간 판결 구역: 안의 적은 40% 느려지고 스킬 사용 불가, 우리 팀은 받는 피해 0.8배', '5초간 금 망치 근접 평타 (피해 12, 적중 시 스택 +2)'] },
   ninja: { p: '스킬·대시를 서로 다른 순서로 이어 쓰면 인술 연계(최대 3): 3연계 시 체력 5 회복 · 이속 +15%', s: ['설치형 덫: 밟은 적 6 피해 + 1초 속박', '누른 만큼 충전해 수리검 최대 5발 연속 발사', '돌진 베기 후 3초간 쌍검 근접 태세'] },
   tide: { s: ['적을 내 쪽으로 끌어당기고 15 피해, 쓰면 7초 뒤 밀물로 변함', '3초간 내 자리에 웅덩이: 적은 20% 느려지고 나는 20%, 팀원은 10% 빨라짐', '직선으로 날아가 원이 되고 0.5초 뒤 토네이도: 맞은 상대는 빨려 들어가 20 피해 + 붙잡힘'] },
 };
@@ -634,6 +634,7 @@ class Game {
     if (t.cnt && src !== t) { this.blockedBy(t); return false; }      // 반격 중에는 어떤 공격(방향·거리 상관없이)도 막음
     let a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1);   // 서든데스 규칙: 모든 데미지 2배
     if (t.drT > 0) a *= 1 - t.dr;      // 받는 피해 감소 버프(전사의 함성)
+    if (this.pools.some(z => z.kind === 'pool' && z.f.sil && this.players[z.owner].team === t.team && Math.hypot(z.x - t.x, z.y - t.y) <= z.r)) a *= 0.8;      // 천사 법률: 판결 구역 안 우리 팀은 받는 피해 0.8배
     if (t.ch.rageAt && !t.rage) { t.taken += a; if (t.taken >= t.ch.rageAt) { t.rage = true; t.taken = 0; this.ev.push({ k: 'text', x: t.x, y: t.y - 36, txt: '분노!', col: '#ffd24a' }); } }      // 탱커: 받은 피해(보호막이 막은 양 포함)가 쌓이면 분노
     if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; if (t.shield <= 0) { const si = t.ch.skills.findIndex(k => k.fx.some(f => f.t === 'shield')); if (si >= 0) t.skCd[si] = Math.max(0, t.skCd[si] - t.shieldT); t.shieldT = 0; } }      // 방패가 깨지면 그때부터 쿨타임
     t.hp -= a;
@@ -2394,7 +2395,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 87;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 88;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
