@@ -340,13 +340,13 @@ class Game {
     if (t.cnt && src !== t) { this.blockedBy(t); return false; }      // 반격 중에는 어떤 공격(방향·거리 상관없이)도 막음
     let a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1);   // 서든데스 규칙: 모든 데미지 2배
     if (t.drT > 0) a *= 1 - t.dr;      // 받는 피해 감소 버프(전사의 함성)
-    if (this.pools.some(z => z.kind === 'pool' && z.f.sil && this.players[z.owner].team === t.team && Math.hypot(z.x - t.x, z.y - t.y) <= z.r)) a *= 0.8;      // 천사 법률: 판결 구역 안 우리 팀은 받는 피해 0.8배
+    const lawMul = this.pools.some(z => z.kind === 'pool' && z.f.sil && this.players[z.owner].team === t.team && Math.hypot(z.x - t.x, z.y - t.y) <= z.r) ? 0.8 : 1; a *= lawMul;      // 천사 법률: 판결 구역 안 우리 팀은 받는 피해 0.8배
     if (t.ch.rageAt && !t.rage) { t.taken += a; if (t.taken >= t.ch.rageAt) { t.rage = true; t.taken = 0; this.ev.push({ k: 'text', x: t.x, y: t.y - 36, txt: '분노!', col: '#ffd24a' }); } }      // 탱커: 받은 피해(보호막이 막은 양 포함)가 쌓이면 분노
     if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; if (t.shield <= 0) { const si = t.ch.skills.findIndex(k => k.fx.some(f => f.t === 'shield')); if (si >= 0) t.skCd[si] = Math.max(0, t.skCd[si] - t.shieldT); t.shieldT = 0; } }      // 방패가 깨지면 그때부터 쿨타임
     t.hp -= a;
     if (o && o.stun) { t.stun = Math.max(t.stun, o.stun); t.charge = null; t.cnt = null; }
     if (o && o.slowT) { t.slowT = Math.max(t.slowT, o.slowT); t.slowMul = o.slowMul != null ? o.slowMul : 0.5; }
-    this.ev.push({ k: 'hit', x: t.x, y: t.y - 8, d: Math.round(dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1) * (t.drT > 0 ? 1 - t.dr : 1)), to: t.idx });
+    this.ev.push({ k: 'hit', x: t.x, y: t.y - 8, d: Math.round(dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1) * (t.drT > 0 ? 1 - t.dr : 1) * lawMul), to: t.idx });
     return true;
   }
 
@@ -1020,4 +1020,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 88;
+export const BUILD = 89;
