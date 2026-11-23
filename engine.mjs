@@ -101,14 +101,14 @@ CHARS.angel = { id: 'angel', name: '천사', icon: '😇', atkIcon: '✨', color
     { name: '법률', icon: '⚖️', desc: '내 자리에 반경 130의 판결 구역을 3초간 펼침. 안에 있는 적은 40% 느려지고 스킬을 쓸 수 없음(평타·대시는 가능). 우리 팀은 구역 안에서 받는 피해 0.8배. 쿨타임은 구역이 끝난 뒤부터', cd: 13, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 130, dur: 3, slow: 0.6, sil: true, col: '#ffd24a' }] },
     { name: '심판', icon: GAVEL, desc: '5초간 금 망치를 듦: 평타가 근접(피해 12, 0.8초, 사거리 70)으로 바뀌고, 적중하면 스택 +2. 쿨타임은 쓴 때부터 12초', cd: 12, ai: { use: 'gapclose', minD: 0, maxD: 150 }, fx: [{ t: 'hammer', dur: 5 }] },
   ] };
-CHARS.ninja = { id: 'ninja', name: '닌자', icon: '🥷', atkIcon: '🗡️', color: '#23262e', role: '원·근접 · 인술 연계', hp: 90, speed: 235, keep: 260, chainMax: 3, noIcon: true,
-  passive: '인술 연계: 스킬·대시를 쓰고 2.5초 안에 다른 스킬(또는 대시)을 쓰면 연계가 이어짐(최대 3). 3연계가 되면 체력 5 회복 + 2초간 이속 +15%. 같은 걸 반복하면 끊김',
-  atk: { type: 'ranged', dmg: 5, cd: 0.45, range: 300, speed: 600, r: 6, col: '#cfd3dc' },
-  stance: { dur: 3, atk: { type: 'melee', dmg: 7, cd: 0.3, range: 70, arc: 1.9, col: '#e8edf7' } },
+const KUNAI = '<svg viewBox="0 0 32 32" width="1em" height="1em" style="vertical-align:-0.12em;display:inline-block"><g transform="translate(16 16) rotate(45)"><path d="M0 -14 L4.2 -1 L0 4 L-4.2 -1 Z" fill="#c9d0de" stroke="#3a4052" stroke-width="1"/><path d="M0 -13 L0 3" stroke="#8c95aa" stroke-width="0.9"/><rect x="-2.2" y="4" width="4.4" height="9" rx="1.2" fill="#2a2d36" stroke="#0e0f13" stroke-width="0.8"/><path d="M-2.2 7H2.2M-2.2 10H2.2" stroke="#6b7388" stroke-width="0.9"/><circle cx="0" cy="15.2" r="2.6" fill="none" stroke="#8c95aa" stroke-width="1.4"/></g></svg>';      // 닌자 선택 카드 쿠나이 아이콘
+CHARS.ninja = { id: 'ninja', name: '닌자', icon: '🥷', atkIcon: KUNAI, color: '#23262e', role: '중거리 · 스피드 · 덫', hp: 90, speed: 255, keep: 250, noIcon: true,
+  ninjutsu: { max: 4, decay: 3, spd: 0.03, atk: 0.07 }, passive: '스킬, 대쉬 사용시 인술스택이 쌓이며 인술 스택이 쌓일수록 ‘참’피해, 평타 속도와 이동속도가 증가함. 4스택 시 평타 하나가 추가로 더 나가고 ‘참’의 피해가 30으로 증가함',
+  atk: { type: 'ranged', dmg: 5, cd: 0.45, range: 300, speed: 620, r: 6, col: '#cfd3dc' },
   skills: [
-    { name: '인술 덫', icon: '🪤', desc: '앞쪽 150 지점에 덫을 설치(0.6초 뒤부터 발동, 최대 2개, 12초 유지). 밟은 적은 6 피해 + 1초 속박(이동·대시 불가). 풍둔 직후에 설치하면 바로 발동 · 범위 1.5배 · 속박 1.4초', cd: 8, ai: { use: 'trap' }, fx: [{ t: 'trap', dist: 150, r: 34, life: 12, maxN: 2, arm: 0.6, dmg: 6, root: 1, col: '#9aa4b8' }] },
-    { name: '수리검 난무', icon: '🌀', desc: '버튼을 누르는 동안 충전(최대 1초), 떼면 충전량만큼 수리검을 연속 발사(1~5발, 0.08초 간격, 발당 5 피해). 덫 직후에 쓰면 +1발', cd: 8, ai: { use: 'volley', maxD: 330 }, fx: [{ t: 'volley', max: 5, charge: 1, dmg: 5, speed: 640, r: 6, life: 0.6, gap: 0.08, col: '#e8edf7' }] },
-    { name: '풍둔', icon: '🌪️', desc: '드래그한 방향으로 150 돌진 베기(경로의 적 8 피해). 끝나면 3초간 쌍검 근접 태세: 평타가 근접(피해 7, 0.3초, 사거리 70). 수리검 직후에 쓰면 돌진 피해 +6', cd: 9, ai: { use: 'gapclose', minD: 120, maxD: 280 }, fx: [{ t: 'charge', dist: 150, speed: 700, w: 44, dmg: 8, col: '#cfd3dc' }, { t: 'stance', dur: 3 }] }
+    { name: '덫', icon: '🪤', desc: '드래그한 방향 앞쪽 150 지점에 덫을 설치(0.6초 뒤부터 발동, 최대 3개, 12초 유지). 밟은 적은 6 피해 + 1초 속박(이동·대시 불가). 상대에겐 희미하게 보임', cd: 6, ai: { use: 'trap' }, fx: [{ t: 'trap', dist: 150, r: 34, life: 12, maxN: 3, arm: 0.6, dmg: 6, root: 1, col: '#9aa4b8' }] },
+    { name: '질풍', icon: '🌪️', desc: '3초간 이동속도 +45%. 덫으로 묶은 적을 쫓거나 거리를 벌릴 때 사용', cd: 10, ai: { use: 'attack', maxD: 330 }, fx: [{ t: 'buff', haste: 1.45, dur: 3, col: '#b9c4d8' }] },
+    { name: '참', icon: '🗡️', desc: '드래그한 방향(탭하면 상대 쪽) 직선으로 240을 빠르게 질주하며 지나가는 적을 벰(적마다 1회): 피해 12 + 쓰기 전 인술 스택당 2, 인술 4스택이면 +10 더(최대 30). 질주하는 동안 무적. 벽 앞에서는 멈춤', cd: 8, ai: { use: 'attack', minD: 70, maxD: 240 }, fx: [{ t: 'charge', dist: 240, speed: 1000, w: 56, dmg: 12, perNin: 2, maxBonus: 10, inv: true, col: '#e8edf7' }] },
   ] };
 const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에서는 위 desc/passive 전체 설명)
   assassin: { p: '대시를 2번 할 수 있음, 스킬을 쓰면 다음 기본공격이 강화됨', s: ['단검을 던져 맞으면 상대 뒤로 이동함', '자신에게 오는 모든 피해를 막았다가 반격함', '상대에게 보이지 않으며 평타를 맞지 않음'] },
@@ -118,12 +118,12 @@ const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에�
   archer: { s: ['화살 3발을 부채꼴로 발사', '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박', '적과 벽을 꿰뚫는 강한 화살'] },
   mage: { s: ['직격 25 피해, 터지면 15 피해', '맞으면 2초간 둔화', '드래그한 방향으로 순간이동'] },
   angel: { p: '평타를 맞힐 때마다 구원 스택(최대 10): 스택당 구원의 회복 +3 · 피해 +2', s: ['내 주변 큰 원: 나·팀원 10+3×스택 회복, 적 10+2×스택 피해 (스택 소모)', '내 자리에 3초간 판결 구역: 안의 적은 40% 느려지고 스킬 사용 불가, 우리 팀은 받는 피해 0.8배', '5초간 금 망치 근접 평타 (피해 12, 적중 시 스택 +2)'] },
-  ninja: { p: '스킬·대시를 서로 다른 순서로 이어 쓰면 인술 연계(최대 3): 3연계 시 체력 5 회복 · 이속 +15%', s: ['설치형 덫: 밟은 적 6 피해 + 1초 속박', '누른 만큼 충전해 수리검 최대 5발 연속 발사', '돌진 베기 후 3초간 쌍검 근접 태세'] },
+  ninja: { p: '스킬, 대쉬 사용시 인술스택이 쌓이며 인술 스택이 쌓일수록 ‘참’피해, 평타 속도와 이동속도가 증가함. 4스택 시 평타 하나가 추가로 더 나가고 ‘참’의 피해가 30으로 증가함', s: ['설치형 덫: 6 피해 + 1초 속박', '질풍: 3초간 이동속도 +45%', '참: 무적으로 직선 질주하며 베기, 12 피해 + 인술 스택당 2 (4스택 최대 30)'] },
   tide: { s: ['적을 내 쪽으로 끌어당기고 15 피해, 쓰면 7초 뒤 밀물로 변함', '3초간 내 자리에 웅덩이: 적은 20% 느려지고 나는 20%, 팀원은 10% 빨라짐', '직선으로 날아가 원이 되고 0.5초 뒤 토네이도: 맞은 상대는 빨려 들어가 20 피해 + 붙잡힘'] },
 };
-const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide', 'angel'];      // 플레이할 수 있는 캐릭터
+const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide', 'angel', 'ninja'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
-for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe', 'pwall', 'pool', 'tornado', 'trap', 'volley'].includes(f.t));
+for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe', 'pwall', 'pool', 'tornado', 'trap', 'decoy'].includes(f.t));
 
 const PLAY_ORDER = CHAR_ORDER.filter(k => !CHARS[k].soon);      // 지금 고를 수 있는 캐릭터
 
@@ -197,10 +197,10 @@ function inTri(c, o, x, y, pad) {
 }
 const LAG = 0.12;      // 온라인 판정 보정(초)
 const isRoot = p => p.slowT > 0 && p.slowMul === 0;      // 속박: 이동·대시·이동기 불가, 공격·그 밖의 스킬은 가능
-const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge');
+const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge' || f.t === 'rewind');
 const tornPos = (g, p, f, ang) => [clamp(p.x + Math.cos(ang) * f.max, 20, W - 20), clamp(p.y + Math.sin(ang) * f.max, 20, H - 20)];      // 용오름: 사거리 끝(231)에 고정, 방향만 정함
 const tornDist = (f, fr) => (typeof fr === 'number' ? f.min + (f.max - f.min) * clamp(fr, 0, 1) : f.dist);      // 드래그 길이(0~1)로 정한 설치 거리
-const atkOf = p => (p.tm && (p.ch.hammer || p.ch.stance)) ? (p.ch.hammer || p.ch.stance).atk : p.ch.atk;      // 천사: 심판(금 망치) 중에는 근접 망치 평타
+const atkOf = p => (p.tm && p.ch.hammer) ? p.ch.hammer.atk : p.ch.atk;      // 천사: 심판(금 망치) 중에는 근접 망치 평타
 const skOf = (p, i) => (i === 0 && p.tm && p.ch.skills[0].alt) ? p.ch.skills[0].alt : p.ch.skills[i];      // 1번 스킬이 둘로 바뀌는 캐릭터(조류술사: 썰물↔밀물)
 // 돌진 경로: 벽에 닿으면 거기서 멈춤. 실제로 갈 수 있는 거리와 도착 지점을 돌려줌
 function chargePath(p, ang, dist) {
@@ -218,7 +218,7 @@ const freshWant = () => ({ dash: 0, sk: [0, 0, 0], angs: [null, null, null], dis
 function mkPlayer(idx, charId) {
   const ch = CHARS[charId];
   return { idx, team: idx, ch, x: 0, y: 0, vx: 0, vy: 0, aim: 0, hp: ch.hp, maxHp: ch.hp, alive: true, atkCd: 0, skCd: [0, 0, 0],
-    dashCd: 0, dashT: 0, dx: 1, dy: 0, inv: 0, stun: 0, slowT: 0, slowMul: 1, sil: 0, cl: -1, ct: 0, vol: null, shield: 0, shieldMax: 0, shieldT: 0, dr: 0, drT: 0, haste: 0, hasteMul: 1, charge: null, guard: null, tm: 0, hm: 0, kb: null,
+    dashCd: 0, dashT: 0, dx: 1, dy: 0, inv: 0, stun: 0, slowT: 0, slowMul: 1, sil: 0, shield: 0, shieldMax: 0, shieldT: 0, dr: 0, drT: 0, haste: 0, hasteMul: 1, charge: null, guard: null, tm: 0, hm: 0, kb: null,
     atkHold: false, atkBuf: 0, atkAng: null, hits: 0, adv: false, orbSk: -1, dashN: ch.dashN || 0, stl: 0, stlI: -1, emp: false, cnt: null, seenX: 0, seenY: 0,
     inp: { mx: 0, my: 0 }, want: freshWant(), taken: 0, rage: false,
     think: 0, strafe: 1, strafeT: 0, stuckT: 0, lx: 0, ly: 0, unstick: 0, unstickAng: 0 };
@@ -254,8 +254,8 @@ class Game {
       const sp0 = (this.quad ? SPAWN4 : SPAWN)[p.idx]; p.x = sp0.x; p.y = sp0.y; p.vx = p.vy = 0; p.aim = p.team === 0 ? 0 : Math.PI;
       p.maxHp = p.ch.hp; p.hp = p.maxHp; p.alive = true; p.atkCd = 0.5;      // 함성 등으로 늘어난 최대 체력은 라운드가 끝나면 초기화
       p.atkBuf = 0; p.skCd = [0, 0, 0]; p.dashCd = 0; p.dashT = 0; p.inv = 0; p.stun = 0; p.dashN = p.ch.dashN || 0; p.stl = 0; p.stlI = -1; p.emp = false; p.cnt = null; p.taken = 0; p.rage = false; p.seenX = p.x; p.seenY = p.y;
-      p.slowT = 0; p.sil = 0; p.cl = -1; p.ct = 0; p.vol = null; if (p.ch.chainMax) p.hits = 0; p.shield = 0; p.shieldT = 0; p.dr = 0; p.drT = 0; p.haste = 0; p.charge = null; p.guard = null; p.kb = null; p.tm = 0; p.hm = 0; p.inp = { mx: 0, my: 0 }; p.want = freshWant();
-      p.think = 0.4; p.stuckT = 0; p.lx = p.x; p.ly = p.y; p.unstick = 0; p.atkAng = null; p.hits = 0; p.adv = false; p.orbSk = -1;
+      p.slowT = 0; p.sil = 0; p.shield = 0; p.shieldT = 0; p.dr = 0; p.drT = 0; p.haste = 0; p.charge = null; p.guard = null; p.kb = null; p.tm = 0; p.hm = 0; p.inp = { mx: 0, my: 0 }; p.want = freshWant();
+      p.hist = []; p.histT = 0; p.pend2 = null; p.nin = 0; p.ninT = 0; p.think = 0.4; p.stuckT = 0; p.lx = p.x; p.ly = p.y; p.unstick = 0; p.atkAng = null; p.hits = 0; p.adv = false; p.orbSk = -1;
     }
     this.minions = []; this.pw = []; this.pools = []; this.rebuildWalls();
     this.bullets = []; this.fx = []; this.zones = []; this.fightT = 0; this.res = null; this.ph = 'count'; this.timer = COUNT_TIME;
@@ -340,7 +340,7 @@ class Game {
     if (t.cnt && src !== t) { this.blockedBy(t); return false; }      // 반격 중에는 어떤 공격(방향·거리 상관없이)도 막음
     let a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1);   // 서든데스 규칙: 모든 데미지 2배
     if (t.drT > 0) a *= 1 - t.dr;      // 받는 피해 감소 버프(전사의 함성)
-    const lawMul = this.pools.some(z => z.kind === 'pool' && z.f.sil && this.players[z.owner].team === t.team && Math.hypot(z.x - t.x, z.y - t.y) <= z.r) ? 0.8 : 1; a *= lawMul;      // 천사 법률: 판결 구역 안 우리 팀은 받는 피해 0.8배
+    const lawMul = this.pools.some(z => z.kind === 'pool' && z.f.sil && this.players[z.owner].team === t.team && Math.hypot(z.x - t.x, z.y - t.y) <= z.r) ? 0.8 : 1; a *= lawMul;
     if (t.ch.rageAt && !t.rage) { t.taken += a; if (t.taken >= t.ch.rageAt) { t.rage = true; t.taken = 0; this.ev.push({ k: 'text', x: t.x, y: t.y - 36, txt: '분노!', col: '#ffd24a' }); } }      // 탱커: 받은 피해(보호막이 막은 양 포함)가 쌓이면 분노
     if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; if (t.shield <= 0) { const si = t.ch.skills.findIndex(k => k.fx.some(f => f.t === 'shield')); if (si >= 0) t.skCd[si] = Math.max(0, t.skCd[si] - t.shieldT); t.shieldT = 0; } }      // 방패가 깨지면 그때부터 쿨타임
     t.hp -= a;
@@ -471,22 +471,13 @@ class Game {
     }
     this.zones = this.zones.filter(z => !z.done);
   }
-  chain(p, id) {      // 닌자 인술 연계: 2.5초 안에 다른 스킬(대시=3)을 이어 쓰면 +1(최대 3)
-    const prev = p.cl, linked = p.ct > 0 && prev >= 0 && prev !== id;
-    p.hits = linked ? Math.min(p.ch.chainMax, (p.hits | 0) + 1) : 0; p.cl = id; p.ct = 2.5;
-    if (linked) {
-      this.ev.push({ k: 'text', x: p.x, y: p.y - 36, txt: '연계 ' + p.hits + '!', col: '#9ad1ff' });
-      if (p.hits >= p.ch.chainMax) { p.hp = Math.min(p.maxHp, p.hp + 5); if (!(p.haste > 0.3 && p.hasteMul > 1.15)) { p.haste = Math.max(p.haste, 2); p.hasteMul = 1.15; } this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 50, life: 0.35, max: 0.35, col: '#9ad1ff' }); }
-    }
-    return { linked, prev: linked ? prev : -1 };
-  }
   useSkill(p, i, angArg, frArg) {
-    const ci = p.ch.chainMax ? this.chain(p, i) : { linked: false, prev: -1 };
-    const sk = skOf(p, i), aimed = typeof angArg === 'number', ang = aimed ? angArg : p.aim;
+    const sk = skOf(p, i), aimed = typeof angArg === 'number', ang = aimed ? angArg : p.aim, n0 = p.nin | 0;      // n0: 이 스킬을 쓰기 전 인술 스택
     if (i === 0 && p.ch.skills[0].alt) p.tm = p.tm ? 0 : 1;      // 썰물을 쓰면 밀물로, 밀물을 쓰면 썰물로 (쿨타임 7초가 지나면 그 스킬을 쓸 수 있음)
     if (p.stl > 0 && !sk.fx.some(f => f.t === 'stealth')) this.endStealth(p);      // 스킬을 쓰면 은신이 풀림
     if (p.ch.empAtk) p.emp = true;      // 스킬을 쓰면 다음 기본공격 강화
     p.skCd[i] = sk.cd;                 // 시전하자마자 쿨타임이 돌기 시작
+    this.ninGain(p);      // 닌자 인술 +1
     this.ev.push({ k: 'skill', p: p.idx, i });
     for (const f of sk.fx) {
       if (f.t === 'proj') this.fireProj(p, f, ang);
@@ -531,18 +522,24 @@ class Game {
         if (f.maxHp) { p.maxHp += f.maxHp; p.hp += f.maxHp; this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '최대 체력 +' + f.maxHp, col: '#ffd24a' }); }
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 60, life: 0.4, max: 0.4, col: f.col || '#ffd24a' });
       } else if (f.t === 'trap') {      // 닌자 덫: 앞쪽에 설치, 적이 밟으면 피해 + 속박
-        const boost = ci.linked && ci.prev === 2, zx = clamp(p.x + Math.cos(ang) * f.dist, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * f.dist, 20, H - 20), r = f.r * (boost ? 1.5 : 1);
+        const zx = clamp(p.x + Math.cos(ang) * f.dist, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * f.dist, 20, H - 20), r = f.r;
         const mine = this.pools.filter(z => z.owner === p.idx && z.kind === 'trap'); while (mine.length >= f.maxN) { const o = mine.shift(); o.t = 0; if (o.fo) o.fo.life = 0; }
         const fo = { k: 'trap', x: zx, y: zy, r, life: f.life, max: f.life, col: f.col, follow: p.idx };
-        this.fx.push(fo); this.pools.push({ kind: 'trap', owner: p.idx, x: zx, y: zy, r, t: f.life, max: f.life, arm: boost ? 0 : f.arm, f, root: boost ? 1.4 : f.root, fo });
-      } else if (f.t === 'volley') {      // 수리검 난무: 누른 시간(frArg 0~1)만큼 연속 발사
-        const fr = typeof frArg === 'number' ? clamp(frArg, 0, 1) : 0.4; let n = 1 + Math.round(fr * (f.max - 1)); if (ci.linked && ci.prev === 0) n++;
-        p.vol = { n, left: n, t: 0, ang, f };
-      } else if (f.t === 'stance') {      // 풍둔: 쌍검 근접 태세
-        p.hm = f.dur; p.tm = Math.ceil(f.dur * 10); p.atkCd = Math.min(p.atkCd, 0.15); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 46, life: 0.35, max: 0.35, col: '#cfd3dc' });
+        this.fx.push(fo); this.pools.push({ kind: 'trap', owner: p.idx, x: zx, y: zy, r, t: f.life, max: f.life, arm: f.arm, f, root: f.root, fo });
+      } else if (f.t === 'decoy') {      // 닌자 분신 포대: 한 자리에 서서 사거리 안의 적에게 자동 사격
+        let zx = clamp(p.x + Math.cos(ang) * f.dist, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * f.dist, 20, H - 20); if (!this.clear(p.x, p.y, zx, zy)) { zx = p.x + Math.cos(ang) * 40; zy = p.y + Math.sin(ang) * 40; }
+        const mine = this.minions.filter(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0); while (mine.length >= f.maxN) mine.shift().hp = 0;
+        this.minions.push({ id: ++this.mid, kind: 'nin', owner: p.idx, x: zx, y: zy, vx: 0, vy: 0, hp: 1, maxHp: 1, r: R, life: f.life, maxLife: f.life, f, aim: ang, fire: 0, fireT: 0.4, guard: 0 });
+        this.fx.push({ k: 'ring', x: zx, y: zy, r: 36, life: 0.3, max: 0.3, col: '#cfd3dc' });
+      } else if (f.t === 'detonate') {      // 결계 격발: 덫·분신을 모두 터뜨림 (둘 다 있으면 피해 +25%)
+        const traps = this.pools.filter(z => z.owner === p.idx && z.kind === 'trap'), cl = this.minions.filter(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0), mul = traps.length && cl.length ? f.combo : 1;
+        const blast = (x, y, r, dmg, root) => { this.fx.push({ k: 'ring', x, y, r, life: 0.35, max: 0.35, col: '#e8edf7' }); for (const q of this.foes(p)) if (q.alive && Math.hypot(q.x - x, q.y - y) <= r + R) { if (this.dealDamage(p, q, dmg * mul, null) && root) { q.slowT = Math.max(q.slowT, root); q.slowMul = 0; q.charge = null; q.cnt = null; } } };
+        for (const z of traps) { blast(z.x, z.y, f.trapR, f.trapDmg, f.trapRoot); z.t = 0; if (z.fo) z.fo.life = 0; }
+        for (const m of cl) { blast(m.x, m.y, f.cloneR, f.cloneDmg, 0); m.hp = 0; }
+        this.ev.push({ k: 'text', x: p.x, y: p.y - 36, txt: mul > 1 ? '결계 격발 · 콤보!' : '결계 격발!', col: '#e8edf7' });
       } else if (f.t === 'charge') {
         const cp = chargePath(p, ang, f.dist);      // 벽이 있으면 거기까지만 돌진
-        p.charge = { dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed, left: cp.d / f.speed, dmg: f.dmg, stun: f.stun || 0, w: f.w || 52, endR: f.endR || 0, endStun: f.endStun || 0, hit: false, col: f.col, soft: !!f.soft, push: f.push || 0, bonus: ci.linked && ci.prev === 1 ? 6 : 0 };
+        p.charge = { dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed, left: cp.d / f.speed, dmg: f.dmg + (f.perNin || 0) * n0 + (p.ch.ninjutsu && n0 >= p.ch.ninjutsu.max ? (f.maxBonus || 0) : 0), stun: f.stun || 0, w: f.w || 52, endR: f.endR || 0, endStun: f.endStun || 0, hit: false, col: f.col, soft: !!f.soft, push: f.push || 0 };
         if (f.inv) p.inv = Math.max(p.inv, cp.d / f.speed + 0.05);      // 날개짓: 날아가는 동안 무적
         const T = cp.d / f.speed + 0.1;      // 돌진하는 동안 경로(사각)와 도착 원을 모두에게 보여줌
         this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: cp.d, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
@@ -586,6 +583,15 @@ class Game {
         }
         this.ev.push({ k: 'text', x: p.x, y: p.y - 40, txt: '용의 힘 +1', col: '#ffd24a' });
       }
+      else if (f.t === 'rewind') {      // 닌자 되감기: 2초 전 위치로, 체력은 더 낮았을 때만 회복
+        const h = p.hist && p.hist[0]; if (h) {
+          this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 34, life: 0.35, max: 0.35, col: f.col });
+          p.x = h.x; p.y = h.y; p.vx = p.vy = 0; p.kb = null; p.charge = null;
+          for (const w of WALLS) resolveCircleRect(p, R, w); p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
+          if (h.hp > p.hp) { this.ev.push({ k: 'text', x: p.x, y: p.y - 40, txt: '+' + Math.round(h.hp - p.hp), col: '#6be08a' }); p.hp = Math.min(p.maxHp, h.hp); }
+          this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 34, life: 0.35, max: 0.35, col: f.col }); p.hist = [{ x: p.x, y: p.y, hp: p.hp }]; p.histT = 0;
+        }
+      }
       else if (f.t === 'blink') {
         let dx, dy; const m = Math.hypot(p.inp.mx, p.inp.my);
         if (aimed) { const sgn = f.dir === 'away' ? -1 : 1; dx = Math.cos(ang) * sgn; dy = Math.sin(ang) * sgn; }
@@ -617,6 +623,8 @@ class Game {
   canUse(p, i, ang) {      // 쓸 수 없는 상황이면 쿨타임도 돌지 않음
     if (p.sil > 0) return false;      // 법률 구역 안: 스킬 봉인
     for (const f of skOf(p, i).fx) {
+      if (f.t === 'rewind' && !(p.hist && p.hist.length)) return false;
+      if (f.t === 'detonate' && !this.pools.some(z => z.owner === p.idx && z.kind === 'trap') && !this.minions.some(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0)) return false;      // 터뜨릴 설치물이 없으면 못 씀
       if (f.t === 'dpower' && p.hits >= p.ch.advent.hits && !this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0)) return false;
       if (f.t === 'pwall' && !this.wallRect(p, f, typeof ang === 'number' ? ang : p.aim)) return false;
     }
@@ -655,7 +663,15 @@ class Game {
     const keep = [];
     for (const m of this.minions) {
       if (m.hp <= 0 && m.kind === 'orb' && !m.done) this.orbBurst(m);
-      if (m.hp <= 0) { if (m.kind === 'dragon') this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 40, life: 0.3, max: 0.3, col: '#ff7a30' }); continue; }
+      if (m.hp <= 0) { if (m.kind === 'dragon') this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 40, life: 0.3, max: 0.3, col: '#ff7a30' }); else if (m.kind === 'nin') this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 30, life: 0.3, max: 0.3, col: '#9aa4b8' }); continue; }
+      if (m.kind === 'nin') {      // 닌자 분신 포대: 가만히 서서 사거리 안의 가장 가까운 적에게 자동 사격
+        const own = this.players[m.owner];
+        if ((m.life -= dt) <= 0 || !own.alive) { this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 30, life: 0.3, max: 0.3, col: '#9aa4b8' }); continue; }
+        let tg = null, td = m.f.range + R; for (const f of this.foes(own)) if (f.alive && f.stl <= 0) { const d = Math.hypot(f.x - m.x, f.y - m.y); if (d < td && this.clear(m.x, m.y, f.x, f.y)) { td = d; tg = f; } }
+        m.fire = tg ? 1 : 0; m.fireT -= dt;
+        if (tg) { m.aim = Math.atan2(tg.y - m.y, tg.x - m.x); if (m.fireT <= 0) { m.fireT = m.f.every; this.fireProj({ x: m.x, y: m.y, idx: m.owner }, { dmg: m.f.dmg, speed: m.f.speed, r: m.f.r, life: 0.7, col: m.f.col }, m.aim); } }
+        keep.push(m); continue;
+      }
       if (m.kind === 'dragon' && (m.life -= dt) <= 0) { this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 40, life: 0.3, max: 0.3, col: '#ff7a30' }); continue; }      // 용은 소환 10초 뒤 사라짐
       const own = this.players[m.owner], e = this.nearFoe(own.team, m.x, m.y);
       if (!own.alive || !e.alive) { keep.push(m); m.vx = m.vy = 0; continue; }
@@ -694,23 +710,37 @@ class Game {
     for (const w of this.pw) { w.t -= dt; if (w.t <= 0) ch = true; }
     if (ch) { this.pw = this.pw.filter(w => w.t > 0); this.rebuildWalls(); }
   }
+  nearPost(p) {      // 닌자 인술 진지: 내 덫·분신 반경 안인가
+    const r = p.ch.post.r;
+    return this.pools.some(z => z.owner === p.idx && z.kind === 'trap' && Math.hypot(z.x - p.x, z.y - p.y) <= r) || this.minions.some(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0 && Math.hypot(m.x - p.x, m.y - p.y) <= r);
+  }
   basicAttack(p) {
     if (p.adv) { this.advent(p); p.atkCd = p.ch.atk.cd; return; }
-    const a = atkOf(p), dmg = a.dmg + (p.emp && p.ch.empAtk ? p.ch.empAtk : 0);
+    const a = atkOf(p), dmg = (a.dmg + (p.emp && p.ch.empAtk ? p.ch.empAtk : 0)) * (p.ch.post && this.nearPost(p) ? p.ch.post.atk : 1);
     if (p.stl > 0) this.endStealth(p);      // 공격하면 은신이 풀림
     const emp = p.emp && p.ch.empAtk; p.emp = false;
     if (emp && a.lunge) {      // 강화 평타: 상대 쪽으로 짧게 파고들며 벤다 (몸이 겹치지 않는 거리까지만)
       const e = this.foe(p), dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1, mv = Math.min(a.lunge, d - (2 * R + 2));
       if (mv > 0) { stepMove(p, dx / d * mv, dy / d * mv); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 26, life: 0.18, max: 0.18, col: p.ch.color }); }
     }
-    if (a.type === 'melee') { const n = this.coneHit(p, a.range, a.arc, dmg, a.col ? { col: a.col } : null); if (n && p.ch.hammer) p.hits = Math.min(p.ch.stackMax, p.hits + p.ch.hammer.stack); }      // 금 망치 적중: 스택 +2
-    else this.fireProj(p, { dmg, speed: a.speed, r: a.r, basic: true, hom: a.hom, life: a.life, pass: a.pass, col: a.col });
-    p.atkCd = a.cd;
+    if (a.type === 'melee') { const n = this.coneHit(p, a.range, a.arc, dmg, a.col ? { col: a.col, basic: true } : null); if (n && p.ch.hammer) p.hits = Math.min(p.ch.stackMax, p.hits + p.ch.hammer.stack); }      // 금 망치 적중: 스택 +2
+    else {
+      const pf = { dmg, speed: a.speed, r: a.r, basic: true, hom: a.hom, life: a.life, pass: a.pass, col: a.col }; this.fireProj(p, pf);
+      if (p.ch.ninjutsu && (p.nin | 0) >= p.ch.ninjutsu.max) p.pend2 = { t: 0.1, f: pf };      // 인술 최대: 평타가 2발 연속
+    }
+    p.atkCd = a.cd * (p.ch.ninjutsu && p.nin ? 1 - p.ch.ninjutsu.atk * p.nin : 1);
   }
 
+  ninGain(p) { const n = p.ch.ninjutsu; if (n) { p.nin = Math.min(n.max, (p.nin | 0) + 1); p.ninT = n.decay; } }
+  recHist(p, dt) {      // 닌자 되감기용: 0.1초마다 위치·체력을 기록(최대 2초)
+    if (!p.hist) { p.hist = []; p.histT = 0; }
+    p.histT += dt; if (p.histT >= 0.1) { p.histT -= 0.1; p.hist.push({ x: p.x, y: p.y, hp: p.hp }); if (p.hist.length > 20) p.hist.shift(); }
+  }
   stepPlayer(p, dt) {
     const e = this.foe(p);
+    if (p.ch.ninjutsu && p.nin > 0) { p.ninT -= dt; if (p.ninT <= 0 || !p.alive) { p.nin = 0; p.ninT = 0; } }
     p.atkCd -= dt; p.dashCd -= dt; p.inv -= dt;
+    if (p.pend2) { p.pend2.t -= dt; if (p.pend2.t <= 0) { if (p.alive && !(p.stun > 0)) this.fireProj(p, p.pend2.f); p.pend2 = null; } }
     p.adv = !!(p.ch.advent && p.hits >= p.ch.advent.hits && !this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0));      // 강림 가능: 게이지가 차고 내 용이 없을 때
     if (p.ch.dashN && p.dashN === 0 && p.dashCd <= 0) p.dashN = p.ch.dashN;      // 대시를 모두 쓴 뒤 쿨타임이 끝나면 다시 충전
     if (!(p.stl > 0)) { p.seenX = p.x; p.seenY = p.y; }      // 은신 직전 위치(상대가 마지막으로 본 곳)
@@ -733,11 +763,7 @@ class Game {
     if (p.stun > 0) p.stun -= dt;
     if (p.slowT > 0) p.slowT -= dt;
     if (p.sil > 0) p.sil -= dt;
-    if (p.ct > 0) { p.ct -= dt; if (p.ct <= 0) { p.ct = 0; p.cl = -1; if (p.ch.chainMax) p.hits = 0; } }      // 연계 제한시간이 지나면 끊김
-    if (p.vol) {      // 수리검 난무: 0.08초 간격 연속 발사
-      if (p.stun > 0 || !p.alive) p.vol = null;
-      else { const v = p.vol; v.t -= dt; while (v.t <= 0 && v.left > 0) { this.fireProj(p, { dmg: v.f.dmg, speed: v.f.speed, r: v.f.r, life: v.f.life, col: v.f.col }, v.ang); v.left--; v.t += v.f.gap; } if (v.left <= 0) p.vol = null; }
-    }
+    if (p.ch.post && p.alive && this.nearPost(p) && !(p.haste > 0.15 && p.hasteMul >= p.ch.post.spd)) { p.haste = Math.max(p.haste, 0.15); p.hasteMul = p.ch.post.spd; }      // 인술 진지: 설치물 근처 이속 +10%
     if (p.haste > 0) p.haste -= dt;
     if (p.drT > 0) p.drT -= dt;
     if (p.guard) {
@@ -759,7 +785,8 @@ class Game {
         const m = Math.hypot(p.inp.mx, p.inp.my);
         if (p.want.dd) { p.dx = p.want.dd[0]; p.dy = p.want.dd[1]; }
         else if (m > 0.2) { p.dx = p.inp.mx / m; p.dy = p.inp.my / m; } else { p.dx = -Math.cos(p.aim); p.dy = -Math.sin(p.aim); }
-        p.dashT = DASH.time; if (p.ch.chainMax) this.chain(p, 3);
+        p.dashT = DASH.time;
+        this.ninGain(p);
         if (p.ch.dashN) { p.dashN--; if (p.dashN === 0) p.dashCd = p.ch.dashCd || DASH.cd; } else p.dashCd = DASH.cd;      // 암살자: 충전 대시를 모두 써야 쿨타임이 돎
         this.ev.push({ k: 'dash', p: p.idx });
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 28, life: 0.25, max: 0.25, col: '#6be08a' });
@@ -778,7 +805,7 @@ class Game {
     else if (p.stun <= 0) {
       let mx = p.inp.mx, my = p.inp.my; const ml = Math.hypot(mx, my);
       if (ml > 1) { mx /= ml; my /= ml; }
-      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1) * (p.stl > 0 ? STL_MUL : 1) * (this.map.speedMul || 1);
+      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1) * (p.stl > 0 ? STL_MUL : 1) * (this.map.speedMul || 1) * (p.ch.ninjutsu && p.nin ? 1 + p.ch.ninjutsu.spd * p.nin : 1);
       vx = mx * sp; vy = my * sp;
     }
     p.vx = vx; p.vy = vy;
@@ -796,7 +823,7 @@ class Game {
       if (!c.soft) for (const q of this.foes(p)) if (q.alive && !c.hits.has(q.idx) && Math.hypot(q.x - p.x, q.y - p.y) < c.w / 2 + R) {
         c.hit = true; c.hits.add(q.idx);
         this.fx.push({ k: 'ring', x: q.x, y: q.y, r: 45, life: 0.25, max: 0.25, col: '#ffffff' });
-        this.dealDamage(p, q, c.dmg + (c.bonus || 0), c);
+        this.dealDamage(p, q, c.dmg, c);
       }
     }
     // 기본공격: 버튼을 톡 누르면 1회(사거리 상관없이), 꾹 누르면 사거리 안에서 자동 반복
@@ -821,7 +848,7 @@ class Game {
     p.think = d.react;
     const hid = e.stl > 0, ex = hid ? e.seenX : e.x, ey = hid ? e.seenY : e.y;      // 은신한 상대는 마지막으로 본 위치만 알 수 있음
     const dx = ex - p.x, dy = ey - p.y, dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist;
-    const los = this.clear(p.x, p.y, ex, ey), keep = p.tm && (p.ch.hammer || p.ch.stance) ? 64 : p.ch.keep, melee = atkOf(p).type === 'melee';
+    const los = this.clear(p.x, p.y, ex, ey), keep = p.tm && p.ch.hammer ? 64 : p.ch.keep, melee = atkOf(p).type === 'melee';
     let ap = dist > keep + 30 ? 1 : dist < keep - 30 ? -1 : 0;
     if (!los) ap = Math.max(ap, 0.8);
     let threat = false;
@@ -884,17 +911,20 @@ class Game {
           p.want.angs[i] = best;
         }
         if (use && sk.fx.some(f => f.t === 'charge' && f.soft)) p.want.angs[i] = Math.atan2(p.y - ey, p.x - ex);      // 날개짓: 상대 반대쪽으로
+        if (use && sk.fx.some(f => f.t === 'blink' && !f.thru && f.dir === 'move')) p.want.angs[i] = Math.atan2(p.y - ey, p.x - ex);      // 그림자 도약: 상대 반대쪽으로
       }
       else if (h.use === 'salv') use = dist <= sk.fx[0].radius && ((p.hits | 0) >= 4 || (p.hp < p.maxHp * 0.5 && (p.hits | 0) >= 2));
       else if (h.use === 'block') use = danger || dist <= h.maxD;
       else if (h.use === 'wall') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && los && Math.random() < 0.5;
       else if (h.use === 'power') { const dr = this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0); use = dr ? (dist < 170 && Math.random() < 0.4) : p.hits < p.ch.advent.hits; }
-      else if (h.use === 'gapclose') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && !((p.ch.hammer || p.ch.stance) && p.tm);
+      else if (h.use === 'gapclose') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && !(p.ch.hammer && p.tm);
       else if (h.use === 'trap') use = dist >= 90 && dist <= 330 && this.pools.filter(z => z.owner === p.idx && z.kind === 'trap').length < 2 && Math.random() < 0.5;
-      else if (h.use === 'volley') use = dist <= (h.maxD || 330) && los && Math.random() < 0.7;
+      else if (h.use === 'rewind') { const o = p.hist && p.hist[0]; use = !!o && (o.hp - p.hp >= 18 || (p.hp < p.maxHp * 0.5 && o.hp > p.hp && dist < 230) || (Math.hypot(o.x - p.x, o.y - p.y) > 130 && dist < 90 && p.hp < p.maxHp * 0.7)); }
+      else if (h.use === 'decoy') use = dist <= 330 && this.minions.filter(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0).length < 2 && Math.random() < 0.5;
+      else if (h.use === 'detonate') use = (this.pools.some(z => z.owner === p.idx && z.kind === 'trap') || this.minions.some(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0)) && dist < 150;
       else if (h.use === 'pool') use = dist < 130 && !this.pools.some(z => z.owner === p.idx && z.kind === 'pool');
       else if (h.use === 'tornado') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && los && Math.random() < 0.6;
-      if (use) { p.want.sk[i] = 1; if (h.use === 'volley') p.want.dists[i] = 0.5 + Math.random() * 0.5; if (h.use === 'tornado') { const f0 = sk.fx[0]; p.want.dists[i] = clamp((dist - f0.min) / (f0.max - f0.min), 0, 1); } }
+      if (use) { p.want.sk[i] = 1; if (h.use === 'tornado') { const f0 = sk.fx[0]; p.want.dists[i] = clamp((dist - f0.min) / (f0.max - f0.min), 0, 1); } }
     }
   }
 
@@ -1020,4 +1050,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 89;
+export const BUILD = 90;

@@ -54,6 +54,7 @@
   .ch .ic { font-size: 40px; line-height: 1.1; }
   .ch .nm { font-family: var(--display); font-size: 22px; color: #9aa6bd; }
   .ch[aria-pressed="true"] .nm { color: var(--t, var(--c)); }
+  .ch[data-id="ninja"][aria-pressed="true"] { border-color: #6b7388; background: #05060a; box-shadow: 0 0 0 2px #6b738873, 0 0 22px 7px #000; }
   .ch.soon { opacity: .6; } .ch.soon .nm { color: #6b7690; }
   .ch .ro { font-size: 11px; color: var(--dim); }
   .ch.lock .ic { filter: grayscale(.4); }
@@ -177,7 +178,7 @@
       <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심 · <b>오른쪽</b> 큰 버튼은 공격(톡=1회, 꾹=자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(탭하면 상대 쪽) · 초록 버튼은 대시(무적, 쿨 5초) · 3라운드 먼저 이기면 승리</div>
       <div class="note" id="verTag" style="font-size:11px;opacity:.7"></div>
       <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
-      <div id="noticeOv" hidden><div class="nbox"><div class="nh">📢 업데이트 안내 <small>v79</small></div><ul><li><b>😇 천사 추가</b><span>회복·지원형 신규 캐릭터가 나왔어요</span></li><li><b>🎲 랜덤 선택 개선</b><span>랜덤을 누르면 모두 켜지고, 카드를 눌러 후보를 끌 수 있어요</span></li></ul><button type="button" class="btn" id="btnNoticeOk">확인</button></div></div>
+      <div id="noticeOv" hidden><div class="nbox"><div class="nh">📢 업데이트 안내 <small>v90</small></div><ul><li><b>🥷 닌자 추가</b><span>덫과 인술 스택으로 싸우는 스피드형 신규 캐릭터가 나왔어요</span></li><li><b>❤️ 체력바 개선</b><span>피해를 받으면 하얀 잔상 바가 현재 체력까지 따라 내려와요</span></li></ul><button type="button" class="btn" id="btnNoticeOk">확인</button></div></div>
       <div id="sndOv" hidden><div class="nbox"><div class="nh">🔊 소리</div><div class="sr"><button type="button" class="btn ghost" id="sndBgmT">🎵 배경음악 켜짐</button><input type="range" id="sndBgmV" min="0" max="100" aria-label="배경음악 음량"></div><div class="sr"><button type="button" class="btn ghost" id="sndSfxT">🔔 효과음 켜짐</button><input type="range" id="sndSfxV" min="0" max="100" aria-label="효과음 음량"></div><button type="button" class="btn" id="btnSndOk">닫기</button></div></div>
       <div id="augOv" hidden><div class="augH"><button type="button" class="btn ghost" id="btnAugBack">← 뒤로</button>✨ 증강 목록</div><div class="augB"><i>✨</i>아직 증강이 출시되지 않았습니다</div></div>
     </div>
@@ -395,14 +396,14 @@ CHARS.angel = { id: 'angel', name: '천사', icon: '😇', atkIcon: '✨', color
     { name: '법률', icon: '⚖️', desc: '내 자리에 반경 130의 판결 구역을 3초간 펼침. 안에 있는 적은 40% 느려지고 스킬을 쓸 수 없음(평타·대시는 가능). 우리 팀은 구역 안에서 받는 피해 0.8배. 쿨타임은 구역이 끝난 뒤부터', cd: 13, ai: { use: 'pool' }, fx: [{ t: 'pool', dist: 0, r: 130, dur: 3, slow: 0.6, sil: true, col: '#ffd24a' }] },
     { name: '심판', icon: GAVEL, desc: '5초간 금 망치를 듦: 평타가 근접(피해 12, 0.8초, 사거리 70)으로 바뀌고, 적중하면 스택 +2. 쿨타임은 쓴 때부터 12초', cd: 12, ai: { use: 'gapclose', minD: 0, maxD: 150 }, fx: [{ t: 'hammer', dur: 5 }] },
   ] };
-CHARS.ninja = { id: 'ninja', name: '닌자', icon: '🥷', atkIcon: '🗡️', color: '#23262e', role: '원·근접 · 인술 연계', hp: 90, speed: 235, keep: 260, chainMax: 3, noIcon: true,
-  passive: '인술 연계: 스킬·대시를 쓰고 2.5초 안에 다른 스킬(또는 대시)을 쓰면 연계가 이어짐(최대 3). 3연계가 되면 체력 5 회복 + 2초간 이속 +15%. 같은 걸 반복하면 끊김',
-  atk: { type: 'ranged', dmg: 5, cd: 0.45, range: 300, speed: 600, r: 6, col: '#cfd3dc' },
-  stance: { dur: 3, atk: { type: 'melee', dmg: 7, cd: 0.3, range: 70, arc: 1.9, col: '#e8edf7' } },
+const KUNAI = '<svg viewBox="0 0 32 32" width="1em" height="1em" style="vertical-align:-0.12em;display:inline-block"><g transform="translate(16 16) rotate(45)"><path d="M0 -14 L4.2 -1 L0 4 L-4.2 -1 Z" fill="#c9d0de" stroke="#3a4052" stroke-width="1"/><path d="M0 -13 L0 3" stroke="#8c95aa" stroke-width="0.9"/><rect x="-2.2" y="4" width="4.4" height="9" rx="1.2" fill="#2a2d36" stroke="#0e0f13" stroke-width="0.8"/><path d="M-2.2 7H2.2M-2.2 10H2.2" stroke="#6b7388" stroke-width="0.9"/><circle cx="0" cy="15.2" r="2.6" fill="none" stroke="#8c95aa" stroke-width="1.4"/></g></svg>';      // 닌자 선택 카드 쿠나이 아이콘
+CHARS.ninja = { id: 'ninja', name: '닌자', icon: '🥷', atkIcon: KUNAI, color: '#23262e', role: '중거리 · 스피드 · 덫', hp: 90, speed: 255, keep: 250, noIcon: true,
+  ninjutsu: { max: 4, decay: 3, spd: 0.03, atk: 0.07 }, passive: '스킬, 대쉬 사용시 인술스택이 쌓이며 인술 스택이 쌓일수록 ‘참’피해, 평타 속도와 이동속도가 증가함. 4스택 시 평타 하나가 추가로 더 나가고 ‘참’의 피해가 30으로 증가함',
+  atk: { type: 'ranged', dmg: 5, cd: 0.45, range: 300, speed: 620, r: 6, col: '#cfd3dc' },
   skills: [
-    { name: '인술 덫', icon: '🪤', desc: '앞쪽 150 지점에 덫을 설치(0.6초 뒤부터 발동, 최대 2개, 12초 유지). 밟은 적은 6 피해 + 1초 속박(이동·대시 불가). 풍둔 직후에 설치하면 바로 발동 · 범위 1.5배 · 속박 1.4초', cd: 8, ai: { use: 'trap' }, fx: [{ t: 'trap', dist: 150, r: 34, life: 12, maxN: 2, arm: 0.6, dmg: 6, root: 1, col: '#9aa4b8' }] },
-    { name: '수리검 난무', icon: '🌀', desc: '버튼을 누르는 동안 충전(최대 1초), 떼면 충전량만큼 수리검을 연속 발사(1~5발, 0.08초 간격, 발당 5 피해). 덫 직후에 쓰면 +1발', cd: 8, ai: { use: 'volley', maxD: 330 }, fx: [{ t: 'volley', max: 5, charge: 1, dmg: 5, speed: 640, r: 6, life: 0.6, gap: 0.08, col: '#e8edf7' }] },
-    { name: '풍둔', icon: '🌪️', desc: '드래그한 방향으로 150 돌진 베기(경로의 적 8 피해). 끝나면 3초간 쌍검 근접 태세: 평타가 근접(피해 7, 0.3초, 사거리 70). 수리검 직후에 쓰면 돌진 피해 +6', cd: 9, ai: { use: 'gapclose', minD: 120, maxD: 280 }, fx: [{ t: 'charge', dist: 150, speed: 700, w: 44, dmg: 8, col: '#cfd3dc' }, { t: 'stance', dur: 3 }] }
+    { name: '덫', icon: '🪤', desc: '드래그한 방향 앞쪽 150 지점에 덫을 설치(0.6초 뒤부터 발동, 최대 3개, 12초 유지). 밟은 적은 6 피해 + 1초 속박(이동·대시 불가). 상대에겐 희미하게 보임', cd: 6, ai: { use: 'trap' }, fx: [{ t: 'trap', dist: 150, r: 34, life: 12, maxN: 3, arm: 0.6, dmg: 6, root: 1, col: '#9aa4b8' }] },
+    { name: '질풍', icon: '🌪️', desc: '3초간 이동속도 +45%. 덫으로 묶은 적을 쫓거나 거리를 벌릴 때 사용', cd: 10, ai: { use: 'attack', maxD: 330 }, fx: [{ t: 'buff', haste: 1.45, dur: 3, col: '#b9c4d8' }] },
+    { name: '참', icon: '🗡️', desc: '드래그한 방향(탭하면 상대 쪽) 직선으로 240을 빠르게 질주하며 지나가는 적을 벰(적마다 1회): 피해 12 + 쓰기 전 인술 스택당 2, 인술 4스택이면 +10 더(최대 30). 질주하는 동안 무적. 벽 앞에서는 멈춤', cd: 8, ai: { use: 'attack', minD: 70, maxD: 240 }, fx: [{ t: 'charge', dist: 240, speed: 1000, w: 56, dmg: 12, perNin: 2, maxBonus: 10, inv: true, col: '#e8edf7' }] },
   ] };
 const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에서는 위 desc/passive 전체 설명)
   assassin: { p: '대시를 2번 할 수 있음, 스킬을 쓰면 다음 기본공격이 강화됨', s: ['단검을 던져 맞으면 상대 뒤로 이동함', '자신에게 오는 모든 피해를 막았다가 반격함', '상대에게 보이지 않으며 평타를 맞지 않음'] },
@@ -412,12 +413,12 @@ const SHORT = {      // 메뉴에 보이는 간단 설명 (자세히 보기에�
   archer: { s: ['화살 3발을 부채꼴로 발사', '뒤로 물러나며 큰 화살 발사, 맞으면 1초간 속박', '적과 벽을 꿰뚫는 강한 화살'] },
   mage: { s: ['직격 25 피해, 터지면 15 피해', '맞으면 2초간 둔화', '드래그한 방향으로 순간이동'] },
   angel: { p: '평타를 맞힐 때마다 구원 스택(최대 10): 스택당 구원의 회복 +3 · 피해 +2', s: ['내 주변 큰 원: 나·팀원 10+3×스택 회복, 적 10+2×스택 피해 (스택 소모)', '내 자리에 3초간 판결 구역: 안의 적은 40% 느려지고 스킬 사용 불가, 우리 팀은 받는 피해 0.8배', '5초간 금 망치 근접 평타 (피해 12, 적중 시 스택 +2)'] },
-  ninja: { p: '스킬·대시를 서로 다른 순서로 이어 쓰면 인술 연계(최대 3): 3연계 시 체력 5 회복 · 이속 +15%', s: ['설치형 덫: 밟은 적 6 피해 + 1초 속박', '누른 만큼 충전해 수리검 최대 5발 연속 발사', '돌진 베기 후 3초간 쌍검 근접 태세'] },
+  ninja: { p: '스킬, 대쉬 사용시 인술스택이 쌓이며 인술 스택이 쌓일수록 ‘참’피해, 평타 속도와 이동속도가 증가함. 4스택 시 평타 하나가 추가로 더 나가고 ‘참’의 피해가 30으로 증가함', s: ['설치형 덫: 6 피해 + 1초 속박', '질풍: 3초간 이동속도 +45%', '참: 무적으로 직선 질주하며 베기, 12 피해 + 인술 스택당 2 (4스택 최대 30)'] },
   tide: { s: ['적을 내 쪽으로 끌어당기고 15 피해, 쓰면 7초 뒤 밀물로 변함', '3초간 내 자리에 웅덩이: 적은 20% 느려지고 나는 20%, 팀원은 10% 빨라짐', '직선으로 날아가 원이 되고 0.5초 뒤 토네이도: 맞은 상대는 빨려 들어가 20 피해 + 붙잡힘'] },
 };
-const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide', 'angel'];      // 플레이할 수 있는 캐릭터
+const CHAR_ORDER = ['tank', 'warrior', 'archer', 'mage', 'assassin', 'summoner', 'tide', 'angel', 'ninja'];      // 플레이할 수 있는 캐릭터
 // 방향을 정해서 쓰는 스킬인지(드래그 조준 가능) 자동 판별
-for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe', 'pwall', 'pool', 'tornado', 'trap', 'volley'].includes(f.t));
+for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.some(f => ['proj', 'cone', 'line', 'charge', 'blink', 'counter', 'aoe', 'pwall', 'pool', 'tornado', 'trap', 'decoy'].includes(f.t));
 
 const PLAY_ORDER = CHAR_ORDER.filter(k => !CHARS[k].soon);      // 지금 고를 수 있는 캐릭터
 
@@ -491,10 +492,10 @@ function inTri(c, o, x, y, pad) {
 }
 const LAG = 0.12;      // 온라인 판정 보정(초)
 const isRoot = p => p.slowT > 0 && p.slowMul === 0;      // 속박: 이동·대시·이동기 불가, 공격·그 밖의 스킬은 가능
-const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge');
+const moveSkill = sk => sk.fx.some(f => f.t === 'blink' || f.t === 'charge' || f.t === 'rewind');
 const tornPos = (g, p, f, ang) => [clamp(p.x + Math.cos(ang) * f.max, 20, W - 20), clamp(p.y + Math.sin(ang) * f.max, 20, H - 20)];      // 용오름: 사거리 끝(231)에 고정, 방향만 정함
 const tornDist = (f, fr) => (typeof fr === 'number' ? f.min + (f.max - f.min) * clamp(fr, 0, 1) : f.dist);      // 드래그 길이(0~1)로 정한 설치 거리
-const atkOf = p => (p.tm && (p.ch.hammer || p.ch.stance)) ? (p.ch.hammer || p.ch.stance).atk : p.ch.atk;      // 천사: 심판(금 망치) 중에는 근접 망치 평타
+const atkOf = p => (p.tm && p.ch.hammer) ? p.ch.hammer.atk : p.ch.atk;      // 천사: 심판(금 망치) 중에는 근접 망치 평타
 const skOf = (p, i) => (i === 0 && p.tm && p.ch.skills[0].alt) ? p.ch.skills[0].alt : p.ch.skills[i];      // 1번 스킬이 둘로 바뀌는 캐릭터(조류술사: 썰물↔밀물)
 // 돌진 경로: 벽에 닿으면 거기서 멈춤. 실제로 갈 수 있는 거리와 도착 지점을 돌려줌
 function chargePath(p, ang, dist) {
@@ -512,7 +513,7 @@ const freshWant = () => ({ dash: 0, sk: [0, 0, 0], angs: [null, null, null], dis
 function mkPlayer(idx, charId) {
   const ch = CHARS[charId];
   return { idx, team: idx, ch, x: 0, y: 0, vx: 0, vy: 0, aim: 0, hp: ch.hp, maxHp: ch.hp, alive: true, atkCd: 0, skCd: [0, 0, 0],
-    dashCd: 0, dashT: 0, dx: 1, dy: 0, inv: 0, stun: 0, slowT: 0, slowMul: 1, sil: 0, cl: -1, ct: 0, vol: null, shield: 0, shieldMax: 0, shieldT: 0, dr: 0, drT: 0, haste: 0, hasteMul: 1, charge: null, guard: null, tm: 0, hm: 0, kb: null,
+    dashCd: 0, dashT: 0, dx: 1, dy: 0, inv: 0, stun: 0, slowT: 0, slowMul: 1, sil: 0, shield: 0, shieldMax: 0, shieldT: 0, dr: 0, drT: 0, haste: 0, hasteMul: 1, charge: null, guard: null, tm: 0, hm: 0, kb: null,
     atkHold: false, atkBuf: 0, atkAng: null, hits: 0, adv: false, orbSk: -1, dashN: ch.dashN || 0, stl: 0, stlI: -1, emp: false, cnt: null, seenX: 0, seenY: 0,
     inp: { mx: 0, my: 0 }, want: freshWant(), taken: 0, rage: false,
     think: 0, strafe: 1, strafeT: 0, stuckT: 0, lx: 0, ly: 0, unstick: 0, unstickAng: 0 };
@@ -548,8 +549,8 @@ class Game {
       const sp0 = (this.quad ? SPAWN4 : SPAWN)[p.idx]; p.x = sp0.x; p.y = sp0.y; p.vx = p.vy = 0; p.aim = p.team === 0 ? 0 : Math.PI;
       p.maxHp = p.ch.hp; p.hp = p.maxHp; p.alive = true; p.atkCd = 0.5;      // 함성 등으로 늘어난 최대 체력은 라운드가 끝나면 초기화
       p.atkBuf = 0; p.skCd = [0, 0, 0]; p.dashCd = 0; p.dashT = 0; p.inv = 0; p.stun = 0; p.dashN = p.ch.dashN || 0; p.stl = 0; p.stlI = -1; p.emp = false; p.cnt = null; p.taken = 0; p.rage = false; p.seenX = p.x; p.seenY = p.y;
-      p.slowT = 0; p.sil = 0; p.cl = -1; p.ct = 0; p.vol = null; if (p.ch.chainMax) p.hits = 0; p.shield = 0; p.shieldT = 0; p.dr = 0; p.drT = 0; p.haste = 0; p.charge = null; p.guard = null; p.kb = null; p.tm = 0; p.hm = 0; p.inp = { mx: 0, my: 0 }; p.want = freshWant();
-      p.think = 0.4; p.stuckT = 0; p.lx = p.x; p.ly = p.y; p.unstick = 0; p.atkAng = null; p.hits = 0; p.adv = false; p.orbSk = -1;
+      p.slowT = 0; p.sil = 0; p.shield = 0; p.shieldT = 0; p.dr = 0; p.drT = 0; p.haste = 0; p.charge = null; p.guard = null; p.kb = null; p.tm = 0; p.hm = 0; p.inp = { mx: 0, my: 0 }; p.want = freshWant();
+      p.hist = []; p.histT = 0; p.pend2 = null; p.nin = 0; p.ninT = 0; p.think = 0.4; p.stuckT = 0; p.lx = p.x; p.ly = p.y; p.unstick = 0; p.atkAng = null; p.hits = 0; p.adv = false; p.orbSk = -1;
     }
     this.minions = []; this.pw = []; this.pools = []; this.rebuildWalls();
     this.bullets = []; this.fx = []; this.zones = []; this.fightT = 0; this.res = null; this.ph = 'count'; this.timer = COUNT_TIME;
@@ -634,7 +635,7 @@ class Game {
     if (t.cnt && src !== t) { this.blockedBy(t); return false; }      // 반격 중에는 어떤 공격(방향·거리 상관없이)도 막음
     let a = dmg * (this.fightT > OT_START ? OT_DMG_MUL : 1);   // 서든데스 규칙: 모든 데미지 2배
     if (t.drT > 0) a *= 1 - t.dr;      // 받는 피해 감소 버프(전사의 함성)
-    const lawMul = this.pools.some(z => z.kind === 'pool' && z.f.sil && this.players[z.owner].team === t.team && Math.hypot(z.x - t.x, z.y - t.y) <= z.r) ? 0.8 : 1; a *= lawMul;      // 천사 법률: 판결 구역 안 우리 팀은 받는 피해 0.8배
+    const lawMul = this.pools.some(z => z.kind === 'pool' && z.f.sil && this.players[z.owner].team === t.team && Math.hypot(z.x - t.x, z.y - t.y) <= z.r) ? 0.8 : 1; a *= lawMul;
     if (t.ch.rageAt && !t.rage) { t.taken += a; if (t.taken >= t.ch.rageAt) { t.rage = true; t.taken = 0; this.ev.push({ k: 'text', x: t.x, y: t.y - 36, txt: '분노!', col: '#ffd24a' }); } }      // 탱커: 받은 피해(보호막이 막은 양 포함)가 쌓이면 분노
     if (t.shieldT > 0 && t.shield > 0) { const ab = Math.min(t.shield, a); t.shield -= ab; a -= ab; if (t.shield <= 0) { const si = t.ch.skills.findIndex(k => k.fx.some(f => f.t === 'shield')); if (si >= 0) t.skCd[si] = Math.max(0, t.skCd[si] - t.shieldT); t.shieldT = 0; } }      // 방패가 깨지면 그때부터 쿨타임
     t.hp -= a;
@@ -765,22 +766,13 @@ class Game {
     }
     this.zones = this.zones.filter(z => !z.done);
   }
-  chain(p, id) {      // 닌자 인술 연계: 2.5초 안에 다른 스킬(대시=3)을 이어 쓰면 +1(최대 3)
-    const prev = p.cl, linked = p.ct > 0 && prev >= 0 && prev !== id;
-    p.hits = linked ? Math.min(p.ch.chainMax, (p.hits | 0) + 1) : 0; p.cl = id; p.ct = 2.5;
-    if (linked) {
-      this.ev.push({ k: 'text', x: p.x, y: p.y - 36, txt: '연계 ' + p.hits + '!', col: '#9ad1ff' });
-      if (p.hits >= p.ch.chainMax) { p.hp = Math.min(p.maxHp, p.hp + 5); if (!(p.haste > 0.3 && p.hasteMul > 1.15)) { p.haste = Math.max(p.haste, 2); p.hasteMul = 1.15; } this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 50, life: 0.35, max: 0.35, col: '#9ad1ff' }); }
-    }
-    return { linked, prev: linked ? prev : -1 };
-  }
   useSkill(p, i, angArg, frArg) {
-    const ci = p.ch.chainMax ? this.chain(p, i) : { linked: false, prev: -1 };
-    const sk = skOf(p, i), aimed = typeof angArg === 'number', ang = aimed ? angArg : p.aim;
+    const sk = skOf(p, i), aimed = typeof angArg === 'number', ang = aimed ? angArg : p.aim, n0 = p.nin | 0;      // n0: 이 스킬을 쓰기 전 인술 스택
     if (i === 0 && p.ch.skills[0].alt) p.tm = p.tm ? 0 : 1;      // 썰물을 쓰면 밀물로, 밀물을 쓰면 썰물로 (쿨타임 7초가 지나면 그 스킬을 쓸 수 있음)
     if (p.stl > 0 && !sk.fx.some(f => f.t === 'stealth')) this.endStealth(p);      // 스킬을 쓰면 은신이 풀림
     if (p.ch.empAtk) p.emp = true;      // 스킬을 쓰면 다음 기본공격 강화
     p.skCd[i] = sk.cd;                 // 시전하자마자 쿨타임이 돌기 시작
+    this.ninGain(p);      // 닌자 인술 +1
     this.ev.push({ k: 'skill', p: p.idx, i });
     for (const f of sk.fx) {
       if (f.t === 'proj') this.fireProj(p, f, ang);
@@ -825,18 +817,24 @@ class Game {
         if (f.maxHp) { p.maxHp += f.maxHp; p.hp += f.maxHp; this.ev.push({ k: 'text', x: p.x, y: p.y - 30, txt: '최대 체력 +' + f.maxHp, col: '#ffd24a' }); }
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 60, life: 0.4, max: 0.4, col: f.col || '#ffd24a' });
       } else if (f.t === 'trap') {      // 닌자 덫: 앞쪽에 설치, 적이 밟으면 피해 + 속박
-        const boost = ci.linked && ci.prev === 2, zx = clamp(p.x + Math.cos(ang) * f.dist, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * f.dist, 20, H - 20), r = f.r * (boost ? 1.5 : 1);
+        const zx = clamp(p.x + Math.cos(ang) * f.dist, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * f.dist, 20, H - 20), r = f.r;
         const mine = this.pools.filter(z => z.owner === p.idx && z.kind === 'trap'); while (mine.length >= f.maxN) { const o = mine.shift(); o.t = 0; if (o.fo) o.fo.life = 0; }
         const fo = { k: 'trap', x: zx, y: zy, r, life: f.life, max: f.life, col: f.col, follow: p.idx };
-        this.fx.push(fo); this.pools.push({ kind: 'trap', owner: p.idx, x: zx, y: zy, r, t: f.life, max: f.life, arm: boost ? 0 : f.arm, f, root: boost ? 1.4 : f.root, fo });
-      } else if (f.t === 'volley') {      // 수리검 난무: 누른 시간(frArg 0~1)만큼 연속 발사
-        const fr = typeof frArg === 'number' ? clamp(frArg, 0, 1) : 0.4; let n = 1 + Math.round(fr * (f.max - 1)); if (ci.linked && ci.prev === 0) n++;
-        p.vol = { n, left: n, t: 0, ang, f };
-      } else if (f.t === 'stance') {      // 풍둔: 쌍검 근접 태세
-        p.hm = f.dur; p.tm = Math.ceil(f.dur * 10); p.atkCd = Math.min(p.atkCd, 0.15); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 46, life: 0.35, max: 0.35, col: '#cfd3dc' });
+        this.fx.push(fo); this.pools.push({ kind: 'trap', owner: p.idx, x: zx, y: zy, r, t: f.life, max: f.life, arm: f.arm, f, root: f.root, fo });
+      } else if (f.t === 'decoy') {      // 닌자 분신 포대: 한 자리에 서서 사거리 안의 적에게 자동 사격
+        let zx = clamp(p.x + Math.cos(ang) * f.dist, 20, W - 20), zy = clamp(p.y + Math.sin(ang) * f.dist, 20, H - 20); if (!this.clear(p.x, p.y, zx, zy)) { zx = p.x + Math.cos(ang) * 40; zy = p.y + Math.sin(ang) * 40; }
+        const mine = this.minions.filter(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0); while (mine.length >= f.maxN) mine.shift().hp = 0;
+        this.minions.push({ id: ++this.mid, kind: 'nin', owner: p.idx, x: zx, y: zy, vx: 0, vy: 0, hp: 1, maxHp: 1, r: R, life: f.life, maxLife: f.life, f, aim: ang, fire: 0, fireT: 0.4, guard: 0 });
+        this.fx.push({ k: 'ring', x: zx, y: zy, r: 36, life: 0.3, max: 0.3, col: '#cfd3dc' });
+      } else if (f.t === 'detonate') {      // 결계 격발: 덫·분신을 모두 터뜨림 (둘 다 있으면 피해 +25%)
+        const traps = this.pools.filter(z => z.owner === p.idx && z.kind === 'trap'), cl = this.minions.filter(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0), mul = traps.length && cl.length ? f.combo : 1;
+        const blast = (x, y, r, dmg, root) => { this.fx.push({ k: 'ring', x, y, r, life: 0.35, max: 0.35, col: '#e8edf7' }); for (const q of this.foes(p)) if (q.alive && Math.hypot(q.x - x, q.y - y) <= r + R) { if (this.dealDamage(p, q, dmg * mul, null) && root) { q.slowT = Math.max(q.slowT, root); q.slowMul = 0; q.charge = null; q.cnt = null; } } };
+        for (const z of traps) { blast(z.x, z.y, f.trapR, f.trapDmg, f.trapRoot); z.t = 0; if (z.fo) z.fo.life = 0; }
+        for (const m of cl) { blast(m.x, m.y, f.cloneR, f.cloneDmg, 0); m.hp = 0; }
+        this.ev.push({ k: 'text', x: p.x, y: p.y - 36, txt: mul > 1 ? '결계 격발 · 콤보!' : '결계 격발!', col: '#e8edf7' });
       } else if (f.t === 'charge') {
         const cp = chargePath(p, ang, f.dist);      // 벽이 있으면 거기까지만 돌진
-        p.charge = { dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed, left: cp.d / f.speed, dmg: f.dmg, stun: f.stun || 0, w: f.w || 52, endR: f.endR || 0, endStun: f.endStun || 0, hit: false, col: f.col, soft: !!f.soft, push: f.push || 0, bonus: ci.linked && ci.prev === 1 ? 6 : 0 };
+        p.charge = { dx: Math.cos(ang), dy: Math.sin(ang), speed: f.speed, left: cp.d / f.speed, dmg: f.dmg + (f.perNin || 0) * n0 + (p.ch.ninjutsu && n0 >= p.ch.ninjutsu.max ? (f.maxBonus || 0) : 0), stun: f.stun || 0, w: f.w || 52, endR: f.endR || 0, endStun: f.endStun || 0, hit: false, col: f.col, soft: !!f.soft, push: f.push || 0 };
         if (f.inv) p.inv = Math.max(p.inv, cp.d / f.speed + 0.05);      // 날개짓: 날아가는 동안 무적
         const T = cp.d / f.speed + 0.1;      // 돌진하는 동안 경로(사각)와 도착 원을 모두에게 보여줌
         this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: cp.d, w: f.w || 52, life: T, max: T, col: f.col || '#5b8def' });
@@ -880,6 +878,15 @@ class Game {
         }
         this.ev.push({ k: 'text', x: p.x, y: p.y - 40, txt: '용의 힘 +1', col: '#ffd24a' });
       }
+      else if (f.t === 'rewind') {      // 닌자 되감기: 2초 전 위치로, 체력은 더 낮았을 때만 회복
+        const h = p.hist && p.hist[0]; if (h) {
+          this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 34, life: 0.35, max: 0.35, col: f.col });
+          p.x = h.x; p.y = h.y; p.vx = p.vy = 0; p.kb = null; p.charge = null;
+          for (const w of WALLS) resolveCircleRect(p, R, w); p.x = clamp(p.x, R, W - R); p.y = clamp(p.y, R, H - R);
+          if (h.hp > p.hp) { this.ev.push({ k: 'text', x: p.x, y: p.y - 40, txt: '+' + Math.round(h.hp - p.hp), col: '#6be08a' }); p.hp = Math.min(p.maxHp, h.hp); }
+          this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 34, life: 0.35, max: 0.35, col: f.col }); p.hist = [{ x: p.x, y: p.y, hp: p.hp }]; p.histT = 0;
+        }
+      }
       else if (f.t === 'blink') {
         let dx, dy; const m = Math.hypot(p.inp.mx, p.inp.my);
         if (aimed) { const sgn = f.dir === 'away' ? -1 : 1; dx = Math.cos(ang) * sgn; dy = Math.sin(ang) * sgn; }
@@ -911,6 +918,8 @@ class Game {
   canUse(p, i, ang) {      // 쓸 수 없는 상황이면 쿨타임도 돌지 않음
     if (p.sil > 0) return false;      // 법률 구역 안: 스킬 봉인
     for (const f of skOf(p, i).fx) {
+      if (f.t === 'rewind' && !(p.hist && p.hist.length)) return false;
+      if (f.t === 'detonate' && !this.pools.some(z => z.owner === p.idx && z.kind === 'trap') && !this.minions.some(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0)) return false;      // 터뜨릴 설치물이 없으면 못 씀
       if (f.t === 'dpower' && p.hits >= p.ch.advent.hits && !this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0)) return false;
       if (f.t === 'pwall' && !this.wallRect(p, f, typeof ang === 'number' ? ang : p.aim)) return false;
     }
@@ -949,7 +958,15 @@ class Game {
     const keep = [];
     for (const m of this.minions) {
       if (m.hp <= 0 && m.kind === 'orb' && !m.done) this.orbBurst(m);
-      if (m.hp <= 0) { if (m.kind === 'dragon') this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 40, life: 0.3, max: 0.3, col: '#ff7a30' }); continue; }
+      if (m.hp <= 0) { if (m.kind === 'dragon') this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 40, life: 0.3, max: 0.3, col: '#ff7a30' }); else if (m.kind === 'nin') this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 30, life: 0.3, max: 0.3, col: '#9aa4b8' }); continue; }
+      if (m.kind === 'nin') {      // 닌자 분신 포대: 가만히 서서 사거리 안의 가장 가까운 적에게 자동 사격
+        const own = this.players[m.owner];
+        if ((m.life -= dt) <= 0 || !own.alive) { this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 30, life: 0.3, max: 0.3, col: '#9aa4b8' }); continue; }
+        let tg = null, td = m.f.range + R; for (const f of this.foes(own)) if (f.alive && f.stl <= 0) { const d = Math.hypot(f.x - m.x, f.y - m.y); if (d < td && this.clear(m.x, m.y, f.x, f.y)) { td = d; tg = f; } }
+        m.fire = tg ? 1 : 0; m.fireT -= dt;
+        if (tg) { m.aim = Math.atan2(tg.y - m.y, tg.x - m.x); if (m.fireT <= 0) { m.fireT = m.f.every; this.fireProj({ x: m.x, y: m.y, idx: m.owner }, { dmg: m.f.dmg, speed: m.f.speed, r: m.f.r, life: 0.7, col: m.f.col }, m.aim); } }
+        keep.push(m); continue;
+      }
       if (m.kind === 'dragon' && (m.life -= dt) <= 0) { this.fx.push({ k: 'ring', x: m.x, y: m.y, r: 40, life: 0.3, max: 0.3, col: '#ff7a30' }); continue; }      // 용은 소환 10초 뒤 사라짐
       const own = this.players[m.owner], e = this.nearFoe(own.team, m.x, m.y);
       if (!own.alive || !e.alive) { keep.push(m); m.vx = m.vy = 0; continue; }
@@ -988,23 +1005,37 @@ class Game {
     for (const w of this.pw) { w.t -= dt; if (w.t <= 0) ch = true; }
     if (ch) { this.pw = this.pw.filter(w => w.t > 0); this.rebuildWalls(); }
   }
+  nearPost(p) {      // 닌자 인술 진지: 내 덫·분신 반경 안인가
+    const r = p.ch.post.r;
+    return this.pools.some(z => z.owner === p.idx && z.kind === 'trap' && Math.hypot(z.x - p.x, z.y - p.y) <= r) || this.minions.some(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0 && Math.hypot(m.x - p.x, m.y - p.y) <= r);
+  }
   basicAttack(p) {
     if (p.adv) { this.advent(p); p.atkCd = p.ch.atk.cd; return; }
-    const a = atkOf(p), dmg = a.dmg + (p.emp && p.ch.empAtk ? p.ch.empAtk : 0);
+    const a = atkOf(p), dmg = (a.dmg + (p.emp && p.ch.empAtk ? p.ch.empAtk : 0)) * (p.ch.post && this.nearPost(p) ? p.ch.post.atk : 1);
     if (p.stl > 0) this.endStealth(p);      // 공격하면 은신이 풀림
     const emp = p.emp && p.ch.empAtk; p.emp = false;
     if (emp && a.lunge) {      // 강화 평타: 상대 쪽으로 짧게 파고들며 벤다 (몸이 겹치지 않는 거리까지만)
       const e = this.foe(p), dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1, mv = Math.min(a.lunge, d - (2 * R + 2));
       if (mv > 0) { stepMove(p, dx / d * mv, dy / d * mv); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 26, life: 0.18, max: 0.18, col: p.ch.color }); }
     }
-    if (a.type === 'melee') { const n = this.coneHit(p, a.range, a.arc, dmg, a.col ? { col: a.col } : null); if (n && p.ch.hammer) p.hits = Math.min(p.ch.stackMax, p.hits + p.ch.hammer.stack); }      // 금 망치 적중: 스택 +2
-    else this.fireProj(p, { dmg, speed: a.speed, r: a.r, basic: true, hom: a.hom, life: a.life, pass: a.pass, col: a.col });
-    p.atkCd = a.cd;
+    if (a.type === 'melee') { const n = this.coneHit(p, a.range, a.arc, dmg, a.col ? { col: a.col, basic: true } : null); if (n && p.ch.hammer) p.hits = Math.min(p.ch.stackMax, p.hits + p.ch.hammer.stack); }      // 금 망치 적중: 스택 +2
+    else {
+      const pf = { dmg, speed: a.speed, r: a.r, basic: true, hom: a.hom, life: a.life, pass: a.pass, col: a.col }; this.fireProj(p, pf);
+      if (p.ch.ninjutsu && (p.nin | 0) >= p.ch.ninjutsu.max) p.pend2 = { t: 0.1, f: pf };      // 인술 최대: 평타가 2발 연속
+    }
+    p.atkCd = a.cd * (p.ch.ninjutsu && p.nin ? 1 - p.ch.ninjutsu.atk * p.nin : 1);
   }
 
+  ninGain(p) { const n = p.ch.ninjutsu; if (n) { p.nin = Math.min(n.max, (p.nin | 0) + 1); p.ninT = n.decay; } }
+  recHist(p, dt) {      // 닌자 되감기용: 0.1초마다 위치·체력을 기록(최대 2초)
+    if (!p.hist) { p.hist = []; p.histT = 0; }
+    p.histT += dt; if (p.histT >= 0.1) { p.histT -= 0.1; p.hist.push({ x: p.x, y: p.y, hp: p.hp }); if (p.hist.length > 20) p.hist.shift(); }
+  }
   stepPlayer(p, dt) {
     const e = this.foe(p);
+    if (p.ch.ninjutsu && p.nin > 0) { p.ninT -= dt; if (p.ninT <= 0 || !p.alive) { p.nin = 0; p.ninT = 0; } }
     p.atkCd -= dt; p.dashCd -= dt; p.inv -= dt;
+    if (p.pend2) { p.pend2.t -= dt; if (p.pend2.t <= 0) { if (p.alive && !(p.stun > 0)) this.fireProj(p, p.pend2.f); p.pend2 = null; } }
     p.adv = !!(p.ch.advent && p.hits >= p.ch.advent.hits && !this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0));      // 강림 가능: 게이지가 차고 내 용이 없을 때
     if (p.ch.dashN && p.dashN === 0 && p.dashCd <= 0) p.dashN = p.ch.dashN;      // 대시를 모두 쓴 뒤 쿨타임이 끝나면 다시 충전
     if (!(p.stl > 0)) { p.seenX = p.x; p.seenY = p.y; }      // 은신 직전 위치(상대가 마지막으로 본 곳)
@@ -1027,11 +1058,7 @@ class Game {
     if (p.stun > 0) p.stun -= dt;
     if (p.slowT > 0) p.slowT -= dt;
     if (p.sil > 0) p.sil -= dt;
-    if (p.ct > 0) { p.ct -= dt; if (p.ct <= 0) { p.ct = 0; p.cl = -1; if (p.ch.chainMax) p.hits = 0; } }      // 연계 제한시간이 지나면 끊김
-    if (p.vol) {      // 수리검 난무: 0.08초 간격 연속 발사
-      if (p.stun > 0 || !p.alive) p.vol = null;
-      else { const v = p.vol; v.t -= dt; while (v.t <= 0 && v.left > 0) { this.fireProj(p, { dmg: v.f.dmg, speed: v.f.speed, r: v.f.r, life: v.f.life, col: v.f.col }, v.ang); v.left--; v.t += v.f.gap; } if (v.left <= 0) p.vol = null; }
-    }
+    if (p.ch.post && p.alive && this.nearPost(p) && !(p.haste > 0.15 && p.hasteMul >= p.ch.post.spd)) { p.haste = Math.max(p.haste, 0.15); p.hasteMul = p.ch.post.spd; }      // 인술 진지: 설치물 근처 이속 +10%
     if (p.haste > 0) p.haste -= dt;
     if (p.drT > 0) p.drT -= dt;
     if (p.guard) {
@@ -1053,7 +1080,8 @@ class Game {
         const m = Math.hypot(p.inp.mx, p.inp.my);
         if (p.want.dd) { p.dx = p.want.dd[0]; p.dy = p.want.dd[1]; }
         else if (m > 0.2) { p.dx = p.inp.mx / m; p.dy = p.inp.my / m; } else { p.dx = -Math.cos(p.aim); p.dy = -Math.sin(p.aim); }
-        p.dashT = DASH.time; if (p.ch.chainMax) this.chain(p, 3);
+        p.dashT = DASH.time;
+        this.ninGain(p);
         if (p.ch.dashN) { p.dashN--; if (p.dashN === 0) p.dashCd = p.ch.dashCd || DASH.cd; } else p.dashCd = DASH.cd;      // 암살자: 충전 대시를 모두 써야 쿨타임이 돎
         this.ev.push({ k: 'dash', p: p.idx });
         this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 28, life: 0.25, max: 0.25, col: '#6be08a' });
@@ -1072,7 +1100,7 @@ class Game {
     else if (p.stun <= 0) {
       let mx = p.inp.mx, my = p.inp.my; const ml = Math.hypot(mx, my);
       if (ml > 1) { mx /= ml; my /= ml; }
-      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1) * (p.stl > 0 ? STL_MUL : 1) * (this.map.speedMul || 1);
+      const sp = p.ch.speed * (p.slowT > 0 ? p.slowMul : 1) * (p.haste > 0 ? p.hasteMul : 1) * (p.stl > 0 ? STL_MUL : 1) * (this.map.speedMul || 1) * (p.ch.ninjutsu && p.nin ? 1 + p.ch.ninjutsu.spd * p.nin : 1);
       vx = mx * sp; vy = my * sp;
     }
     p.vx = vx; p.vy = vy;
@@ -1090,7 +1118,7 @@ class Game {
       if (!c.soft) for (const q of this.foes(p)) if (q.alive && !c.hits.has(q.idx) && Math.hypot(q.x - p.x, q.y - p.y) < c.w / 2 + R) {
         c.hit = true; c.hits.add(q.idx);
         this.fx.push({ k: 'ring', x: q.x, y: q.y, r: 45, life: 0.25, max: 0.25, col: '#ffffff' });
-        this.dealDamage(p, q, c.dmg + (c.bonus || 0), c);
+        this.dealDamage(p, q, c.dmg, c);
       }
     }
     // 기본공격: 버튼을 톡 누르면 1회(사거리 상관없이), 꾹 누르면 사거리 안에서 자동 반복
@@ -1115,7 +1143,7 @@ class Game {
     p.think = d.react;
     const hid = e.stl > 0, ex = hid ? e.seenX : e.x, ey = hid ? e.seenY : e.y;      // 은신한 상대는 마지막으로 본 위치만 알 수 있음
     const dx = ex - p.x, dy = ey - p.y, dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist;
-    const los = this.clear(p.x, p.y, ex, ey), keep = p.tm && (p.ch.hammer || p.ch.stance) ? 64 : p.ch.keep, melee = atkOf(p).type === 'melee';
+    const los = this.clear(p.x, p.y, ex, ey), keep = p.tm && p.ch.hammer ? 64 : p.ch.keep, melee = atkOf(p).type === 'melee';
     let ap = dist > keep + 30 ? 1 : dist < keep - 30 ? -1 : 0;
     if (!los) ap = Math.max(ap, 0.8);
     let threat = false;
@@ -1178,17 +1206,20 @@ class Game {
           p.want.angs[i] = best;
         }
         if (use && sk.fx.some(f => f.t === 'charge' && f.soft)) p.want.angs[i] = Math.atan2(p.y - ey, p.x - ex);      // 날개짓: 상대 반대쪽으로
+        if (use && sk.fx.some(f => f.t === 'blink' && !f.thru && f.dir === 'move')) p.want.angs[i] = Math.atan2(p.y - ey, p.x - ex);      // 그림자 도약: 상대 반대쪽으로
       }
       else if (h.use === 'salv') use = dist <= sk.fx[0].radius && ((p.hits | 0) >= 4 || (p.hp < p.maxHp * 0.5 && (p.hits | 0) >= 2));
       else if (h.use === 'block') use = danger || dist <= h.maxD;
       else if (h.use === 'wall') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && los && Math.random() < 0.5;
       else if (h.use === 'power') { const dr = this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0); use = dr ? (dist < 170 && Math.random() < 0.4) : p.hits < p.ch.advent.hits; }
-      else if (h.use === 'gapclose') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && !((p.ch.hammer || p.ch.stance) && p.tm);
+      else if (h.use === 'gapclose') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && !(p.ch.hammer && p.tm);
       else if (h.use === 'trap') use = dist >= 90 && dist <= 330 && this.pools.filter(z => z.owner === p.idx && z.kind === 'trap').length < 2 && Math.random() < 0.5;
-      else if (h.use === 'volley') use = dist <= (h.maxD || 330) && los && Math.random() < 0.7;
+      else if (h.use === 'rewind') { const o = p.hist && p.hist[0]; use = !!o && (o.hp - p.hp >= 18 || (p.hp < p.maxHp * 0.5 && o.hp > p.hp && dist < 230) || (Math.hypot(o.x - p.x, o.y - p.y) > 130 && dist < 90 && p.hp < p.maxHp * 0.7)); }
+      else if (h.use === 'decoy') use = dist <= 330 && this.minions.filter(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0).length < 2 && Math.random() < 0.5;
+      else if (h.use === 'detonate') use = (this.pools.some(z => z.owner === p.idx && z.kind === 'trap') || this.minions.some(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0)) && dist < 150;
       else if (h.use === 'pool') use = dist < 130 && !this.pools.some(z => z.owner === p.idx && z.kind === 'pool');
       else if (h.use === 'tornado') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && los && Math.random() < 0.6;
-      if (use) { p.want.sk[i] = 1; if (h.use === 'volley') p.want.dists[i] = 0.5 + Math.random() * 0.5; if (h.use === 'tornado') { const f0 = sk.fx[0]; p.want.dists[i] = clamp((dist - f0.min) / (f0.max - f0.min), 0, 1); } }
+      if (use) { p.want.sk[i] = 1; if (h.use === 'tornado') { const f0 = sk.fx[0]; p.want.dists[i] = clamp((dist - f0.min) / (f0.max - f0.min), 0, 1); } }
     }
   }
 
@@ -1349,13 +1380,13 @@ document.addEventListener('dblclick', e => e.preventDefault(), { passive: false 
 // 메뉴
 // 메인 화면 카드: 선택 색은 암살자 빨강·전사 주황·소환사 노랑·궁수 초록·탱커 파랑·조류술사 남색·마법사 보라·미출시 회색 (soon = 아직 선택 불가)
 const setIc = (el, ic) => { if (String(ic).startsWith('<svg')) el.innerHTML = ic; else el.textContent = ic; };      // 아이콘이 이모지면 글자로, SVG면 그림으로
-const KUNAI = '<svg viewBox="0 0 32 32" width="1em" height="1em" style="vertical-align:-0.12em;display:inline-block"><g transform="translate(16 16) rotate(45)"><path d="M0 -14 L4.2 -1 L0 4 L-4.2 -1 Z" fill="#c9d0de" stroke="#3a4052" stroke-width="1"/><path d="M0 -13 L0 3" stroke="#8c95aa" stroke-width="0.9"/><rect x="-2.2" y="4" width="4.4" height="9" rx="1.2" fill="#2a2d36" stroke="#0e0f13" stroke-width="0.8"/><path d="M-2.2 7H2.2M-2.2 10H2.2" stroke="#6b7388" stroke-width="0.9"/><circle cx="0" cy="15.2" r="2.6" fill="none" stroke="#8c95aa" stroke-width="1.4"/></g></svg>';      // 닌자 선택 카드 쿠나이 아이콘
+// (KUNAI 상수는 위쪽 CHARS 앞으로 옮김)
 const MENU_CARDS = [
   { id: 'assassin', col: '#ff3b3b' }, { id: 'warrior', col: '#ff8a1f' }, { id: 'summoner', col: '#ffd92e' },
   { id: 'archer', col: '#3ddc6a' }, { id: 'tank', col: '#2f9bff' },
   { id: 'tide', col: '#3d3fd1', txt: '#8f94ff', icon: '🌊', name: '조류술사', role: '중거리 · 위치 컨트롤' },
   { id: 'mage', col: '#b04bff' },
-  { id: 'angel', col: '#ffffff', txt: '#ffffff', icon: '✨' }, { id: 'ninja', col: '#8b93a8', soon: true, icon: KUNAI, name: '닌자', role: '출시 예정' }];
+  { id: 'angel', col: '#ffffff', txt: '#ffffff', icon: '✨' }, { id: 'ninja', col: '#1a1d26', txt: '#c5cbe0', icon: KUNAI }];
 const menuIc = k => (MENU_CARDS.find(c => c.id === k) || {}).icon || CHARS[k].icon;      // 메뉴에 보이는 선택 아이콘(천사는 ✨)
 const menuCol = k => (MENU_CARDS.find(c => c.id === k) || { col: '#9aa4b8' }).col;
 let menuToastT = 0;
@@ -1378,7 +1409,7 @@ const randPick = () => { const L = selSet.length ? selSet : PLAY_ORDER; return L
 function resolveMy() { myChar = selKey === 'random' || isLocked(selKey) ? randPick() : selKey; }
 function renderInfo() {
   const box = $('info'), k = selKey;
-  box.style.setProperty('--ic', k === 'random' ? '#9aa4b8' : menuCol(k));
+  box.style.setProperty('--ic', k === 'random' ? '#9aa4b8' : k === 'ninja' ? '#9aa4b8' : menuCol(k));
   if (k === 'random') {
     box.innerHTML = '<div class="h"><b>🎲 랜덤</b><span>켜진 ' + selSet.length + '명 중 하나가 무작위로 정해져요</span></div><div class="na" style="color:#c9d2e4;font-size:22px;letter-spacing:4px">' + selSet.map(x => menuIc(x)).join(' ') + '</div><div class="na" style="color:#9aa4b8">' + selSet.map(x => CHARS[x].name).join(' · ') + '<br>카드를 눌러 후보를 켜고 끌 수 있어요<br>🎲 버튼을 다시 누르면 랜덤이 꺼져요</div>';
   } else if (CHARS[k].locked) {
@@ -1420,7 +1451,7 @@ function buildChars() {
 $('btnRand').onclick = () => { randMode = !randMode; if (randMode) selSet = PLAY_ORDER.slice(); setSel(); };      // 랜덤을 누르면 모든 캐릭터에 불이 들어옴(눌러서 끌 수 있음), 다시 누르면 랜덤 해제
 $('btnAug').onclick = () => { const t = $('menuToast'); if (t) t.remove(); $('augOv').hidden = false; };
 $('btnAugBack').onclick = () => { $('augOv').hidden = true; };
-{ let seen = ''; try { seen = localStorage.getItem('aa_notice') || ''; } catch (e) { /* 무시 */ } if (seen !== '79') $('noticeOv').hidden = false; $('btnNoticeOk').onclick = () => { $('noticeOv').hidden = true; try { localStorage.setItem('aa_notice', '79'); } catch (e) { /* 무시 */ } }; }      // 업데이트 공지: 버전마다 한 번
+{ let seen = ''; try { seen = localStorage.getItem('aa_notice') || ''; } catch (e) { /* 무시 */ } if (seen !== '90') $('noticeOv').hidden = false; $('btnNoticeOk').onclick = () => { $('noticeOv').hidden = true; try { localStorage.setItem('aa_notice', '90'); } catch (e) { /* 무시 */ } }; }      // 업데이트 공지: 버전마다 한 번
 buildChars();
 function setDiff(d) {
   diffKey = d;
@@ -1449,7 +1480,8 @@ function setOpp(o) {      // 상대 캐릭터: 랜덤(기본) 또는 직접 선�
 (function buildOpp() {
   const box = $('oppSeg'); box.innerHTML = '';
   for (const [id, label] of [['random', '🎲 랜덤'], ...PLAY_ORDER.map(k => [k, menuIc(k) + ' ' + CHARS[k].name])]) {
-    const b = document.createElement('button'); b.type = 'button'; b.dataset.o = id; b.textContent = label; b.onclick = () => setOpp(id); box.appendChild(b);
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.o = id; b.innerHTML = label;      // 닌자 쿠나이 아이콘은 SVG라서 innerHTML
+    b.onclick = () => setOpp(id); box.appendChild(b);
   }
   setOpp(oppKey);
 })();
@@ -1542,7 +1574,7 @@ function startGame() {
 }
 function openVs() {
   if (isLocked(selKey)) return;
-  $('vsMe').textContent = selKey === 'random' ? '내 캐릭터: 🎲 랜덤 (시작할 때 정해져요)' : '내 캐릭터: ' + CHARS[selKey].icon + ' ' + CHARS[selKey].name;
+  $('vsMe').innerHTML = selKey === 'random' ? '내 캐릭터: 🎲 랜덤 (시작할 때 정해져요)' : '내 캐릭터: ' + menuIc(selKey) + ' ' + CHARS[selKey].name;
   $('menu').hidden = true; $('vs').hidden = false;
 }
 $('btnStart').onclick = openVs;
@@ -1623,7 +1655,7 @@ function inStart(src, id, x, y, target) {
       const i = Number(act[1]);
       if (game && skOf(game.players[0], i).aimed) {
         if (game.players[0].skCd[i] > 0.05) roles.set(key, { type: 'btn', btn: b });      // 이미 쓴(쿨타임 중인) 스킬은 조준할 수 없음
-        else roles.set(key, { type: 'skill', btn: b, i, ox: x, oy: y, dx: 0, dy: 0, cx: false, t0: performance.now() });
+        else roles.set(key, { type: 'skill', btn: b, i, ox: x, oy: y, dx: 0, dy: 0, cx: false });
       }
       else { roles.set(key, { type: 'btn', btn: b }); if (game) pressSk(i); }
     }
@@ -1664,7 +1696,7 @@ function inEnd(src, id, cancel) {
   if (stick.key === key) { stick.key = null; stick.dx = stick.dy = 0; stkDraw(); }
   const r = roles.get(key);
   if (r) {
-    if (r.type === 'skill' && !cancel && !r.cx && game) { const ang = Math.hypot(r.dx, r.dy) > DRAG_MIN ? ((ctlCfg.aim || 80) < 80 && r.sa != null ? r.sa : Math.atan2(r.dy, r.dx)) : undefined; if (r.i === -1) game.pressAttack(ang); else { const cf = skOf(game.players[0], r.i).fx.find(f => f.t === 'volley'); pressSk(r.i, ang, cf ? clamp((performance.now() - r.t0) / 1000 / cf.charge, 0, 1) : (ang === undefined ? undefined : dragFr(r.dx, r.dy))); } }
+    if (r.type === 'skill' && !cancel && !r.cx && game) { const ang = Math.hypot(r.dx, r.dy) > DRAG_MIN ? ((ctlCfg.aim || 80) < 80 && r.sa != null ? r.sa : Math.atan2(r.dy, r.dx)) : undefined; if (r.i === -1) game.pressAttack(ang); else pressSk(r.i, ang, ang === undefined ? undefined : dragFr(r.dx, r.dy)); }
     r.btn.classList.remove('hold'); roles.delete(key);
   }
 }
@@ -1816,9 +1848,8 @@ const SND = (() => {
     'angel:1': () => { impact(0.8, 1.1); ring(900, 0.25, 0.7, 0.01); chord([392, 523, 659], 0.9, 0.1); noise(sfxG, 0.5, { type: 'lowpass', f0: 600, v: 0.2, a: 0.05 }); },
     'angel:2': () => { impact(0.9, 1.2); ring(1200, 0.2, 0.9, 0.01); fm(sfxG, 1800, 3, 0.5, 0.6, { v: 0.06, d: 0.02 }); },
     'a:ninja': () => { swish(0, 0.26, 3600, 1200, 0.07); ring(3000, 0.035, 0.12, 0.05); },
-    'a:ninjam': () => { swish(0, 0.3, 4200, 900, 0.08); swish(0.05, 0.26, 3800, 800, 0.07); ring(2600, 0.05, 0.16, 0.07); },
     'ninja:0': () => { ring(520, 0.18, 0.3); noise(sfxG, 0.05, { type: 'highpass', f0: 3500, v: 0.16 }); ring(1100, 0.1, 0.25, 0.09); impact(0.3, 1.5, 0.02); },
-    'ninja:1': () => { for (let k = 0; k < 5; k++) { swish(k * 0.08, 0.2, 3800, 1400, 0.06); ring(3200 + k * 150, 0.025, 0.1, k * 0.08 + 0.03); } },
+    'ninja:1': () => { impact(0.35, 1.3, 0.02); ring(700, 0.12, 0.3); noise(sfxG, 0.12, { type: 'bandpass', f0: 1800, f1: 600, q: 1, v: 0.14, a: 0.02 }); },
     'ninja:2': () => { swish(0, 0.4, 2600, 300, 0.2); noise(sfxG, 0.25, { type: 'bandpass', f0: 700, f1: 200, q: 0.8, v: 0.2, a: 0.04 }); ring(2400, 0.05, 0.25, 0.1); }
   };
   const UI = new Set(['click', 'select']);
@@ -1887,7 +1918,7 @@ function sndFrame(now) {      // 매 프레임: 상태 변화를 보고 공격·
     else if (game.score[0] > pv.sc[0]) SND.sfx('roundWin'); else if (game.score[1] > pv.sc[1]) SND.sfx('roundLose');
     if (fight && pv.ph === 'fight') P.forEach((p, i) => {
       const q = pv.p[i]; if (!q) return; const mine = i === 0 || p.team === P[0].team, vol = mine ? 1 : 0.7, id = p.ch.id;
-      if (p.atkCd > q.atkCd + 0.15) SND.sfx('a:' + (atkOf(p).type === 'melee' && id === 'angel' ? 'melee' : (atkOf(p).type === 'melee' && id === 'ninja' ? 'ninjam' : id)), vol);
+      if (p.atkCd > q.atkCd + 0.15) SND.sfx('a:' + (atkOf(p).type === 'melee' && id === 'angel' ? 'melee' : id), vol);
       for (let k = 0; k < 3; k++) if (p.skCd[k] > q.skCd[k] + 0.4) SND.sfx(id + ':' + k + (id === 'tide' && k === 0 && !p.tm ? 'b' : ''), vol);      // 조류술사 1번: 쓴 뒤 tm이 1이면 썰물, 0이면 밀물
       if (p.dashT > 0 && !(q.dashT > 0) && !p.charge) SND.sfx('dash', vol);
     });
@@ -2108,9 +2139,9 @@ function drawAimPreview() {
     else if (f.t === 'line') { ctx.rotate(a); ctx.fillStyle = '#ffffff26'; ctx.fillRect(0, -f.w / 2, f.len, f.w); ctx.strokeRect(0, -f.w / 2, f.len, f.w); }
     else if (f.t === 'charge') { const cd = chargePath(p, a, f.dist).d; ctx.rotate(a); ctx.fillStyle = '#ffffff26'; ctx.fillRect(0, -f.w / 2, cd, f.w); ctx.strokeRect(0, -f.w / 2, cd, f.w); if (f.endR) { ctx.beginPath(); ctx.arc(cd, 0, f.endR, 0, 6.283); ctx.fill(); ctx.stroke(); } }
     else if (f.t === 'aoe') { const rg = !!(f.rageDmg && p.rage), rad = f.radius * (rg ? 1.1 : 1); ctx.fillStyle = rg ? '#ffd24a26' : '#ffffff22'; ctx.strokeStyle = rg ? '#ffd24a' : '#ffffffd0'; ctx.beginPath(); ctx.arc(ox, oy, rad, 0, 6.283); ctx.fill(); ctx.stroke(); }
-    else if (f.t === 'pool' || f.t === 'tornado' || f.t === 'trap') { let zx, zy; if (f.t === 'tornado') { [zx, zy] = tornPos(game, game.players[0], f, a, aimPrev.fr); const rl = rayLen(ox + Math.cos(a) * (R + 4), oy + Math.sin(a) * (R + 4), a, Math.max(30, Math.hypot(zx - ox, zy - oy) - (R + 4)), f.pr); zx = clamp(ox + Math.cos(a) * (R + 4 + rl), 20, W - 20); zy = clamp(oy + Math.sin(a) * (R + 4 + rl), 20, H - 20); } else { zx = clamp(ox + Math.cos(a) * f.dist, 20, W - 20); zy = clamp(oy + Math.sin(a) * f.dist, 20, H - 20); } if (f.t === 'tornado') { ctx.beginPath(); ctx.arc(ox, oy, f.max, 0, 6.283); ctx.strokeStyle = '#ffffff40'; ctx.stroke(); ctx.strokeStyle = '#ffffffd0'; ctx.fillStyle = '#ffffff20'; { const ba = Math.atan2(zy - oy, zx - ox), bl = Math.hypot(zx - ox, zy - oy); ctx.save(); ctx.translate(ox, oy); ctx.rotate(ba); ctx.fillRect(0, -f.pr - R, bl, 2 * (f.pr + R)); ctx.strokeRect(0, -f.pr, bl, 2 * f.pr); ctx.restore(); } ctx.strokeStyle = '#4aa8ff'; } ctx.fillStyle = '#4aa8ff26'; ctx.strokeStyle = '#4aa8ff'; ctx.beginPath(); ctx.arc(zx, zy, f.r, 0, 6.283); ctx.fill(); ctx.stroke(); }
+    else if (f.t === 'pool' || f.t === 'tornado' || f.t === 'trap' || f.t === 'decoy') { let zx, zy; if (f.t === 'tornado') { [zx, zy] = tornPos(game, game.players[0], f, a, aimPrev.fr); const rl = rayLen(ox + Math.cos(a) * (R + 4), oy + Math.sin(a) * (R + 4), a, Math.max(30, Math.hypot(zx - ox, zy - oy) - (R + 4)), f.pr); zx = clamp(ox + Math.cos(a) * (R + 4 + rl), 20, W - 20); zy = clamp(oy + Math.sin(a) * (R + 4 + rl), 20, H - 20); } else { zx = clamp(ox + Math.cos(a) * f.dist, 20, W - 20); zy = clamp(oy + Math.sin(a) * f.dist, 20, H - 20); } if (f.t === 'tornado') { ctx.beginPath(); ctx.arc(ox, oy, f.max, 0, 6.283); ctx.strokeStyle = '#ffffff40'; ctx.stroke(); ctx.strokeStyle = '#ffffffd0'; ctx.fillStyle = '#ffffff20'; { const ba = Math.atan2(zy - oy, zx - ox), bl = Math.hypot(zx - ox, zy - oy); ctx.save(); ctx.translate(ox, oy); ctx.rotate(ba); ctx.fillRect(0, -f.pr - R, bl, 2 * (f.pr + R)); ctx.strokeRect(0, -f.pr, bl, 2 * f.pr); ctx.restore(); } ctx.strokeStyle = '#4aa8ff'; } ctx.fillStyle = '#4aa8ff26'; ctx.strokeStyle = '#4aa8ff'; ctx.beginPath(); ctx.arc(zx, zy, f.r, 0, 6.283); ctx.fill(); ctx.stroke(); }
     else if (f.t === 'pwall') { const r = game.wallRect(p, f, a, true); ctx.setLineDash([]); ctx.fillStyle = r.bad ? '#ff4a4a40' : '#4aa8ff40'; ctx.strokeStyle = r.bad ? '#ff6b6b' : '#4aa8ff'; ctx.lineWidth = 3; ctx.translate(r.cx, r.cy); ctx.rotate(r.a); ctx.fillRect(-r.hw, -r.hh, r.fw, r.fh); ctx.strokeRect(-r.hw, -r.hh, r.fw, r.fh); }
-    else if (f.t === 'proj' || f.t === 'volley') {
+    else if (f.t === 'proj') {
       const n = f.n || 1, sp = f.spread || 0, r = f.r || 5, maxLen = f.speed * (f.life || 1.4);
       for (let k = 0; k < n; k++) {
         const ang = a + (k - (n - 1) / 2) * sp, sx = ox + Math.cos(ang) * (R + 4), sy = oy + Math.sin(ang) * (R + 4), L = rayLen(sx, sy, ang, maxLen, r, f.pierce, f.wp);
@@ -2135,7 +2166,25 @@ function drawAimPreview() {
 let myNick = '';
 try { myNick = (localStorage.getItem('aa_nick') || '').slice(0, 8); } catch (e) { /* 무시 */ }
 { const ni = document.getElementById('nick'); if (ni) { ni.value = myNick; ni.addEventListener('input', () => { myNick = ni.value.trim().slice(0, 8); try { localStorage.setItem('aa_nick', myNick); } catch (e) { /* 무시 */ } }); } }
+const hpTrail = {};      // 체력바 뒤의 하얀 잔상 바: 피해를 받으면 그대로 남아 있다가, 0.5초 동안 피해가 없으면 현재 체력까지 따라 내려옴
+function trailOf(p) {
+  const now = performance.now();
+  const k = p.idx, t = hpTrail[k] || (hpTrail[k] = { v: p.hp, hp: p.hp, hit: -1e9, at: now });
+  const dt = Math.min(0.1, Math.max(0, (now - t.at) / 1000)); t.at = now;
+  if (p.hp < t.hp - 0.01) t.hit = now;      // 방금 피해를 받음
+  t.hp = p.hp;
+  if (p.hp >= t.v || p.hp > t.v - 0.01) t.v = p.hp;      // 회복·라운드 시작: 바로 맞춤
+  else if (now - t.hit >= 500) t.v = Math.max(p.hp, t.v - Math.max(p.maxHp * 0.6, 30) * dt);      // 0.5초 뒤부터 부드럽게 따라옴
+  return t.v;
+}
 const haloOff = {};      // 천사 링: 법률이 끝난 시각
+function drawGhost(now) {      // 닌자 되감기: 돌아갈 자리(2초 전)를 희미한 잔상으로
+  const p = game.players[0]; if (p.ch.id !== 'ninja' || !p.alive || !p.hist || !p.hist.length || p.skCd[2] > 0.4 || (game.ph && game.ph !== 'fight')) return;
+  const h = p.hist[0], a = p.skCd[2] > 0 ? 0.25 : 0.55;
+  ctx.save(); ctx.globalAlpha = a; ctx.setLineDash([5, 5]); ctx.lineWidth = 2; ctx.strokeStyle = '#b9a6ff'; ctx.fillStyle = '#b9a6ff33';
+  ctx.beginPath(); ctx.arc(h.x, h.y, R, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(h.x, h.y, 9, 0, 6.283); ctx.moveTo(h.x, h.y - 6); ctx.lineTo(h.x, h.y); ctx.lineTo(h.x + 4, h.y + 3); ctx.stroke(); ctx.restore();
+}
 function drawPlayer(p, now) {
   const me0 = game.players[0], foeOf = p.team !== me0.team;
   if (foeOf && p.stl > 0) return;      // 은신한 상대는 보이지 않음
@@ -2156,17 +2205,22 @@ function drawPlayer(p, now) {
     for (let k = 0; k < N; k++) { const a = -Math.PI / 2 + k * 6.283 / N; ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr, 4, 0, 6.283); ctx.fillStyle = k < p.hits ? (full ? '#ffd24a' : '#ff9a3a') : '#00000088'; ctx.fill(); ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 1.2; ctx.stroke(); }
     ctx.restore();
   }
-  ctx.rotate(p.aim); ctx.fillStyle = '#e8edf7'; ctx.beginPath(); ctx.moveTo(R + 9, 0); ctx.lineTo(R - 1, -6); ctx.lineTo(R - 1, 6); ctx.closePath(); ctx.fill(); ctx.rotate(-p.aim);
+  ctx.rotate(p.aim); ctx.fillStyle = p.ch.id === 'ninja' ? '#7a8296' : '#e8edf7'; ctx.beginPath(); ctx.moveTo(R + 9, 0); ctx.lineTo(R - 1, -6); ctx.lineTo(R - 1, 6); ctx.closePath(); ctx.fill(); ctx.rotate(-p.aim);
   ctx.shadowColor = p.ch.color; ctx.shadowBlur = 14; ctx.fillStyle = hitFlash[p.idx] > 0 ? '#fff' : p.ch.color; ctx.beginPath(); ctx.arc(0, 0, R, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
   ctx.strokeStyle = ring; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, R, 0, 6.283); ctx.stroke();
   if (!p.ch.noIcon) { ctx.font = '22px ' + EMOJI; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText(p.ch.icon, 0, 1); ctx.textBaseline = 'alphabetic'; }
-  if (p.ch.id === 'ninja') {      // 닌자: 검은 몸 + 눈만 보이는 복면 띠 + 뒤로 날리는 스카프, 근접 태세에는 쌍검
+  if (p.ch.id === 'ninja') {      // 닌자 B-1: 뒤로 날리는 회색 두건 꼬리 2갈래 + 몸 한가운데의 큰 쿠나이
     ctx.save(); ctx.rotate(p.aim);
-    const sw = Math.sin(now / 110) * 3; ctx.fillStyle = '#3a404e'; ctx.beginPath(); ctx.moveTo(-R * 0.6, -3); ctx.lineTo(-R - 14, -9 + sw); ctx.lineTo(-R - 5, 0); ctx.lineTo(-R - 15, 8 - sw); ctx.lineTo(-R * 0.6, 4); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#d9deea'; ctx.beginPath(); ctx.roundRect(R * 0.05, -R * 0.38, R * 0.92, R * 0.76, 5); ctx.fill();
-    ctx.fillStyle = '#15171c'; ctx.beginPath(); ctx.arc(R * 0.55, -R * 0.16, 2.3, 0, 6.283); ctx.arc(R * 0.55, R * 0.16, 2.3, 0, 6.283); ctx.fill();
-    if (p.tm) { ctx.strokeStyle = '#e8edf7'; ctx.lineWidth = 3; ctx.lineCap = 'round'; for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(R * 0.4, sd * (R + 3)); ctx.lineTo(R + 16, sd * (R - 4)); ctx.stroke(); } }
+    const sw = Math.sin(now / 110) * 3, len = 16; ctx.beginPath(); ctx.rect(-120, -120, 240, 240); ctx.arc(0, 0, R + 1.5, 0, 6.283, true); ctx.clip(); ctx.fillStyle = '#3a404e';      // 몸 밖에만 꼬리를 그림
+    ctx.beginPath(); ctx.moveTo(-R * 0.55, -2); ctx.lineTo(-R - len, -11 + sw); ctx.lineTo(-R - len * 0.35, -3); ctx.lineTo(-R - len * 1.1, 5 - sw); ctx.lineTo(-R * 0.55, 3); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-R * 0.55, 0); ctx.lineTo(-R - len * 0.8, 8 - sw); ctx.lineTo(-R - len * 0.3, 1); ctx.lineTo(-R - len * 0.9, 15 + sw); ctx.lineTo(-R * 0.55, 5); ctx.closePath(); ctx.fill();
     ctx.restore();
+    ctx.save(); ctx.rotate(0.78); ctx.scale(1.35, 1.35);      // 쿠나이는 조준 방향과 상관없이 같은 각도로 가운데에
+    ctx.fillStyle = '#e3e8f4'; ctx.strokeStyle = '#262a36'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(4.4, -1); ctx.lineTo(0, 4); ctx.lineTo(-4.4, -1); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#7d869b'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(0, -13); ctx.lineTo(0, 3); ctx.stroke();
+    ctx.fillStyle = '#565d70'; ctx.strokeStyle = '#e6eaf4'; ctx.beginPath(); ctx.roundRect(-2.4, 4, 4.8, 9, 1.2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#cfd5e4'; ctx.beginPath(); ctx.moveTo(-2.4, 7); ctx.lineTo(2.4, 7); ctx.moveTo(-2.4, 10); ctx.lineTo(2.4, 10); ctx.stroke();
+    ctx.strokeStyle = '#e6eaf4'; ctx.lineWidth = 1.7; ctx.beginPath(); ctx.arc(0, 15.4, 2.8, 0, 6.283); ctx.stroke(); ctx.restore();
   }
   if (p.ch.id === 'angel') {      // 금색 링(머리 위) + 심판 중에는 금 망치
     const hy = -R - 5 + Math.sin(now / 300) * 1.5;
@@ -2204,12 +2258,13 @@ function drawPlayer(p, now) {
   }
   if (p.alive) {
     const w = 56, x = p.x - w / 2, y = p.y - R - 16 - (p.ch.stackMax ? 6 : 0);      // 천사는 금색 링 자리를 위해 체력바를 조금 위로
-    ctx.fillStyle = '#000a'; ctx.fillRect(x, y, w, 5); ctx.fillStyle = ring; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, p.hp / p.maxHp)), 5);
-    if (p.ch.stackMax || p.ch.chainMax) {      // 천사: 체력바 아래 구원 스택 노란 10칸 (가득 차면 금빛으로 빛남)
-      const N = p.ch.stackMax || p.ch.chainMax, cw = (w - (N - 1) * 1.2) / N, full = (p.hits | 0) >= N;
-      for (let k = 0; k < N; k++) { const cx = x + k * (cw + 1.2); ctx.fillStyle = '#000a'; ctx.fillRect(cx, y + 6.5, cw, 4); if (k < (p.hits | 0)) { ctx.fillStyle = p.ch.chainMax ? '#9ad1ff' : '#ffd24a'; ctx.fillRect(cx, y + 6.5, cw, 4); } }
+    ctx.fillStyle = '#000a'; ctx.fillRect(x, y, w, 5); { const tv = trailOf(p); if (tv > p.hp + 0.01) { ctx.fillStyle = '#ffffffd9'; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, tv / p.maxHp)), 5); } } ctx.fillStyle = ring; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, p.hp / p.maxHp)), 5);
+    if (p.ch.stackMax) {      // 천사: 체력바 아래 구원 스택 노란 10칸 (가득 차면 금빛으로 빛남)
+      const N = p.ch.stackMax, cw = (w - (N - 1) * 1.2) / N, full = (p.hits | 0) >= N;
+      for (let k = 0; k < N; k++) { const cx = x + k * (cw + 1.2); ctx.fillStyle = '#000a'; ctx.fillRect(cx, y + 6.5, cw, 4); if (k < (p.hits | 0)) { ctx.fillStyle = '#ffd24a'; ctx.fillRect(cx, y + 6.5, cw, 4); } }
       if (full) { ctx.save(); ctx.shadowColor = '#ffd24a'; ctx.shadowBlur = 8; ctx.strokeStyle = '#ffe58a'; ctx.lineWidth = 1; ctx.strokeRect(x - 1, y + 6, w + 2, 5); ctx.restore(); }
     }
+    if (p.ch.ninjutsu && p.nin > 0) { const dk = Math.max(0, Math.min(1, (p.ninT || 0) / p.ch.ninjutsu.decay)); ctx.fillStyle = '#000a'; ctx.fillRect(x, y + 11.5, w, 2.5); ctx.fillStyle = dk < 0.34 ? '#ff6b6b' : '#b9a6ff'; ctx.fillRect(x, y + 11.5, w * dk, 2.5); const N = p.ch.ninjutsu.max, cw = (w - (N - 1) * 1.2) / N, full = p.nin >= N; for (let k = 0; k < N; k++) { const cx = x + k * (cw + 1.2); ctx.fillStyle = '#000a'; ctx.fillRect(cx, y + 6.5, cw, 4); if (k < p.nin) { ctx.fillStyle = '#c9b8ff'; ctx.fillRect(cx, y + 6.5, cw, 4); } } if (full) { ctx.save(); ctx.shadowColor = '#b9a6ff'; ctx.shadowBlur = 8; ctx.strokeStyle = '#d9ccff'; ctx.lineWidth = 1; ctx.strokeRect(x - 1, y + 6, w + 2, 5); ctx.restore(); } }
     if (p.shieldT > 0 && p.shield > 0) { ctx.fillStyle = '#000a'; ctx.fillRect(x, y + 6, w, 4); ctx.fillStyle = '#3d9bff'; ctx.fillRect(x, y + 6, w * Math.max(0, Math.min(1, p.shield / (p.shieldMax || p.shield))), 4); }
     if (p.stun > 0) { ctx.font = '14px ' + EMOJI; ctx.textAlign = 'center'; ctx.fillText('💫', p.x, y - 3); }
     drawStatus(p);
@@ -2217,11 +2272,8 @@ function drawPlayer(p, now) {
 }
 function drawStealthBar() {      // 화면 아래 중앙: 내 은신(암살자)·금 망치(천사 심판) 남은 시간 바
   const p = game.players[0]; if (!p || !p.alive) return;
-  let cur, tot, col, t, chg = null;
-  for (const r of roles.values()) if (r.type === 'skill' && r.i >= 0) { const cf = skOf(p, r.i).fx.find(f => f.t === 'volley'); if (cf) { chg = { ratio: clamp((performance.now() - r.t0) / 1000 / cf.charge, 0, 1), cf }; break; } }
-  if (chg) { cur = chg.ratio; tot = 1; col = '#cfd3dc'; t = '🌀 수리검 ' + (1 + Math.round(chg.ratio * (chg.cf.max - 1))) + '발 충전'; }
-  else if (p.ch.stance && p.tm > 0) { cur = p.tm / 10; tot = p.ch.stance.dur; col = '#cfd3dc'; t = '🗡️ 쌍검 태세 ' + cur.toFixed(1) + '초'; }
-  else if (p.stl > 0) { cur = p.stl; tot = 3.5; col = '#9aa4b8'; t = '🫥 은신 ' + p.stl.toFixed(1) + '초'; }
+  let cur, tot, col, t;
+  if (p.stl > 0) { cur = p.stl; tot = 3.5; col = '#9aa4b8'; t = '🫥 은신 ' + p.stl.toFixed(1) + '초'; }
   else if (p.ch.hammer && p.tm > 0) { cur = p.tm / 10; tot = p.ch.hammer.dur; col = '#ffd24a'; t = '🔨 심판 ' + cur.toFixed(1) + '초'; }
   else return;
   const w = 340, h = 16, x = (W - w) / 2, y = H - 40, r = Math.max(0, Math.min(1, cur / tot));
@@ -2238,7 +2290,6 @@ function drawStatus(p) {      // 캐릭터 바로 아래에 지속 효과의 남
   if (p.drT > 0) it.push(['📣', p.drT.toFixed(1), '#ffd24a']);
   if (p.stl > 0) it.push(['🫥', p.stl.toFixed(1), '#dfe6f5']);
   if (p.ch.hammer && p.tm > 0) it.push(['🔨', (p.tm / 10).toFixed(1), '#ffd24a']);
-  if (p.ch.stance && p.tm > 0) it.push(['🗡️', (p.tm / 10).toFixed(1), '#cfd3dc']);
   if (p.sil > 0) it.push(['🔇', p.sil.toFixed(1), '#ffd24a']);
   if (p.slowT > 0) it.push([isRoot(p) ? '⛓️' : '🧊', p.slowT.toFixed(1), isRoot(p) ? '#6be08a' : '#a9e6ff']);
   if (p.emp) it.push(['🗡️', '+5', '#ff9a9a']);
@@ -2297,6 +2348,14 @@ function drawMinions(now) {
       ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(m.x, m.y, m.r * 1.9 * pu, 0, 6.283); ctx.fill();
       ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(m.x, m.y, m.r * pu, 0, 6.283); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#3a2a00'; ctx.font = '800 13px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(Math.max(0, Math.ceil(m.hp))), m.x, m.y + 1); ctx.textBaseline = 'alphabetic';      // 구슬 체력은 가운데에
+    } else if (m.kind === 'nin') {      // 닌자 분신 포대: 검은 닌자 모습 + 남은 시간 호
+      ctx.save(); ctx.translate(m.x, m.y);
+      if (same) { ctx.strokeStyle = '#9aa4b866'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.arc(0, 0, CHARS.ninja.skills[1].fx[0].range, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.fillStyle = '#23262e'; ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, R, 0, 6.283); ctx.fill(); ctx.stroke();
+      ctx.rotate(m.aim); ctx.fillStyle = '#d9deea'; ctx.beginPath(); ctx.roundRect(R * 0.05, -R * 0.38, R * 0.92, R * 0.76, 5); ctx.fill();
+      ctx.fillStyle = '#15171c'; ctx.beginPath(); ctx.arc(R * 0.55, -R * 0.16, 2.3, 0, 6.283); ctx.arc(R * 0.55, R * 0.16, 2.3, 0, 6.283); ctx.fill(); ctx.rotate(-m.aim);
+      ctx.strokeStyle = '#cfd3dc'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, R + 6, -Math.PI / 2, -Math.PI / 2 + 6.283 * Math.max(0, m.life || 0) / CHARS.ninja.skills[1].fx[0].life); ctx.stroke();
+      ctx.restore();
     } else {
       const face = Math.cos(m.aim) >= 0 ? 1 : -1;
       if (m.fire) {      // 불 뿜기: 상대 쪽으로 계속 — 겹친 불꽃 입자
@@ -2353,6 +2412,7 @@ function hpBar(x, w, p, left, col, name) {
   const hp = Math.max(0, Math.round(p.hp));
   ctx.textAlign = left ? 'left' : 'right'; ctx.font = 'bold ' + (w < 200 ? 12 : 15) + 'px ' + FONT; ctx.fillStyle = p.alive ? col : '#6a7490'; ctx.fillText(name + (p.alive ? '' : ' ✖'), left ? x : x + w, 22);
   ctx.fillStyle = '#1a2130'; rr(x, 30, w, 18, 5); ctx.fill();
+  const tv = trailOf(p); if (tv > p.hp + 0.01) { const tw = w * Math.max(0, Math.min(1, tv / p.maxHp)); ctx.fillStyle = '#ffffffd9'; rr(left ? x : x + w - tw, 30, tw, 18, 5); ctx.fill(); }      // 하얀 잔상 바
   const bw = w * Math.max(0, Math.min(1, hp / p.maxHp)); ctx.fillStyle = col; if (bw > 1) { rr(left ? x : x + w - bw, 30, bw, 18, 5); ctx.fill(); }
   if (p.shieldT > 0 && p.shield > 0) {      // 방패 내구도: 체력바 아래 파란 바
     ctx.fillStyle = '#1a2130'; rr(x, 51, w, 9, 4); ctx.fill();
@@ -2362,15 +2422,16 @@ function hpBar(x, w, p, left, col, name) {
   ctx.fillStyle = '#fff'; ctx.font = 'bold 12px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(game.practice && p.idx === 1 ? '∞' : hp + ' / ' + p.maxHp, x + w / 2, 43);
 }
 function fmtTime(s) { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+const hudName = (p, fb) => (p.idx === 0 ? myNick : p.nick) || fb;      // 체력바 위 이름: 닉네임(없으면 나·아군·적 등)
 function drawHUD(now) {
   const P = game.players;
   ctx.fillStyle = '#0a0d13'; ctx.fillRect(0, 0, CW, OY);
   if (P.length === 4) {      // 2대2: 왼쪽 위 = 내 팀(나·아군), 오른쪽 위 = 상대 팀 두 명
-    hpBar(16, 170, P[0], true, ME_COL, '나 · ' + P[0].ch.name); hpBar(196, 170, P[1], true, ALLY_COL, '아군 · ' + P[1].ch.name);
-    hpBar(CW - 16 - 170, 170, P[2], false, OPP_COL, '적 · ' + P[2].ch.name); hpBar(CW - 196 - 170, 170, P[3], false, OPP_COL, '적 · ' + P[3].ch.name);
+    hpBar(16, 170, P[0], true, ME_COL, hudName(P[0], '나') + ' · ' + P[0].ch.name); hpBar(196, 170, P[1], true, ALLY_COL, hudName(P[1], '아군') + ' · ' + P[1].ch.name);
+    hpBar(CW - 16 - 170, 170, P[2], false, OPP_COL, hudName(P[2], '적') + ' · ' + P[2].ch.name); hpBar(CW - 196 - 170, 170, P[3], false, OPP_COL, hudName(P[3], '적') + ' · ' + P[3].ch.name);
   } else {
-    hpBar(16, 350, P[0], true, ME_COL, '나 · ' + P[0].ch.name);
-    hpBar(CW - 16 - 350, 350, P[1], false, OPP_COL, oppLabel() + ' · ' + P[1].ch.name);
+    hpBar(16, 350, P[0], true, ME_COL, hudName(P[0], '나') + ' · ' + P[0].ch.name);
+    hpBar(CW - 16 - 350, 350, P[1], false, OPP_COL, hudName(P[1], oppLabel()) + ' · ' + P[1].ch.name);
   }
   if (game.practice) { ctx.textAlign = 'center'; ctx.fillStyle = '#9aa6bd'; ctx.font = 'bold 11px ' + FONT; ctx.fillText('PRACTICE', CW / 2, 14); ctx.font = 'bold 19px ' + FONT; ctx.fillStyle = '#6be08a'; ctx.fillText('🎯 연습 모드', CW / 2, 36); return; }
   ctx.textAlign = 'center'; ctx.fillStyle = '#9aa6bd'; ctx.font = 'bold 11px ' + FONT; ctx.fillText('ROUND ' + game.round, CW / 2, 14);
@@ -2395,7 +2456,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 89;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 90;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -2537,8 +2598,8 @@ function hostSend(now) {
   if (!net.m || now - net.sendT < 22) return; net.sendT = now;
   const g = game, P = g.players;
   const pl = P.map(p => [r1(p.x), r1(p.y), r1(p.vx), r1(p.vy), r2(p.aim), r1(p.hp), p.maxHp, p.alive ? 1 : 0, r2(p.stun), r2(p.slowT), r1(p.shield), p.shieldMax, r2(p.shieldT), r2(p.drT), r2(p.haste), r2(p.dashT),
-    p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0, p.rage ? 1 : 0, p.hits | 0, p.adv ? 1 : 0, p.tm | 0, r2(p.sil)]);
-  const mn = g.minions.slice(0, 10).map(m => [m.id, r1(m.x), r1(m.y), r1(m.vx), r1(m.vy), r1(m.hp), m.kind === 'orb' ? 1 : 0, m.owner, r2(m.aim), m.fire ? 1 : 0, m.maxHp, m.r, m.guard > 0 ? 1 : 0]), pw = g.pw.map(w => [r1(w.cx), r1(w.cy), Math.round(w.a * 1000) / 1000, w.fw, w.fh, w.own, r2(w.t), w.max]);
+    p.charge ? [r2(p.charge.dx), r2(p.charge.dy)] : 0, r2(p.atkCd), r2(p.dashCd), r2(p.skCd[0]), r2(p.skCd[1]), r2(p.skCd[2]), r2(p.slowMul), p.dashN | 0, r2(Math.max(0, p.stl)), p.emp ? 1 : 0, p.cnt ? r2(p.cnt.t) : 0, p.rage ? 1 : 0, p.hits | 0, p.adv ? 1 : 0, p.tm | 0, r2(p.sil), p.nin | 0, r2(p.ninT || 0)]);
+  const mn = g.minions.slice(0, 10).map(m => [m.id, r1(m.x), r1(m.y), r1(m.vx), r1(m.vy), r1(m.hp), m.kind === 'orb' ? 1 : m.kind === 'nin' ? 2 : 0, m.owner, r2(m.aim), m.fire ? 1 : 0, m.maxHp, m.r, m.guard > 0 ? 1 : 0, r2(m.life || 0)]), pw = g.pw.map(w => [r1(w.cx), r1(w.cy), Math.round(w.a * 1000) / 1000, w.fw, w.fh, w.own, r2(w.t), w.max]);
   const bl = g.bullets.slice(0, 18).map(b => [b._i || (b._i = ++net.bid), r1(b.x), r1(b.y), r1(b.vx), r1(b.vy), b.r, b.owner, b.col || 0]);
   const fl = g.fx.slice(0, 10).map(f => { if (!f._i) f._i = ++net.fid; const o = { i: f._i, k: f.k, x: r1(f.x), y: r1(f.y), l: r2(f.life), m: r2(f.max), c: f.col }; if (f.a != null) o.a = r2(f.a); if (f.r != null) o.r = r1(f.r); if (f.len != null) { o.len = r1(f.len); o.w = r1(f.w); } if (f.arc != null) o.arc = r2(f.arc); if (f.follow != null) o.f = f.follow; if (f.fist) o.fi = 1; return o; });
   const s = { n: ++net.n, mn, pw, ph: g.ph, tm: r2(g.timer), ft: r2(g.fightT), rd: g.round, sc: g.score, rs: g.res ? g.res.w : null, mw: g.matchWinner, ch: [cid(P[0].ch), cid(P[1].ch)], mp: g.mapId, es: g.ess ? [g.ess.up ? 1 : 0, r2(g.ess.t)] : 0, a: net.lastQ, p: pl, b: bl, f: fl, e: net.evBuf.slice(-10).map(x => x.a) };
@@ -2658,6 +2719,7 @@ function predictSkill(i, angArg, qid, fr) {      // 스킬을 누르는 즉시 �
     else if (f.t === 'counter') { const T = f.block + L; predFx({ k: 'tri', x: vp.x, y: vp.y, a: ang, len: f.len, w: f.w, life: T, max: T, col: f.col || '#ff6b6b' }); net.pcnt = now; }
     else if (f.t === 'pool') predFx({ k: 'pool', x: clamp(vp.x + Math.cos(ang) * f.dist, 20, W - 20), y: clamp(vp.y + Math.sin(ang) * f.dist, 20, H - 20), r: f.r, life: f.dur, max: f.dur, col: f.col, follow: 0 });
     else if (f.t === 'tornado') { const [tx, ty] = tornPos(g, vp, f, ang, aimed ? fr : undefined), a2 = Math.atan2(ty - vp.y, tx - vp.x), ln = Math.max(30, Math.hypot(tx - vp.x, ty - vp.y) - (R + 4)), keep = g.bullets; g.bullets = []; g.fireProj(vp, { dmg: 0, speed: f.speed, r: f.pr, life: ln / f.speed, col: f.col }, a2); for (const b of g.bullets) { b.qid = qid; b.t0 = now; net.pb.push(b); } g.bullets = keep; }
+    else if (f.t === 'rewind') { const o = vp.hist && vp.hist[0]; if (o) { predFx({ k: 'ring', x: vp.x, y: vp.y, r: 34, life: 0.35, max: 0.35, col: f.col }); vp.x = o.x; vp.y = o.y; for (const w of WALLS) resolveCircleRect(vp, R, w); predFx({ k: 'ring', x: vp.x, y: vp.y, r: 34, life: 0.35, max: 0.35, col: f.col }); vp.hist = [{ x: vp.x, y: vp.y, hp: vp.hp }]; vp.histT = 0; } }
     else if (f.t === 'stealth') predFx({ k: 'ring', x: vp.x, y: vp.y, r: 44, life: 0.35, max: 0.35, col: '#9aa4b8' });
     else if (f.t === 'salv') predFx({ k: 'ring', x: vp.x, y: vp.y, r: f.radius, life: 0.55, max: 0.55, col: f.col });
     else if (f.t === 'hammer') predFx({ k: 'ring', x: vp.x, y: vp.y, r: 54, life: 0.4, max: 0.4, col: '#ffd24a' });
@@ -2686,7 +2748,7 @@ function predictSkill(i, angArg, qid, fr) {      // 스킬을 누르는 즉시 �
 }
 function predictAttack() {      // 평타도 누르는 즉시 내 화면에 먼저 표시 (피해 판정은 방장)
   const g = game, vp = g.players[0], a = atkOf(vp), now = performance.now();
-  net.cdo.a = { v: a.cd, t: now };
+  net.cdo.a = { v: a.cd * (vp.ch.ninjutsu && vp.nin ? 1 - vp.ch.ninjutsu.atk * vp.nin : 1), t: now };
   if (a.type === 'melee') predFx({ k: 'cone', x: vp.x, y: vp.y, a: vp.aim, arc: a.arc, r: a.range, life: 0.2, max: 0.2, col: '#e8edf7', follow: -1, fist: !!a.fist });
   else if (a.hom) { /* 유도탄은 서버 결과만 그림 */ }
   else { const keep = g.bullets; g.bullets = []; g.fireProj(vp, { dmg: a.dmg, speed: a.speed, r: a.r, basic: true, col: a.col }, vp.aim); for (const b of g.bullets) { b.qid = 0; b.t0 = now; net.pb.push(b); } g.bullets = keep; }
@@ -2737,7 +2799,7 @@ function guestFrame(now, dt) {
     for (const m of (s.mn || [])) {
       const ea = age + lead, tx = W - m[1] - m[3] * ea, ty = m[2] + m[4] * ea; let o = old.get(m[0]);
       if (!o) o = { id: m[0], x: tx, y: ty }; else { const k = Math.min(1, dt * 18); o.x += (tx - o.x) * k; o.y += (ty - o.y) * k; }
-      o.hp = m[5]; o.kind = m[6] ? 'orb' : 'dragon'; o.owner = NP - 1 - m[7]; o.aim = Math.PI - m[8]; o.fire = m[9]; o.maxHp = m[10]; o.r = m[11]; o.guard = m[12];
+      o.hp = m[5]; o.kind = m[6] === 1 ? 'orb' : m[6] === 2 ? 'nin' : 'dragon'; o.owner = NP - 1 - m[7]; o.aim = Math.PI - m[8]; o.fire = m[9]; o.maxHp = m[10]; o.r = m[11]; o.guard = m[12]; o.life = m[13] || 0;
       nxt.set(m[0], o); arr.push(o);
     }
     g._mm = nxt; g.minions = arr; }
@@ -2754,7 +2816,7 @@ function guestFrame(now, dt) {
       pd.t -= dt; if (pd.t <= 0) net.pd = null;
     } else if (own && d[7] && d[8] <= 0 && !(d[26] > 0) && !(now - (net.pcnt || 0) < 500) && (hold || (!d[16] && d[15] <= 0))) {      // 내 걷기: 내 화면에서 먼저 움직이고 서버 위치로 부드럽게 맞춤
       const m = readMove(); let mx = m[0], my = m[1]; const ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; }
-      const sp = vp.ch.speed * (d[9] > 0 ? d[22] : 1) * (d[14] > 0 ? (vp.hasteMul || 1) : 1) * (d[24] > 0 ? STL_MUL : 1) * ((g.map && g.map.speedMul) || 1), er = Math.hypot(tx - vp.x, ty - vp.y);
+      const sp = vp.ch.speed * (d[9] > 0 ? d[22] : 1) * (d[14] > 0 ? (vp.hasteMul || 1) : 1) * (d[24] > 0 ? STL_MUL : 1) * ((g.map && g.map.speedMul) || 1) * (vp.ch.ninjutsu && vp.nin ? 1 + vp.ch.ninjutsu.spd * vp.nin : 1), er = Math.hypot(tx - vp.x, ty - vp.y);
       if (!vp._init || er > (hold ? 450 : 150)) { vp.x = tx; vp.y = ty; vp._init = 1; }
       else {
         stepMove(vp, mx * sp * dt, my * sp * dt);
@@ -2775,7 +2837,7 @@ function guestFrame(now, dt) {
     vp.nick = (s.nk && s.nk[j]) || '';
     vp.vx = -d[2]; vp.vy = d[3]; vp.aim = Math.PI - d[4]; vp.hp = d[5]; vp.maxHp = d[6]; vp.alive = !!d[7]; vp.stun = d[8]; vp.slowT = d[9]; vp.shield = d[10]; vp.shieldMax = d[11]; vp.shieldT = d[12]; vp.drT = d[13]; vp.haste = d[14]; vp.dashT = d[15];
     vp.charge = d[16] ? { dx: -d[16][0], dy: d[16][1] } : null; vp.atkCd = Math.max(0, d[17] - age); vp.dashCd = Math.max(0, d[18] - age); vp.skCd = [d[19], d[20], d[21]].map(v => Math.max(0, v - age)); vp.slowMul = d[22];
-    vp.dashN = d[23] | 0; vp.stl = d[24] || 0; vp.emp = !!d[25]; vp.cnt = d[26] > 0 ? { t: d[26] } : null; vp.rage = !!d[27]; vp.hits = d[28] | 0; vp.adv = !!d[29]; vp.sil = d[31] || 0; if (!(j === NP - 1 && net.cdo && net.cdo.s0)) vp.tm = d[30] | 0; if (vp.ch.id === 'tide') vp.hasteMul = 1.2; else if (d[14] > 0 && !(vp.hasteMul > 1)) vp.hasteMul = 1.1;
+    vp.dashN = d[23] | 0; vp.stl = d[24] || 0; vp.emp = !!d[25]; vp.cnt = d[26] > 0 ? { t: d[26] } : null; vp.rage = !!d[27]; vp.hits = d[28] | 0; vp.adv = !!d[29]; vp.sil = d[31] || 0; vp.nin = d[32] | 0; vp.ninT = d[33] || 0; if (!(j === NP - 1 && net.cdo && net.cdo.s0)) vp.tm = d[30] | 0; if (vp.ch.id === 'tide') vp.hasteMul = 1.2; else if (d[14] > 0 && !(vp.hasteMul > 1)) vp.hasteMul = 1.1;
     if (j === NP - 1) { net.dq = (net.dq || []).filter(q => q > (s.a | 0)); vp.dashN = Math.max(0, vp.dashN - net.dq.length); }      // 아직 서버가 처리 못 한 내 대시는 충전에서 미리 뺌
     if (own && net.pd) vp.dashT = net.pd.t;
     if (j === NP - 1) {      // 방금 누른 대시·스킬의 쿨타임은 서버 응답 전에도 바로 표시
@@ -2804,6 +2866,7 @@ function guestFrame(now, dt) {
   // 내 입력 보내기
   const m = readMove(); net.mv = [-m[0], m[1]];
   const hold = atkHeld(); g.players[0].atkHold = hold;
+  if (g.players[0].ch.id === 'ninja' && g.players[0].alive && s.ph === 'fight') g.recHist(g.players[0], dt);
   { const vp0 = g.players[0], e0 = g.foe(vp0);
     if (net.atkBuf > 0) net.atkBuf -= dt;
     if (s.ph === 'fight' && vp0.alive && vp0.stun <= 0 && !vp0.charge && !net.pd && vp0.dashT <= 0 && vp0.atkCd <= 0) {
@@ -2862,7 +2925,7 @@ function frame(now) {
   ctx.save();
   let sx = 0, sy = 0; if (shake > 0.3) { sx = (Math.random() - 0.5) * shake; sy = (Math.random() - 0.5) * shake; shake *= 0.85; } else shake = 0;
   ctx.translate(sx, OY + sy); ctx.beginPath(); ctx.rect(-4, -4, W + 8, H + 8); ctx.clip();
-  drawArena(); drawFx(); drawAtkRange(); drawAimPreview(); drawMinions(now); drawBullets(); for (let pi = game.players.length - 1; pi >= 0; pi--) drawPlayer(game.players[pi], now); drawEffects(dt); drawStealthBar();
+  drawArena(); drawFx(); drawAtkRange(); drawAimPreview(); drawMinions(now); drawBullets(); for (let pi = game.players.length - 1; pi >= 0; pi--) drawPlayer(game.players[pi], now); drawGhost(now); drawEffects(dt); drawStealthBar();
   if (game.players.length === 4 && game.ph === 'fight' && !game.players[0].alive) {      // 2대2: 쓰러지면 남은 사람들의 싸움을 지켜봄
     const al = game.players.filter(p => p.team === game.players[0].team && p.alive).length;
     ctx.save(); ctx.font = 'bold 20px ' + FONT; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#000'; const tx = '👀 관전 중 · ' + (al ? '아군이 아직 싸우는 중!' : '결과를 기다리는 중');
