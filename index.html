@@ -341,7 +341,7 @@ const CHARS = {
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
     atk: { type: 'melee', dmg: 10, cd: 0.6, range: 72, arc: 2.2 },
     skills: [
-      { name: '강타', icon: '🗡️', desc: '직선 범위가 보이고 0.3초 뒤 25 피해', cd: 5, ai: { use: 'attack', maxD: 195 }, fx: [{ t: 'line', len: 215, w: 68, dmg: 25, delay: 0.3, col: '#ff8a4a' }] },
+      { name: '강타', icon: '🗡️', desc: '직선 범위가 보이고 0.25초 뒤 25 피해', cd: 5, ai: { use: 'attack', maxD: 195 }, fx: [{ t: 'line', len: 215, w: 68, dmg: 25, delay: 0.25, col: '#ff8a4a' }] },
       { name: '전사의 함성', icon: '📣', desc: '3초간 받는 피해 30% 감소, 최대 체력 +10(그 라운드 동안)', cd: 15, ai: { use: 'attack', maxD: 200 }, fx: [{ t: 'buff', dr: 0.3, dur: 3, maxHp: 10, col: '#ffd24a' }] },
       { name: '가로베기', icon: '🌙', desc: '0.6초간 120° 부채꼴로 투사체를 막고, 끝나면 범위 안의 적에게 15 피해', cd: 10, ai: { use: 'block', maxD: 125 }, fx: [{ t: 'cone', range: 128, arc: 2.094, dmg: 15, guard: 0.6, col: '#ff8a4a' }] },
     ] },
@@ -2456,12 +2456,12 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 90;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 91;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
   q: [], qid: 0, mv: [0, 0], gin: { mx: 0, my: 0, h: 0 }, gp: null, lastQ: 0, hostRm: false, guestRm: false, rmSent: false,
-  snap: null, snapT: 0, lastN: -1, seenFx: new Map(), seenEv: new Map(), bid: 0, fid: 0, eid: 0, evBuf: [], sendT: 0, inT: 0, lastIn: '', lastRx: 0, n: 0, hostChar: null,
+  snap: null, snapT: 0, lastN: -1, seenFx: new Map(), trapFx: new Map(), seenEv: new Map(), bid: 0, fid: 0, eid: 0, evBuf: [], sendT: 0, inT: 0, lastIn: '', lastRx: 0, n: 0, hostChar: null,
 };
 const cid = ch => CHAR_ORDER.find(k => CHARS[k] === ch);
 const r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100;
@@ -2535,7 +2535,7 @@ function netLeave() {
   if (net.offPeers) { try { net.offPeers(); } catch (e) { /* 무시 */ } }
   if (net.m) { net.m.leave().catch(() => {}); }
   net.offPeers = null; net.m = null; net.role = 'none'; net.started = false; net.quad = false; net.gp = null; net.snap = null; net.lastN = -1; net.q = []; net.hostRm = net.guestRm = net.rmSent = false;
-  net.seenFx.clear(); net.seenEv.clear(); net.evBuf = [];
+  net.seenFx.clear(); net.trapFx.clear(); net.seenEv.clear(); net.evBuf = [];
   lobbyPresence({ o: null });
   $('netHost').hidden = true; $('netBtns').hidden = false;
 }
@@ -2760,8 +2760,9 @@ function ingestEvents(s) {
     { const hx = W - f.x, mi = net.pfx.findIndex(p => p.k === f.k && now - p.t < 1000 && Math.hypot(p.x - hx, p.y - f.y) < 100); if (mi >= 0) { const po = net.pfx.splice(mi, 1)[0]; if (po.o && f.l != null && f.m != null) { po.o.life = Math.min(po.o.life, f.l); po.o.max = f.m; } continue; } }      // 내가 먼저 그린 효과는 서버 효과와 같은 시각에 사라지게 맞춤(끝난 뒤에도 남아 '2개'로 보이던 것 방지)
     const o = { k: f.k, x: W - f.x, y: f.y, life: f.l, max: f.m, col: f.c };
     if (f.a != null) o.a = Math.PI - f.a; if (f.r != null) o.r = f.r; if (f.len != null) { o.len = f.len; o.w = f.w; } if (f.arc != null) o.arc = f.arc; o.follow = f.f != null && f.f >= 0 ? game.players.length - 1 - f.f : -1; if (f.fi) o.fist = true;
-    g.fx.push(o);
+    g.fx.push(o); if (f.k === 'trap') net.trapFx.set(f.i, o);      // 덫은 밟히면 서버에서 먼저 사라지므로 따로 추적
   }
+  { const live = new Set(s.f.map(f => f.i)); for (const [id, o] of net.trapFx) if (!live.has(id)) { o.life = 0; net.trapFx.delete(id); } }      // 서버 효과 목록에서 사라진 덫(밟힘·교체)은 바로 지움
   for (const a of s.e) {
     if (net.seenEv.has(a[0])) continue; net.seenEv.set(a[0], now);
     if (a[1] === 'w') g.ev.push({ k: 'swap', p: g.players.length - 1 - a[2] }); else if (a[1] === 'h') g.ev.push({ k: 'hit', x: W - a[2], y: a[3], d: a[4], to: g.players.length - 1 - a[5] }); else g.ev.push({ k: 'text', x: W - a[2], y: a[3], txt: a[4], col: a[5] });

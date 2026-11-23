@@ -46,7 +46,7 @@ const CHARS = {
   warrior: { id: 'warrior', name: '전사', icon: '⚔️', atkIcon: '⚔️', color: '#ff8a4a', role: '근접 · 높은 공격력', hp: 110, speed: 220, keep: 64,
     atk: { type: 'melee', dmg: 10, cd: 0.6, range: 72, arc: 2.2 },
     skills: [
-      { name: '강타', icon: '🗡️', desc: '직선 범위가 보이고 0.3초 뒤 25 피해', cd: 5, ai: { use: 'attack', maxD: 195 }, fx: [{ t: 'line', len: 215, w: 68, dmg: 25, delay: 0.3, col: '#ff8a4a' }] },
+      { name: '강타', icon: '🗡️', desc: '직선 범위가 보이고 0.25초 뒤 25 피해', cd: 5, ai: { use: 'attack', maxD: 195 }, fx: [{ t: 'line', len: 215, w: 68, dmg: 25, delay: 0.25, col: '#ff8a4a' }] },
       { name: '전사의 함성', icon: '📣', desc: '3초간 받는 피해 30% 감소, 최대 체력 +10(그 라운드 동안)', cd: 15, ai: { use: 'attack', maxD: 200 }, fx: [{ t: 'buff', dr: 0.3, dur: 3, maxHp: 10, col: '#ffd24a' }] },
       { name: '가로베기', icon: '🌙', desc: '0.6초간 120° 부채꼴로 투사체를 막고, 끝나면 범위 안의 적에게 15 피해', cd: 10, ai: { use: 'block', maxD: 125 }, fx: [{ t: 'cone', range: 128, arc: 2.094, dmg: 15, guard: 0.6, col: '#ff8a4a' }] },
     ] },
@@ -1050,4 +1050,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 90;
+export const BUILD = 91;
