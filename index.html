@@ -2041,10 +2041,10 @@ const VFX = (() => {
   const TAU = Math.PI * 2, PMAX = 250, FNT = FONT, EM = EMOJI;
   const S = () => {}, txt = () => {}, shake = a => addShake(a), now = (t, fn) => fn();
     const rnd=(a=0,b=1)=>a+Math.random()*(b-a),eo=t=>1-Math.pow(1-t,3),cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),ad=(a,b)=>{let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;if(d<-Math.PI)d+=TAU;return d},hyp=Math.hypot;
-  let fx = [], parts = [], projs = [], imps = [], tm = 0;
-  const add = (dur, draw, o = {}) => { const e = Object.assign({ t: 0, dur, draw }, o); if (fx.length < 70) fx.push(e); return e; };
-  const later = (t, fn) => add(t, null, { end: fn });
-  function P(o) { if (parts.length >= PMAX) return; parts.push(Object.assign({ vx: 0, vy: 0, drag: 2.5, life: 0.5, t: 0, r: 3, col: '#fff', k: 'dot', add: 1, rot: rnd(0, TAU), vr: 0 }, o)); }
+  let fx = [], parts = [], projs = [], imps = [], tm = 0; const CAP = { on: false, list: [] };
+  const add = (dur, draw, o = {}) => { const e = Object.assign({ t: 0, dur, draw }, o); if (!CAP.on && fx.length < 70) fx.push(e); return e; };
+  const later = (t, fn) => { if (CAP.on) { fn(); return null; } return add(t, null, { end: fn }); };
+  function P(o) { if (CAP.on || parts.length >= PMAX) return; parts.push(Object.assign({ vx: 0, vy: 0, drag: 2.5, life: 0.5, t: 0, r: 3, col: '#fff', k: 'dot', add: 1, rot: rnd(0, TAU), vr: 0 }, o)); }
   function burst(x,y,n,o){for(let i=0;i<n;i++){const a=o.a!=null?o.a+rnd(-0.5,0.5)*(o.spread??1):rnd(0,TAU),s=(o.s??200)*rnd(0.35,1);P({...o,x:x+rnd(-1,1)*(o.jit||0),y:y+rnd(-1,1)*(o.jit||0),vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:(o.life??0.5)*rnd(0.6,1.2),r:(o.r??3)*rnd(0.6,1.3),vr:rnd(-8,8)})}}
 function ringFx(x,y,r,col,dur=0.3,lw=4){add(dur,(c,e,u)=>{c.globalAlpha=(1-u)*0.9;c.strokeStyle=col;c.lineWidth=lw*(1-u)+1;c.shadowColor=col;c.shadowBlur=0;c.beginPath();c.arc(x,y,r*(0.35+0.65*eo(u)),0,TAU);c.stroke();c.globalAlpha=(1-u)*0.15;c.fillStyle=col;c.fill()})}
   function trail(c,p,col,w,n){p.tr.push([p.x,p.y]);if(p.tr.length>n)p.tr.shift();c.save();c.lineCap='round';c.globalCompositeOperation='lighter';for(let i=1;i<p.tr.length;i++){const k=i/p.tr.length;c.globalAlpha=k*0.7;c.strokeStyle=col;c.lineWidth=w*k;c.beginPath();c.moveTo(...p.tr[i-1]);c.lineTo(...p.tr[i]);c.stroke()}c.restore()}
@@ -2068,7 +2068,7 @@ function rocks(x,y,n,a,spread,s,col){burst(x,y,n,{k:'rock',col,s,life:0.6,r:5,ad
   function mk(cs, dm, aimA, TEAM) {
     const ME = TEAM, OPP = '#ff5d6c'; let dragon = null, hs = 0;
     const hurt = () => {}, foeShot = () => {}, blockFx = () => {}, ninGain = () => {};
-    function shoot(o) { const p = Object.assign({ x: cs.x, y: cs.y, a: aimA(), spd: 500, r: 8, range: 500, d: 0, t: 0, tr: [], dm }, o); if (!o.foe && !o.at) { p.x += Math.cos(p.a) * (R + 2); p.y += Math.sin(p.a) * (R + 2); } if (projs.length < 40) projs.push(p); return p; }
+    function shoot(o) { const p = Object.assign({ x: cs.x, y: cs.y, a: aimA(), spd: 500, r: 8, range: 500, d: 0, t: 0, tr: [], dm }, o); if (CAP.on) CAP.list.push(p); return p; }
     const inCone=(r,a,arc)=>{const d=hyp(dm.x-cs.x,dm.y-cs.y);return d<=r+R&&Math.abs(ad(Math.atan2(dm.y-cs.y,dm.x-cs.x),a))<=arc/2+0.25};
 const inRect=(x0,y0,a,L,w)=>{const dx=dm.x-x0,dy=dm.y-y0,al=dx*Math.cos(a)+dy*Math.sin(a),pe=-dx*Math.sin(a)+dy*Math.cos(a);return al>=-R&&al<=L+R&&Math.abs(pe)<=w/2+R};
     const SK={
@@ -2286,7 +2286,7 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
   const pv = [], swapped = {}; let lastGame = null;
   // ───────── 매 프레임 ─────────
   function frame(dt) {
-    if (lastGame !== game) { lastGame = game; fx = []; parts = []; projs = []; imps = []; pv.length = 0; for (const k in swapped) delete swapped[k]; }
+    if (lastGame !== game) { lastGame = game; fx = []; parts = []; projs = []; imps = []; alive = []; orphans = []; bmap.clear(); pv.length = 0; for (const k in swapped) delete swapped[k]; }
     tm += dt;
     for (const e of fx) { e.t += dt; if (e.upd) { try { e.upd(dt, e); } catch (er) { /* 무시 */ } } }
     for (const e of fx.filter(e => e.t >= e.dur)) { if (e.end) { const f = e.end; e.end = null; try { f(); } catch (er) { /* 무시 */ } } }
@@ -2299,7 +2299,7 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
       let wl = false; if (!p.pierce) for (const w of WALLS) if (wallDist(w, p.x, p.y) <= p.r) { wl = true; break; }
       if (wl || p.d >= p.range || p.x < -40 || p.x > W + 40 || p.y < -40 || p.y > H + 40) { if (!p.done && p.end && !wl) p.end(p); p.done = 1; }
     }
-    projs = projs.filter(p => !p.done);
+    projs = []; bulletsFrame(dt);
     for (const q of parts) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; const d = Math.exp(-q.drag * dt); q.vx *= d; q.vy *= d; q.rot += q.vr * dt; } parts = parts.filter(q => q.t < q.life);
     for (const m of imps) m.life -= dt; imps = imps.filter(m => m.life > 0);
     const Pl = game.players; if (!Pl) return;
@@ -2367,10 +2367,60 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
     for (const m of imps) { const t = 1 - Math.max(0, m.life) / m.max, Ln = (m.big ? 46 : 34) * (0.5 + t * 0.7); c.save(); c.translate(m.x, m.y); c.globalAlpha = 1 - t; c.strokeStyle = '#fff'; c.lineCap = 'round'; for (let k = 0; k < 6; k++) { const a = m.a + k * 1.0472 + 0.3; c.lineWidth = k % 2 ? 2 : 4; c.beginPath(); c.moveTo(Math.cos(a) * Ln * 0.25, Math.sin(a) * Ln * 0.25); c.lineTo(Math.cos(a) * Ln, Math.sin(a) * Ln); c.stroke(); } c.fillStyle = '#fff'; c.globalAlpha = (1 - t) * 0.8; c.beginPath(); c.arc(0, 0, 10 * (1 - t) + 3, 0, TAU); c.fill(); c.restore(); }
     c.globalAlpha = 1;
   }
-  // 실제 투사체는 판정 위치만 은은하게 표시 (모양은 위 이펙트가 그림)
+  // ───────── 실제 투사체에 미리보기 모양을 입힘: 위치는 항상 실제 투사체 그대로 ─────────
+  function styleKey(o, b) {
+    const id = o.ch.id, col = b.col;
+    if (id === 'archer') return b.r > 10 ? 'a2' : col === '#4cff7a' ? 'a3' : 'a0';
+    if (id === 'mage') return col === '#ff8a4a' ? 'm1' : col === '#8fd8ff' ? 'm2' : 'm0';
+    if (id === 'assassin') return 's1';
+    if (id === 'summoner') return 'u0';
+    if (id === 'tide') return col === '#7fd3ff' ? 'd1' : (col === '#4aa8ff' && b.r > 40) ? 'd1b' : col === '#9fe8ff' ? 'd3' : 'd0';
+    if (id === 'angel') return 'g0';
+    if (id === 'ninja') return 'n0';
+    return null;
+  }
+  const bmap = new Map(), bobj = new WeakMap(); let bseen = 0;
+  const bKey = b => (b.id != null ? 'i' + b.id : null);
+  function getInst(b) { const k = bKey(b); return k ? bmap.get(k) : bobj.get(b); }
+  function setInst(b, v) { const k = bKey(b); if (k) bmap.set(k, v); else bobj.set(b, v); }
+  function makeInst(b) {
+    const o = game.players[b.owner]; if (!o) return null; const key = styleKey(o, b); if (!key) return null;
+    const q = pv[o.idx] || { x: o.x, y: o.y, nin: o.nin | 0 }, foe = game.foe ? game.foe(o) : null, cs = mkCs(o, q, false), dm = mkDm(foe, o);
+    CAP.on = true; CAP.list = []; let opt = null;
+    try { const SKs = mk(cs, dm, () => Math.atan2(b.vy, b.vx), teamCol(o)); SKs[key].call(SKs); opt = CAP.list[0] || null; } catch (er) { opt = null; } finally { CAP.on = false; CAP.list = []; }
+    if (!opt) return null;
+    return { o: opt, owner: b.owner, key, hits: new Set(), seen: 0, p: Object.assign({}, opt, { x: b.x, y: b.y, a: Math.atan2(b.vy, b.vx), tr: [], t: 0, d: 0 }) };
+  }
+  function bulletsFrame(dt) {
+    bseen++; const B = game.bullets || [], live = [];
+    for (const b of B) {
+      let I = getInst(b);
+      if (!I) {      // 새 투사체: 방금 사라진 같은 주인·같은 모양의 투사체가 바로 옆에 있으면(예측 → 서버 교체) 그 상태를 이어받음
+        const o = game.players[b.owner], key = o && styleKey(o, b);
+        for (const J of orphans) if (J.owner === b.owner && J.key === key && hyp(J.p.x - b.x, J.p.y - b.y) < 40) { I = J; J.taken = true; break; }
+        if (!I) I = makeInst(b); if (!I) continue; setInst(b, I);
+      }
+      const p = I.p, nx = b.x, ny = b.y; p.d += hyp(nx - p.x, ny - p.y); p.x = nx; p.y = ny; if (b.vx || b.vy) p.a = Math.atan2(b.vy, b.vx); p.t += dt; I.seen = bseen; I.b = b;
+      if (p.tick) { try { p.tick(p, dt); } catch (er) { /* 무시 */ } }
+      if (p.pierce) for (const e of game.players) if (e.alive && e.team !== (game.players[I.owner] || {}).team && !I.hits.has(e.idx) && hyp(e.x - p.x, e.y - p.y) < p.r + R) { I.hits.add(e.idx); if (p.hit) { try { p.hit(p); } catch (er) { /* 무시 */ } } }
+      live.push(I);
+    }
+    // 이번 프레임에 사라진 투사체: 적 근처면 적중 효과, 아니면 끝 효과(화염구 폭발 등)
+    for (const J of orphans) if (!J.taken) finish(J);
+    orphans = [];
+    for (const I of alive) if (I.seen !== bseen) orphans.push(I);
+    alive = live;
+    if (bmap.size > 80) for (const [k, v] of bmap) if (v.seen !== bseen) bmap.delete(k);
+  }
+  let alive = [], orphans = [];
+  function finish(J) {
+    const p = J.p, own = game.players[J.owner]; let near = false;
+    for (const e of game.players) if (e.alive && own && e.team !== own.team && hyp(e.x - p.x, e.y - p.y) < p.r + R + 14) near = true;
+    try { if (near && !p.pierce && p.hit) p.hit(p); else if (!near && p.end) p.end(p); } catch (er) { /* 무시 */ }
+  }
   function bullet(c, b) {
-    const o = game.players[b.owner]; if (!o) return false; const col = teamCol(o);
-    c.save(); c.globalAlpha = 0.28; c.fillStyle = col; c.beginPath(); c.arc(b.x, b.y, b.r, 0, TAU); c.fill(); c.globalAlpha = 0.6; c.strokeStyle = col; c.lineWidth = 1.5; c.stroke(); c.restore(); return true;
+    const I = getInst(b); if (!I) return false;
+    c.save(); try { I.p.draw(c, I.p); } catch (er) { /* 무시 */ } c.restore(); return true;
   }
   return { frame, under, over, hit, bullet, swap(i) { swapped[i] = true; } };
 })();
@@ -2766,6 +2816,7 @@ function waterRope(x0, y0, x1, y1, a, tm) {      // 구불구불한 물줄기 (x
 }
 function drawBullets() {
   for (const b of game.bullets) {
+    if (VFX.bullet(ctx, b)) continue;      // 미리보기 모양 (위치는 실제 투사체)
     if (b.col === '#9fe8ff' && b.r < 30) {      // 용오름: 빙글 도는 소용돌이
       const tm = performance.now() / 1000; ctx.save(); ctx.translate(b.x, b.y); ctx.shadowColor = '#9fe8ff'; ctx.shadowBlur = 14; ctx.lineCap = 'round';
       for (let k = 0; k < 3; k++) { ctx.globalAlpha = 0.9 - k * 0.2; ctx.strokeStyle = '#e6fbff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, b.r * (0.5 + k * 0.35), tm * 9 + k * 2, tm * 9 + k * 2 + 4); ctx.stroke(); }
@@ -2780,7 +2831,6 @@ function drawBullets() {
       ctx.restore(); continue;
     }
     if (b.col === '#7fd3ff' && game.players[b.owner]) { const o = game.players[b.owner]; waterRope(o.x, o.y, b.x, b.y, 1, performance.now() / 1000); }
-    if (VFX.bullet(ctx, b)) { const bo = game.players[b.owner], al2 = bo && bo.team === game.players[0].team; ctx.strokeStyle = b.owner === 0 ? ME_COL : al2 ? ALLY_COL : OPP_COL; ctx.globalAlpha = 0.9; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x, b.y, Math.min(b.r + 2, 12), 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; continue; }
     const bt = game.players[b.owner] ? game.players[b.owner].team : b.owner, mt = game.players[0].team, ally = bt === mt, q4 = game.players.length === 4, col = b.col || (b.owner === 0 ? (q4 ? '#a6f3d2' : '#8ed0ff') : ally ? (q4 ? '#8ed0ff' : '#a6f3d2') : '#ff9aa5');
     ctx.shadowColor = col; ctx.shadowBlur = 12; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = b.owner === 0 ? ME_COL : ally ? ALLY_COL : OPP_COL; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 1, 0, 6.283); ctx.stroke();
@@ -2907,7 +2957,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 95;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 96;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
@@ -3300,7 +3350,7 @@ function guestFrame(now, dt) {
       for (let i = 0; i < 3; i++) { const c = co['s' + i]; if (c) { if (now - c.t > 700) co['s' + i] = null; else vp.skCd[i] = Math.max(vp.skCd[i], c.v - (now - c.t) / 1000); } }
     }
   }
-  g.bullets = s.b.map(b => { const e = extrap(W - b[1], b[2], -b[3], b[4], b[5], age + lead, b[8]); return { x: e[0], y: e[1], vx: -b[3], vy: b[4], r: b[5], owner: NP - 1 - b[6], col: b[7] || null, pierce: !!b[8] }; });
+  g.bullets = s.b.map(b => { const e = extrap(W - b[1], b[2], -b[3], b[4], b[5], age + lead, b[8]); return { id: b[0], x: e[0], y: e[1], vx: -b[3], vy: b[4], r: b[5], owner: NP - 1 - b[6], col: b[7] || null, pierce: !!b[8] }; });
   net.pfx = net.pfx.filter(p => now - p.t < 1200);
   if (net.pbSn !== s.n) {
     net.pbSn = s.n; const cur = new Set(); let fresh = 0;
