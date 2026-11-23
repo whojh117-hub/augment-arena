@@ -2322,10 +2322,10 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
           else if (id === 'tide' && k === 0 && !p.tm) go('d1b');
           else go(tbl[k]);
         }
-        if (p.dashT > 0 && !(q.dashT > 0) && !p.charge) { burst(q.x, q.y, 6, { k: 'smoke', col: '160,170,190', s: 90, life: 0.4, r: 9, add: 0 }); }
+        if (p.dashT > 0 && !(q.dashT > 0) && !p.charge && !(p.stl > 0)) { burst(q.x, q.y, 6, { k: 'smoke', col: '160,170,190', s: 90, life: 0.4, r: 9, add: 0 }); }
       }
       let h = hist[i]; if (!h) h = hist[i] = { t: 0, a: [] }; h.t += dt; if (h.t > 0.035) { h.t = 0; h.a.unshift([p.x, p.y]); h.a.length = Math.min(h.a.length, 12); }
-      if (fight && id === 'assassin' && p.emp && Math.random() < dt * 28) { const aa = rnd(0, TAU); P({ k: 'flame2', x: p.x + Math.cos(aa) * (R + 4), y: p.y + Math.sin(aa) * (R + 4), vx: Math.cos(aa) * 20, vy: Math.sin(aa) * 20 - 30, life: 0.45, r: 4, drag: 1 }); }
+      if (fight && id === 'assassin' && p.emp && !(p.stl > 0) && Math.random() < dt * 28) { const aa = rnd(0, TAU); P({ k: 'flame2', x: p.x + Math.cos(aa) * (R + 4), y: p.y + Math.sin(aa) * (R + 4), vx: Math.cos(aa) * 20, vy: Math.sin(aa) * 20 - 30, life: 0.45, r: 4, drag: 1 }); }
       if (fight && id === 'tank' && p.rage && Math.random() < 0.5) { const aa = rnd(0, TAU); P({ k: 'flame', x: p.x + Math.cos(aa) * R, y: p.y + Math.sin(aa) * R, vx: Math.cos(aa) * 30, vy: Math.sin(aa) * 30 - 20, life: 0.3, r: 5, drag: 1 }); }
       pv[i] = { x: p.x, y: p.y, ph: game.ph, round: game.round, atkCd: p.atkCd, skCd: p.skCd.slice(), dashT: p.dashT, emp: !!p.emp, rage: !!p.rage, adv: !!p.adv, nin: p.nin | 0 };
     });
@@ -2367,7 +2367,7 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
       if (id === 'ninja' && (p.nin | 0) >= 4) { const h = hist[p.idx]; if (h) [3, 6, 9].forEach((k, i) => { const z = h.a[k]; if (!z || hyp(z[0] - x, z[1] - y) < 3) return; c.save(); c.globalAlpha = 0.22 - i * 0.06; c.fillStyle = '#3a404e'; c.strokeStyle = '#9aa4b8'; c.lineWidth = 2; c.beginPath(); c.arc(z[0], z[1], R, 0, TAU); c.fill(); c.stroke(); c.restore(); }); }
       if (id === 'ninja' && p.haste > 0) { c.save(); c.strokeStyle = '#e8edf7'; c.lineCap = 'round'; c.lineWidth = 2.5; for (let i = 0; i < 3; i++) { const s0 = -tm * 7 + i * TAU / 3, rr = R + 9 + i * 3; c.globalAlpha = 0.65; c.beginPath(); c.arc(x, y, rr, s0, s0 + 1.3); c.stroke(); } c.restore(); }
       if (id === 'tank' && p.rage) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.9; c.drawImage(sprite('#ffd21a'), x - (R + 20), y - (R + 20), (R + 20) * 2, (R + 20) * 2); c.restore(); }
-      if (id === 'assassin' && p.emp) { c.save(); c.globalCompositeOperation = 'lighter'; const pu = 0.75 + 0.25 * Math.sin(tm * 7); c.globalAlpha = 0.9 * pu; c.drawImage(sprite('#ff2828'), x - (R + 22), y - (R + 22), (R + 22) * 2, (R + 22) * 2); c.lineCap = 'round'; for (let i = 0; i < 3; i++) { const s0 = tm * 4.2 + i * TAU / 3; c.strokeStyle = i % 2 ? '#ff6b6b' : '#ff2a2a'; c.lineWidth = 3; c.globalAlpha = 0.9; c.beginPath(); c.arc(x, y, R + 8 + Math.sin(tm * 6 + i) * 2, s0, s0 + 1.1); c.stroke(); } c.restore(); }
+      if (id === 'assassin' && p.emp && !(p.stl > 0)) { c.save(); c.globalCompositeOperation = 'lighter'; const pu = 0.75 + 0.25 * Math.sin(tm * 7); c.globalAlpha = 0.9 * pu; c.drawImage(sprite('#ff2828'), x - (R + 22), y - (R + 22), (R + 22) * 2, (R + 22) * 2); c.lineCap = 'round'; for (let i = 0; i < 3; i++) { const s0 = tm * 4.2 + i * TAU / 3; c.strokeStyle = i % 2 ? '#ff6b6b' : '#ff2a2a'; c.lineWidth = 3; c.globalAlpha = 0.9; c.beginPath(); c.arc(x, y, R + 8 + Math.sin(tm * 6 + i) * 2, s0, s0 + 1.1); c.stroke(); } c.restore(); }
     }
   }
   const spr = {};
@@ -2990,7 +2990,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 97;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 98;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
