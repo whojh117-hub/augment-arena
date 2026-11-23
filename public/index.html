@@ -1874,8 +1874,19 @@ const SND = (() => {
   const CH = [[110, 220, 261.63, 329.63], [87.31, 174.61, 220, 261.63], [130.81, 261.63, 329.63, 392], [98, 196, 246.94, 293.66],
     [110, 220, 261.63, 329.63], [87.31, 174.61, 220, 261.63], [98, 196, 246.94, 293.66], [82.41, 164.81, 207.65, 246.94]];      // Am F C G | Am F G E
   const LEAD = [[3, 0, 2, 0, 3, 0, 1, 0, 2, 0, 0, 3, 0, 2, 0, 0], [2, 0, 3, 0, 0, 3, 0, 2, 1, 0, 2, 0, 3, 0, 0, 0]];
+  // ── 맵별 노래(mp3): 있으면 합성 배경음악 대신 반복 재생 ──
+  const TRK = { waste: 'bgm/waste.mp3', temple: 'bgm/temple.mp3', hell: 'bgm/hell.mp3' }, tbuf = {}; let tKey = null, tCur = null, tSrc = null, tGain = null;
+  function trackUpdate() {
+    if (!ac) return; const want = mode === 'fight' && tKey && TRK[tKey] ? tKey : null;
+    if (want && tbuf[want] === undefined) { tbuf[want] = null; fetch(TRK[want]).then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no))).then(d => { tbuf[want] = d; trackUpdate(); }).catch(() => { tbuf[want] = false; }); }
+    const play = want && tbuf[want] ? want : null; if (play === tCur) return;
+    if (tSrc) { try { tGain.gain.setTargetAtTime(0, ac.currentTime, 0.12); tSrc.stop(ac.currentTime + 0.6); } catch (e) { /* 무시 */ } tSrc = null; }
+    tCur = play; if (!play) return;
+    tSrc = ac.createBufferSource(); tSrc.buffer = tbuf[play]; tSrc.loop = true; tGain = ac.createGain(); tGain.gain.value = 2; tSrc.connect(tGain); tGain.connect(bgmG); tSrc.start();
+  }
   function sched() {
     if (!ac || !st.bgm || ac.state !== 'running') return;
+    if (tCur) return;      // 노래가 재생 중이면 합성 음악은 쉼
     if (nextT < ac.currentTime - 0.2) nextT = ac.currentTime + 0.05;      // 멈췄다 돌아왔을 때 한꺼번에 몰려 나오지 않게
     const fight = mode === 'fight', bpm = fight ? 124 : 76, s16 = 60 / bpm / 4;
     while (nextT < ac.currentTime + 0.4) {
@@ -1899,8 +1910,8 @@ const SND = (() => {
     }
   }
   function startBgm() { if (timer || !ensure()) return; nextT = ac.currentTime + 0.1; timer = setInterval(sched, 100); }
-  function setMode(m) { if (m !== mode) { mode = m; stp = 0; if (ac) nextT = ac.currentTime + 0.12; } }
-  function resume() { const a = ensure(); if (!a) return; if (a.state !== 'running') a.resume().catch(() => {}); startBgm(); }
+  function setMode(m, trk) { if (m !== mode) { mode = m; stp = 0; if (ac) nextT = ac.currentTime + 0.12; } tKey = trk || null; trackUpdate(); }
+  function resume() { const a = ensure(); if (!a) return; if (a.state !== 'running') a.resume().catch(() => {}); startBgm(); trackUpdate(); }
   document.addEventListener('visibilitychange', () => { if (!ac) return; if (document.hidden) ac.suspend().catch(() => {}); else ac.resume().catch(() => {}); });
   return {
     st, resume, sfx, hit, setMode, save, apply,
@@ -1996,7 +2007,7 @@ const SK2 = { warrior: ['w1', 'w2', 'w3'], tank: ['t1', 't2', 't3'], archer: ['a
 const AT2 = { warrior: 'w0', tank: 't0', archer: 'a0', mage: 'm0', assassin: 's0', summoner: 'u0', tide: 'd0', angel: 'g0', ninja: 'n0' };
 const VFXswap = {};      // 이번 프레임에 용의 힘 위치 교환이 일어난 소환사 번호
 function sndFrame(now) {      // 매 프레임: 상태 변화를 보고 공격·스킬·대시·카운트다운·승패 소리를 냄 (오프라인·온라인 공통)
-  SND.setMode(scene === 'play' && game && game.ph !== 'over' ? 'fight' : 'menu');
+  { const pl = scene === 'play' && game && game.ph !== 'over'; SND.setMode(pl ? 'fight' : 'menu', pl ? game.mapId : null); }
   const S = sndFrame; if (scene !== 'play' || !game) { S.prev = null; return; }
   const P = game.players, fight = game.ph === 'fight', pv = S.prev;
   if (pv && pv.round === game.round) {
@@ -2837,7 +2848,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 92;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 93;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,

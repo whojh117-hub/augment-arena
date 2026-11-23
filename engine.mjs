@@ -1050,4 +1050,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 92;
+export const BUILD = 93;
