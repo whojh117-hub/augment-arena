@@ -1877,9 +1877,13 @@ const SND = (() => {
   const LEAD = [[3, 0, 2, 0, 3, 0, 1, 0, 2, 0, 0, 3, 0, 2, 0, 0], [2, 0, 3, 0, 0, 3, 0, 2, 1, 0, 2, 0, 3, 0, 0, 0]];
   // ── 맵별 노래(mp3): 있으면 합성 배경음악 대신 반복 재생 ──
   const TRK = { waste: 'bgm/waste.mp3', temple: 'bgm/temple.mp3', hell: 'bgm/hell.mp3' }, tbuf = {}; let tKey = null, tCur = null, tSrc = null, tGain = null;
+  let tPre = false;
+  function loadTrack(k) { if (tbuf[k] !== undefined) return Promise.resolve(); tbuf[k] = null; return fetch(TRK[k]).then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no))).then(d => { tbuf[k] = d; trackUpdate(); }).catch(() => { tbuf[k] = false; }); }
+  function preload(first) { let p = first ? loadTrack(first) : Promise.resolve(); for (const k of Object.keys(TRK)) if (k !== first) p = p.then(() => loadTrack(k)); }      // 하나씩 차례로(동시에 풀면 버벅일 수 있음)
   function trackUpdate() {
     if (!ac) return; const want = mode === 'fight' && tKey && TRK[tKey] ? tKey : null;
-    if (want && tbuf[want] === undefined) { tbuf[want] = null; fetch(TRK[want]).then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no))).then(d => { tbuf[want] = d; trackUpdate(); }).catch(() => { tbuf[want] = false; }); }
+    if (!tPre) { tPre = true; preload(want); }      // 소리가 켜지는 첫 터치 때 모든 맵 노래를 미리 받아 풀어 둠 → 게임 시작하자마자 재생
+    if (want && tbuf[want] === undefined) loadTrack(want);
     const play = want && tbuf[want] ? want : null; if (play === tCur) return;
     if (tSrc) { try { tGain.gain.setTargetAtTime(0, ac.currentTime, 0.12); tSrc.stop(ac.currentTime + 0.6); } catch (e) { /* 무시 */ } tSrc = null; }
     tCur = play; if (!play) return;
@@ -2990,7 +2994,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 98;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 99;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
