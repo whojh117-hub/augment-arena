@@ -1272,6 +1272,7 @@ class Game {
       let w = -1; if (a0 && !a1) w = 0; else if (a1 && !a0) w = 1;
       if (w >= 0) this.score[w]++;
       this.res = { w }; this.ph = 'end'; this.timer = ROUNDEND_TIME;
+      this.pools = this.pools.filter(z => z.kind !== 'trap'); for (const f of this.fx) if (f.k === 'trap') f.life = 0;      // 라운드가 끝나면 닌자 덫도 바로 사라짐
     }
   }
 
@@ -2848,7 +2849,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 93;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 94;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,

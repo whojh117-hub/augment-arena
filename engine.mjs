@@ -975,6 +975,7 @@ class Game {
       let w = -1; if (a0 && !a1) w = 0; else if (a1 && !a0) w = 1;
       if (w >= 0) this.score[w]++;
       this.res = { w }; this.ph = 'end'; this.timer = ROUNDEND_TIME;
+      this.pools = this.pools.filter(z => z.kind !== 'trap'); for (const f of this.fx) if (f.k === 'trap') f.life = 0;      // 라운드가 끝나면 닌자 덫도 바로 사라짐
     }
   }
 
@@ -1050,4 +1051,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 93;
+export const BUILD = 94;
