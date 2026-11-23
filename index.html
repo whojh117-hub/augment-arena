@@ -85,6 +85,8 @@
   #nickBox .tag { margin: 0; font-size: 12px; }
   #nick { width: 190px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 15px var(--body); text-align: center; }
   #joinCode { width: 150px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 20px var(--body); text-align: center; letter-spacing: 3px; text-transform: lowercase; }
+  #hostRow { display: flex; align-items: baseline; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  #hostNick { font: 700 20px var(--body, system-ui); color: #e8edf7; }
   #hostCode { font: 400 64px var(--display); letter-spacing: 8px; color: var(--me); }
   .rooms { display: flex; flex-direction: column; gap: 6px; min-width: 300px; color: var(--dim); font-size: 13px; text-align: center; }
   .rooms .room { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; font: 700 15px var(--body); cursor: pointer; }
@@ -208,7 +210,7 @@
         <div class="tag" style="margin-top:4px">열린 방</div>
         <div id="roomList" class="rooms"></div>
       </div>
-      <div id="netHost" class="netbox" hidden><div class="tag">방 코드</div><div id="hostCode"></div><div class="tag" id="hostChar"></div><button class="btn ghost" id="btnHostCancel">방 닫기</button></div>
+      <div id="netHost" class="netbox" hidden><div class="tag">방 코드</div><div id="hostRow"><div id="hostCode"></div><span id="hostNick"></span></div><div class="tag" id="hostChar"></div><button class="btn ghost" id="btnHostCancel">방 닫기</button></div>
       <div class="row"><button class="btn ghost" id="btnReload" hidden>새로고침</button><button class="btn ghost" id="btnNetBack">뒤로</button></div>
     </div>
 
@@ -2848,8 +2850,8 @@ const CODE_CH = 'abcdefghjkmnpqrstuvwxyz23456789';
 const randCode = () => Array.from({ length: 4 }, () => CODE_CH[Math.floor(Math.random() * CODE_CH.length)]).join('');
 const isSA = () => !!(window.claude && window.claude.sa);      // 우리 서버에서 연 페이지면 서버가 판정함
 const hasClaude = () => !!(window.claude && typeof claude.use === 'function');
-function netMsg(t, warn) { const el = $('netMsg'); el.textContent = t; el.style.color = warn ? '#ff9a5a' : ''; }
-const myLabel = () => (selKey === 'random' ? '🎲 랜덤 (시작할 때 정해져요)' : CHARS[myChar].icon + ' ' + CHARS[myChar].name);
+function netMsg(t, warn) { const el = $('netMsg'); el.innerHTML = t; el.style.color = warn ? '#ff9a5a' : ''; }
+const myLabel = () => (selKey === 'random' ? '🎲 랜덤 (시작할 때 정해져요)' : menuIc(myChar) + ' ' + CHARS[myChar].name);
 function lobbyPresence(p) { if (net.room) net.room.presence(p).catch(() => {}); }
 function newestPeerVersion() { let v = 0; if (net.room) for (const p of net.room.peers()) if (!p.isMe && p.presence && p.presence.v > v) v = p.presence.v; return v; }
 
@@ -2929,8 +2931,8 @@ async function netHost() {
   try { net.m = await net.room.join('g-' + net.code); } catch (e) { netMsg('방을 만들지 못했어요(' + (e && e.code) + '). 잠시 뒤 다시 해보세요.', true); net.role = 'none'; return; }
   net.m.presence({ r: 'h', c: myChar, v: BUILD, nk: myNick, rnd: selKey === 'random' ? 1 : 0 }).catch(() => {});
   lobbyPresence({ o: net.code, c: myChar, rnd: selKey === 'random' ? 1 : 0 });
-  $('hostChar').textContent = '내 캐릭터: ' + myLabel();
-  $('netBtns').hidden = true; $('netHost').hidden = false; $('hostCode').textContent = net.code.toUpperCase();
+  $('hostChar').innerHTML = '내 캐릭터: ' + myLabel();
+  $('netBtns').hidden = true; $('netHost').hidden = false; $('hostCode').textContent = net.code.toUpperCase(); $('hostNick').textContent = myNick || '';
   netMsg('상대를 기다리는 중… 코드를 알려주거나, 상대가 "열린 방"에서 이 방을 고르면 시작돼요.');
   net.offPeers = isSA() ? null : net.m.onPeers(hostPeers, () => {});
 }
@@ -2994,7 +2996,7 @@ function quadLobby() {
   if (!net.m || net.started || !net.quad) return;
   const n = quadCount(), vs = net.m.peers().find(p => !p.isMe && p.presence && p.presence.v && p.presence.v !== BUILD);
   if (vs) { versionBlock(vs.presence.v); return; }
-  if (net.role === 'host') { $('hostChar').textContent = '2v2 · ' + n + '/4명 모였어요 · 내 캐릭터: ' + myLabel(); lobbyPresence({ o: net.code, m: 2, n, c: myChar, v: BUILD }); }
+  if (net.role === 'host') { $('hostChar').innerHTML = '2v2 · ' + n + '/4명 모였어요 · 내 캐릭터: ' + myLabel(); lobbyPresence({ o: net.code, m: 2, n, c: myChar, v: BUILD }); }
   else netMsg('2v2 방 ' + net.code.toUpperCase() + ' · ' + n + '/4명 모였어요(내 캐릭터: ' + myLabel() + '). 4명이 모이면 시작해요. 들어온 순서대로 1·2번째가 한 팀이에요.');
 }
 async function quadOpen(code, role) {
@@ -3007,7 +3009,7 @@ async function quadOpen(code, role) {
 }
 async function netHost2() {
   if (!(await quadOpen(randCode(), 'host'))) return;
-  $('netBtns').hidden = true; $('netHost').hidden = false; $('hostCode').textContent = net.code.toUpperCase();
+  $('netBtns').hidden = true; $('netHost').hidden = false; $('hostCode').textContent = net.code.toUpperCase(); $('hostNick').textContent = myNick || '';
   netMsg('2v2 방이에요. 코드를 알려주거나 "열린 방"에서 고르게 하세요. 4명이 모이면 자동으로 시작해요.'); quadLobby();
 }
 async function netJoin2(code) {
