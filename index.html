@@ -2433,7 +2433,10 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
     const Pl = game.players; if (!Pl) return;
     for (const p of Pl) {      // 몸 둘레의 기운
       if (!p.alive || (p.team !== Pl[0].team && p.stl > 0)) continue; const id = p.ch.id, x = p.x, y = p.y;
-      if (id === 'ninja' && (p.nin | 0) >= 4) { const h = hist[p.idx]; if (h) [3, 6, 9].forEach((k, i) => { const z = h.a[k]; if (!z || hyp(z[0] - x, z[1] - y) < 3) return; c.save(); c.globalAlpha = 0.22 - i * 0.06; c.fillStyle = '#3a404e'; c.strokeStyle = '#9aa4b8'; c.lineWidth = 2; c.beginPath(); c.arc(z[0], z[1], R, 0, TAU); c.fill(); c.stroke(); c.restore(); }); }
+      if (id === 'ninja' && (p.nin | 0) >= 4) {      // 인술 4스택: 움직이는 반대쪽으로 바람 선이 흘러 빨라 보이게
+        const h = hist[p.idx], z = h && h.a[3]; if (z) { const vx = x - z[0], vy = y - z[1], vl = hyp(vx, vy); if (vl > 8) { const ux = vx / vl, uy = vy / vl, nx = -uy, ny = ux; c.save(); c.lineCap = 'round'; c.strokeStyle = '#e8edf7';
+          for (let k = -2; k <= 2; k++) { const o = k * 7, f = 0.5 + 0.5 * Math.sin(tm * 26 + k * 1.9), L = (k === 0 ? 30 : 20) + f * 16, sx = x - ux * (R * Math.cos(o / R) + 2) + nx * o, sy = y - uy * (R * Math.cos(o / R) + 2) + ny * o; c.globalAlpha = (k === 0 ? 0.75 : 0.5) * (0.6 + 0.4 * f); c.lineWidth = k === 0 ? 2.6 : 1.8; c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx - ux * L, sy - uy * L); c.stroke(); }
+          c.restore(); } } }
       if (id === 'ninja' && p.haste > 0) { c.save(); c.strokeStyle = '#e8edf7'; c.lineCap = 'round'; c.lineWidth = 2.5; for (let i = 0; i < 3; i++) { const s0 = -tm * 7 + i * TAU / 3, rr = R + 9 + i * 3; c.globalAlpha = 0.65; c.beginPath(); c.arc(x, y, rr, s0, s0 + 1.3); c.stroke(); } c.restore(); }
       if (LITE.on && ((id === 'tank' && p.rage) || (id === 'assassin' && p.emp && !(p.stl > 0)))) { c.save(); c.strokeStyle = id === 'tank' ? '#ffd21a' : '#ff2a2a'; c.lineWidth = 3; c.globalAlpha = 0.85; c.beginPath(); c.arc(x, y, R + 6, 0, TAU); c.stroke(); c.restore(); continue; }
       if (id === 'tank' && p.rage) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.9; c.drawImage(sprite('#ffd21a'), x - (R + 20), y - (R + 20), (R + 20) * 2, (R + 20) * 2); c.restore(); }
@@ -3078,7 +3081,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 104;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 105;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
