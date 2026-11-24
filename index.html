@@ -85,6 +85,10 @@
   #setOv { position: absolute; inset: 0; z-index: 7; background: #05070b99; border-radius: 10px; overflow: hidden; }
   #setOv .sdr { position: absolute; top: 0; right: 0; bottom: 0; width: 360px; max-width: 92%; background: var(--surface); border-left: 2px solid #4aa8ff; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; animation: sdrIn .22s ease; }
   @keyframes sdrIn { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes sdrOut { from { transform: none; } to { transform: translateX(100%); } }
+  @keyframes setFadeIn { from { background: #05070b00; } to { background: #05070b99; } }
+  @keyframes setFadeOut { from { background: #05070b99; } to { background: #05070b00; } }
+  #setOv { animation: setFadeIn .22s ease; } #setOv.closing { animation: setFadeOut .22s ease forwards; pointer-events: none; } #setOv.closing .sdr { animation: sdrOut .22s ease forwards; }
   #setOv .sh { display: flex; align-items: center; justify-content: space-between; } #setOv .sh b { font: 900 24px var(--body); color: #cfe3ff; } #setOv .sh .btn { padding: 6px 14px; font-size: 16px; }
   #setOv .ss { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); } #setOv .ss:last-child { border-bottom: 0; }
   #setOv .st { font: 700 13px var(--body); color: var(--dim); } #setOv .sd { font-size: 12px; color: var(--dim); }
@@ -194,7 +198,6 @@
       <div class="note" id="verTag" style="font-size:11px;opacity:.7"></div>
       <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
       <div id="noticeOv" hidden><div class="nbox"><div class="nh">📢 업데이트 안내 <small>v90</small></div><ul><li><b>🥷 닌자 추가</b><span>덫과 인술 스택으로 싸우는 스피드형 신규 캐릭터가 나왔어요</span></li><li><b>❤️ 체력바 개선</b><span>피해를 받으면 하얀 잔상 바가 현재 체력까지 따라 내려와요</span></li></ul><button type="button" class="btn" id="btnNoticeOk">확인</button></div></div>
-      <div id="sndOv" hidden><div class="nbox"><div class="nh">🔊 소리</div><div class="sr"><button type="button" class="btn ghost" id="sndBgmT">🎵 배경음악 켜짐</button><input type="range" id="sndBgmV" min="0" max="100" aria-label="배경음악 음량"></div><div class="sr"><button type="button" class="btn ghost" id="sndSfxT">🔔 효과음 켜짐</button><input type="range" id="sndSfxV" min="0" max="100" aria-label="효과음 음량"></div><button type="button" class="btn" id="btnSndOk">닫기</button></div></div>
       <div id="setOv" hidden><div class="sdr" role="dialog" aria-label="설정">
         <div class="sh"><b>설정</b><button type="button" class="btn ghost" id="btnSetX" aria-label="닫기">✕</button></div>
         <div class="ss"><div class="st">닉네임</div><input id="nick" maxlength="8" placeholder="최대 8글자" autocomplete="off" spellcheck="false"></div>
@@ -243,6 +246,8 @@
       <div class="row"><button class="btn ghost" id="btnReload" hidden>새로고침</button><button class="btn ghost" id="btnNetBack">뒤로</button></div>
     </div>
 
+    <!-- 소리 창: 일시정지 화면에서도 열리도록 메뉴 밖에 둠 -->
+    <div id="sndOv" hidden><div class="nbox"><div class="nh">🔊 소리</div><div class="sr"><button type="button" class="btn ghost" id="sndBgmT">🎵 배경음악 켜짐</button><input type="range" id="sndBgmV" min="0" max="100" aria-label="배경음악 음량"></div><div class="sr"><button type="button" class="btn ghost" id="sndSfxT">🔔 효과음 켜짐</button><input type="range" id="sndSfxV" min="0" max="100" aria-label="효과음 음량"></div><button type="button" class="btn" id="btnSndOk">닫기</button></div></div>
     <div id="pauseOv" class="panel" hidden>
       <h2>⚙️ 일시정지</h2>
       <div style="display:flex;flex-direction:column;gap:12px;align-items:stretch;min-width:220px"><button class="btn" id="btnResume">계속하기</button><button class="btn ghost" id="btnSnd2">🔊 소리</button><button class="btn ghost" id="btnQuit2">나가기</button></div>
@@ -1567,7 +1572,7 @@ function cfgFold(f) { $('cfgBar').classList.toggle('fold', f); $('cfgTab').hidde
 $('cfgFold').onclick = () => cfgFold(true); $('cfgTab').onclick = () => cfgFold(false);
 $('cfgModeE').onclick = () => cfgMode('edit'); $('cfgModeP').onclick = () => cfgMode('play');
 $('cfgAim').oninput = e => { ctlCfg.aim = Number(e.target.value); $('cfgAimV').textContent = ctlCfg.aim; saveCtl(); };
-$('btnCfg').onclick = () => { $('setOv').hidden = true; cfgOpen(); }; $('cfgDone').onclick = cfgClose;
+$('btnCfg').onclick = () => { window.setClose ? setClose(true) : ($('setOv').hidden = true); cfgOpen(); }; $('cfgDone').onclick = cfgClose;
 $('cfgReset').onclick = () => { ctlCfg = { b: {}, op: 93, st: 100, aim: ctlCfg.aim || 80 }; saveCtl(); applyLayout(); $('cfgOp').value = 93; $('cfgOpV').textContent = '93%'; cfgSelect(cfg.sel); };
 $('cfgSize').oninput = e => { if (cfg.sel === 'hintL') { ctlCfg.st = Number(e.target.value); $('cfgSizeV').textContent = ctlCfg.st + '%'; applyLayout(); saveCtl(); return; } const id = cfg.sel, el = $(id), r = el.getBoundingClientRect(), c = ctlCfg.b[id] || { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight, s: 100 }; c.s = Number(e.target.value); ctlCfg.b[id] = c; $('cfgSizeV').textContent = c.s + '%'; applyLayout(); saveCtl(); };
 $('cfgOp').oninput = e => { ctlCfg.op = Number(e.target.value); $('cfgOpV').textContent = ctlCfg.op + '%'; applyLayout(); saveCtl(); };
@@ -2519,9 +2524,12 @@ document.addEventListener('pointerdown', e => {      // 첫 터치에서 소리�
     $('setLite').textContent = VFX.lite ? '✨ 켜짐 (간단히)' : '✨ 꺼짐 (화려하게)'; $('setLite').classList.toggle('on', VFX.lite);
   };
   // 설정 창: 오른쪽에서 나옴 (닉네임 · 소리 · 이펙트 간단히 · 조작 설정 · 튜토리얼)
-  $('btnSet').onclick = () => { upd(); $('setOv').hidden = false; };
-  $('btnSetX').onclick = () => { $('setOv').hidden = true; };
-  $('setOv').addEventListener('pointerdown', e => { if (e.target === $('setOv')) $('setOv').hidden = true; });
+  let setT = 0;
+  const setClose = (now) => { const o = $('setOv'); if (o.hidden) return; clearTimeout(setT); if (now) { o.classList.remove('closing'); o.hidden = true; return; } o.classList.add('closing'); setT = setTimeout(() => { o.hidden = true; o.classList.remove('closing'); }, 220); };      // 닫을 때 오른쪽으로 부드럽게 들어감
+  window.setClose = setClose;
+  $('btnSet').onclick = () => { clearTimeout(setT); upd(); const o = $('setOv'); o.classList.remove('closing'); o.hidden = false; };
+  $('btnSetX').onclick = () => setClose();
+  $('setOv').addEventListener('pointerdown', e => { if (e.target === $('setOv')) setClose(); });
   $('setBgmT').onclick = () => { SND.set('bgm', SND.st.bgm ? 0 : 1); upd(); }; $('setSfxT').onclick = () => { SND.set('sfx', SND.st.sfx ? 0 : 1); upd(); };
   $('setBgmV').oninput = e => { SND.set('bv', e.target.value / 100); }; $('setSfxV').oninput = e => { SND.set('sv', e.target.value / 100); };
   $('setLite').onclick = () => { VFX.lite = !VFX.lite; try { localStorage.setItem('aa_lite', VFX.lite ? '1' : '0'); } catch (e) { /* 무시 */ } upd(); };

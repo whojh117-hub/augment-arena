@@ -88,6 +88,16 @@ const server = http.createServer((req, res) => {
   }
   if (url === '/health') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('ok ' + hub.conns.size); return; }
   if (url === '/favicon.ico') { res.writeHead(204); res.end(); return; }
+  const bm = /^\/bgm\/([a-z0-9_-]+)\.mp3$/.exec(url);      // 맵별 노래
+  if (bm) {      // 아이폰·아이패드 사파리는 오디오를 부분 요청(Range)으로 받으므로 지원
+    fs.readFile(path.join(__dirname, 'public', 'bgm', bm[1] + '.mp3'), (e, d) => {
+      if (e) { res.writeHead(404); res.end('Not found'); return; }
+      const rg = /bytes=(\d*)-(\d*)/.exec(req.headers.range || ''), H = { 'content-type': 'audio/mpeg', 'accept-ranges': 'bytes', 'cache-control': 'public, max-age=86400' };
+      if (rg) { const st = rg[1] ? +rg[1] : Math.max(0, d.length - +rg[2]), en = rg[1] && rg[2] ? Math.min(+rg[2], d.length - 1) : d.length - 1; if (st >= d.length || st > en) { res.writeHead(416, { 'content-range': 'bytes */' + d.length }); res.end(); return; } res.writeHead(206, Object.assign(H, { 'content-range': 'bytes ' + st + '-' + en + '/' + d.length, 'content-length': en - st + 1 })); res.end(d.subarray(st, en + 1)); return; }
+      res.writeHead(200, Object.assign(H, { 'content-length': d.length })); res.end(d);
+    });
+    return;
+  }
   res.writeHead(404); res.end('Not found');
 });
 server.on('upgrade', (req, socket) => {
