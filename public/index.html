@@ -2799,7 +2799,8 @@ function trailOf(p) {
 }
 const haloOff = {};      // 천사 링: 법률이 끝난 시각
 function drawGhost(now) {      // 닌자 되감기: 돌아갈 자리(2초 전)를 희미한 잔상으로
-  const p = game.players[0]; if (p.ch.id !== 'ninja' || !p.alive || !p.hist || !p.hist.length || p.skCd[2] > 0.4 || (game.ph && game.ph !== 'fight')) return;
+  const p = game.players[0]; if (!p.ch.skills.some(k => k.fx.some(f => f.t === 'rewind'))) return;      // 되감기 스킬이 없으면(지금 닌자는 없음) 그리지 않음
+  if (p.ch.id !== 'ninja' || !p.alive || !p.hist || !p.hist.length || p.skCd[2] > 0.4 || (game.ph && game.ph !== 'fight')) return;
   const h = p.hist[0], a = p.skCd[2] > 0 ? 0.25 : 0.55;
   ctx.save(); ctx.globalAlpha = a; ctx.setLineDash([5, 5]); ctx.lineWidth = 2; ctx.strokeStyle = '#b9a6ff'; ctx.fillStyle = '#b9a6ff33';
   ctx.beginPath(); ctx.arc(h.x, h.y, R, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
@@ -3077,7 +3078,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 103;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 104;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
