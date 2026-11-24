@@ -197,7 +197,7 @@
       <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button><button class="btn ghost" id="btnRand">🎲 랜덤</button></div>
       <div class="note" id="verTag" style="font-size:11px;opacity:.7"></div>
       <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
-      <div id="noticeOv" hidden><div class="nbox"><div class="nh">📢 업데이트 안내 <small>v90</small></div><ul><li><b>🥷 닌자 추가</b><span>덫과 인술 스택으로 싸우는 스피드형 신규 캐릭터가 나왔어요</span></li><li><b>❤️ 체력바 개선</b><span>피해를 받으면 하얀 잔상 바가 현재 체력까지 따라 내려와요</span></li></ul><button type="button" class="btn" id="btnNoticeOk">확인</button></div></div>
+      <div id="noticeOv" hidden><div class="nbox"><div class="nh">📢 업데이트 안내 <small>v105</small></div><ul><li><b>✨ 스킬 이펙트·효과음·맵 노래 추가</b><span>모든 캐릭터의 스킬 이펙트와 효과음이 새로 생기고, 황무지·신전·지옥 맵에 노래가 나와요</span></li><li><b>⚙️ 설정 창 추가</b><span>오른쪽 위 설정에서 닉네임·소리·이펙트 간단히·조작 설정·튜토리얼을 바꿀 수 있어요</span></li><li><b>🤖 컴퓨터 개선</b><span>컴퓨터가 스킬을 더 똑똑하게 써요</span></li></ul><button type="button" class="btn" id="btnNoticeOk">확인</button></div></div>
       <div id="setOv" hidden><div class="sdr" role="dialog" aria-label="설정">
         <div class="sh"><b>설정</b><button type="button" class="btn ghost" id="btnSetX" aria-label="닫기">✕</button></div>
         <div class="ss"><div class="st">닉네임</div><input id="nick" maxlength="8" placeholder="최대 8글자" autocomplete="off" spellcheck="false"></div>
@@ -1502,7 +1502,7 @@ function buildChars() {
 $('btnRand').onclick = () => { randMode = !randMode; if (randMode) selSet = PLAY_ORDER.slice(); setSel(); };      // 랜덤을 누르면 모든 캐릭터에 불이 들어옴(눌러서 끌 수 있음), 다시 누르면 랜덤 해제
 $('btnAug').onclick = () => { const t = $('menuToast'); if (t) t.remove(); $('augOv').hidden = false; };
 $('btnAugBack').onclick = () => { $('augOv').hidden = true; };
-{ let seen = ''; try { seen = localStorage.getItem('aa_notice') || ''; } catch (e) { /* 무시 */ } if (seen !== '90') $('noticeOv').hidden = false; $('btnNoticeOk').onclick = () => { $('noticeOv').hidden = true; try { localStorage.setItem('aa_notice', '90'); } catch (e) { /* 무시 */ } }; }      // 업데이트 공지: 버전마다 한 번
+{ let seen = ''; try { seen = localStorage.getItem('aa_notice') || ''; } catch (e) { /* 무시 */ } if (seen !== '105') $('noticeOv').hidden = false; $('btnNoticeOk').onclick = () => { $('noticeOv').hidden = true; try { localStorage.setItem('aa_notice', '105'); } catch (e) { /* 무시 */ } }; }      // 업데이트 공지: 버전마다 한 번
 buildChars();
 function setDiff(d) {
   diffKey = d;
