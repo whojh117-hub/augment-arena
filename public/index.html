@@ -1876,18 +1876,20 @@ const SND = (() => {
     [110, 220, 261.63, 329.63], [87.31, 174.61, 220, 261.63], [98, 196, 246.94, 293.66], [82.41, 164.81, 207.65, 246.94]];      // Am F C G | Am F G E
   const LEAD = [[3, 0, 2, 0, 3, 0, 1, 0, 2, 0, 0, 3, 0, 2, 0, 0], [2, 0, 3, 0, 0, 3, 0, 2, 1, 0, 2, 0, 3, 0, 0, 0]];
   // ── 맵별 노래(mp3): 있으면 합성 배경음악 대신 반복 재생 ──
-  const TRK = { waste: 'bgm/waste.mp3', temple: 'bgm/temple.mp3', hell: 'bgm/hell.mp3' }, tbuf = {}; let tKey = null, tCur = null, tSrc = null, tGain = null;
-  let tPre = false;
-  function loadTrack(k) { if (tbuf[k] !== undefined) return Promise.resolve(); tbuf[k] = null; return fetch(TRK[k]).then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no))).then(d => { tbuf[k] = d; trackUpdate(); }).catch(() => { tbuf[k] = false; }); }
-  function preload(first) { let p = first ? loadTrack(first) : Promise.resolve(); for (const k of Object.keys(TRK)) if (k !== first) p = p.then(() => loadTrack(k)); }      // 하나씩 차례로(동시에 풀면 버벅일 수 있음)
+  //  통째로 풀어 두면(디코딩) 곡당 수십 MB라 아이패드가 버벅일 수 있어, 오디오 태그로 조금씩 읽으며 재생(메모리 적음)
+  const TRK = { waste: 'bgm/waste.mp3', temple: 'bgm/temple.mp3', hell: 'bgm/hell.mp3' }, tel = {}; let tKey = null, tCur = null, tPre = false;
+  function mkEl(k) {
+    if (tel[k]) return tel[k]; const el = new Audio(TRK[k]); el.loop = true; el.preload = 'auto'; el.playsInline = true; el.setAttribute('playsinline', '');
+    try { const src = ac.createMediaElementSource(el), g = ac.createGain(); g.gain.value = 2; src.connect(g); g.connect(bgmG); } catch (e) { /* 연결 실패 시 기본 출력 */ }
+    return (tel[k] = el);
+  }
   function trackUpdate() {
     if (!ac) return; const want = mode === 'fight' && tKey && TRK[tKey] ? tKey : null;
-    if (!tPre) { tPre = true; preload(want); }      // 소리가 켜지는 첫 터치 때 모든 맵 노래를 미리 받아 풀어 둠 → 게임 시작하자마자 재생
-    if (want && tbuf[want] === undefined) loadTrack(want);
-    const play = want && tbuf[want] ? want : null; if (play === tCur) return;
-    if (tSrc) { try { tGain.gain.setTargetAtTime(0, ac.currentTime, 0.12); tSrc.stop(ac.currentTime + 0.6); } catch (e) { /* 무시 */ } tSrc = null; }
-    tCur = play; if (!play) return;
-    tSrc = ac.createBufferSource(); tSrc.buffer = tbuf[play]; tSrc.loop = true; tGain = ac.createGain(); tGain.gain.value = 2; tSrc.connect(tGain); tGain.connect(bgmG); tSrc.start();
+    if (!tPre) { tPre = true; for (const k of Object.keys(TRK)) { const el = mkEl(k); el.muted = true; const pr = el.play(); if (pr) pr.then(() => { if (tCur !== k) el.pause(); el.muted = false; }).catch(() => { el.muted = false; }); } }      // 첫 터치 때 미리 받아 두고 재생 권한도 열어 둠
+    if (want === tCur) return;
+    if (tCur && tel[tCur]) tel[tCur].pause();
+    tCur = want; if (!want) return;
+    const el = mkEl(want); el.muted = false; try { el.currentTime = 0; } catch (e) { /* 무시 */ } const pr = el.play(); if (pr) pr.catch(() => {});
   }
   function sched() {
     if (!ac || !st.bgm || ac.state !== 'running') return;
@@ -2045,7 +2047,7 @@ const VFX = (() => {
   const TAU = Math.PI * 2, PMAX = 250, FNT = FONT, EM = EMOJI;
   const S = () => {}, txt = () => {}, shake = a => addShake(a), now = (t, fn) => fn();
     const rnd=(a=0,b=1)=>a+Math.random()*(b-a),eo=t=>1-Math.pow(1-t,3),cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),ad=(a,b)=>{let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;if(d<-Math.PI)d+=TAU;return d},hyp=Math.hypot;
-  let fx = [], parts = [], projs = [], imps = [], tm = 0; const EMPX = { fn: null }, empPend = {}, ST = []; const CAP = { on: false, list: [] };
+  let fx = [], parts = [], projs = [], imps = [], tm = 0, CD = null, freshFx = [], freshB = []; const seenO = new WeakSet(), recentHits = []; const EMPX = { fn: null }, empPend = {}, ST = []; const CAP = { on: false, list: [] };
   const add = (dur, draw, o = {}) => { const e = Object.assign({ t: 0, dur, draw }, o); if (!CAP.on && fx.length < 70) fx.push(e); return e; };
   const later = (t, fn) => { if (CAP.on) { fn(); return null; } return add(t, null, { end: fn }); };
   function P(o) { if (CAP.on || parts.length >= PMAX) return; parts.push(Object.assign({ vx: 0, vy: 0, drag: 2.5, life: 0.5, t: 0, r: 3, col: '#fff', k: 'dot', add: 1, rot: rnd(0, TAU), vr: 0 }, o)); }
@@ -2115,7 +2117,7 @@ t0(){S('c:t0');const a=aimA();add(0.3,(c,e,u)=>{const f=eo(cl(u*2.4)),r=68*f,fd=
 t1(){S('c:t1');cs.shield=3;cs.shHits=[];ringFx(cs.x,cs.y,52,'#7ee7ff',0.35,6);burst(cs.x,cs.y,14,{k:'star',col:'#bff4ff',s:160,life:0.5,r:5});txt(cs.x,cs.y-R-26,'방패 40','#7ee7ff');
   const blk=p=>{const d=hyp(p.x-cs.x,p.y-cs.y);if(cs.shield>0&&d<=R+14){cs.shHits.push({a:Math.atan2(p.y-cs.y,p.x-cs.x),t:0});S('shieldHit');burst(p.x,p.y,8,{k:'spark',col:'#bff4ff',s:220,life:0.25,r:2});txt(p.x,p.y-12,'-8','#7ee7ff');return true}return false};
   later(0.5,()=>foeShot(null,blk));later(1.3,()=>foeShot(null,blk));later(1.6,()=>foeShot(null,blk));return 3.4},
-t2(){S('c:t2');const a=aimA(),D=260,sp=640,dur=D/sp,x0=cs.x,y0=cs.y,ex=cl(x0+Math.cos(a)*D,R,W-R),ey=cl(y0+Math.sin(a)*D,R,H-R),Lp=hyp(ex-x0,ey-y0);
+t2(){S('c:t2');const a=aimA(),D=CD||260,sp=640,dur=D/sp,x0=cs.x,y0=cs.y,ex=cl(x0+Math.cos(a)*D,R,W-R),ey=cl(y0+Math.sin(a)*D,R,H-R),Lp=hyp(ex-x0,ey-y0);
   add(dur+0.15,(c,e,u)=>{const q=1,fd=1-cl(e.t/(dur+0.15));c.save();c.translate(x0,y0);c.rotate(a);c.fillStyle='#5b8def';c.globalAlpha=0.14*fd;c.fillRect(0,-32,Lp,64);c.globalAlpha=0.45*fd;c.fillRect(0,-32,Lp*q,64);c.globalAlpha=0.95*fd;c.strokeStyle='#fff';c.lineWidth=2;c.setLineDash([8,6]);c.strokeRect(0,-32,Lp,64);c.restore();
     c.setLineDash([8,6]);c.strokeStyle='#fff';c.lineWidth=2;c.fillStyle='#5b8def';c.globalAlpha=0.14*fd;c.beginPath();c.arc(ex,ey,100,0,TAU);c.fill();c.globalAlpha=0.4*fd;c.beginPath();c.arc(ex,ey,100*q,0,TAU);c.fill();c.globalAlpha=0.95*fd;c.beginPath();c.arc(ex,ey,100,0,TAU);c.stroke()},{under:1});
   SK.t2go(a,D,dur,x0,y0,ex,ey);return 1.6},
@@ -2275,12 +2277,20 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
     return o;
   }
   function run(p, name, q, foe) {
-    let a = p.aim == null ? 0 : p.aim, snap = SNAP.has(name), q2 = q;
+    let a = p.aim == null ? 0 : p.aim, snap = SNAP.has(name), q2 = q; CD = null;
+    { const near = f => (hyp(f.x - p.x, f.y - p.y) < 45 || hyp(f.x - q.x, f.y - q.y) < 45);
+      const ff = freshFx.filter(f => f.a != null && f.x != null && near(f)), tel = ff.find(f => f.k === 'tele');
+      const fb = freshB.filter(b => b.owner === p.idx), mv = hyp(p.x - q.x, p.y - q.y);
+      if (tel) { a = tel.a; if (name === 't2' || name === 'n3') CD = tel.len; }
+      else if (ff.length) a = ff[ff.length - 1].a;
+      else if (fb.length) { const b = fb[fb.length - 1]; a = Math.atan2(b.vy, b.vx); if (fb.length >= 3) { const m = fb[Math.floor(fb.length / 2)]; a = Math.atan2(m.vy, m.vx); } }
+      else if (mv > 25) a = name === 'a2' ? Math.atan2(q.y - p.y, q.x - p.x) : Math.atan2(p.y - q.y, p.x - q.x); }
     if (name === 'u2') { const wl = (game.pw || []).filter(w => w.own === p.idx && w.a != null).pop(); if (wl) { a = wl.a; snap = true; q2 = { x: wl.cx - Math.cos(a) * (R + 70), y: wl.cy - Math.sin(a) * (R + 70), nin: 0 }; } }      // 실제 벽 위치에 맞춤
     const cs = mkCs(p, q2, snap), dm = mkDm(foe, p), SKs = mk(cs, dm, () => a, teamCol(p));
     if (name === 'n1x') { const tr = game.fx.filter(z => z.k === 'trap' && z.follow === p.idx).pop(), tx = tr ? tr.x : p.x + Math.cos(a) * 150, ty = tr ? tr.y : p.y + Math.sin(a) * 150; burst(tx, ty, 8, { k: 'smoke', col: '140,150,170', s: 70, life: 0.5, r: 10, add: 0 }); return; }
     EMPX.fn = null; const f = SKs[name]; if (f) f.call(SKs);
-    if (name === 'sX' && EMPX.fn) empPend[p.idx] = { fn: EMPX.fn, t: performance.now() };
+    if (name === 'sX' && EMPX.fn) { const nw = performance.now(), h = recentHits.find(z => nw - z.t < 400 && z.team !== p.team && hyp(z.vx - p.x, z.vy - p.y) < 140);
+      if (h) { recentHits.splice(recentHits.indexOf(h), 1); try { EMPX.fn(h.vx, h.vy); } catch (er) { /* 무시 */ } } else empPend[p.idx] = { fn: EMPX.fn, t: nw }; }
   }
   function swapFx(p, x0, y0) {      // 용의 힘 위치 교환: 금색·주황 궤적이 서로 교차하며 즉시 바뀜
     const x1 = p.x, y1 = p.y, mx = (x0 + x1) / 2, my = (y0 + y1) / 2, Ln = hyp(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / Ln, ny = (x1 - x0) / Ln, off = Math.min(70, Ln * 0.35); shake(14);
@@ -2310,6 +2320,9 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
     for (const m of imps) m.life -= dt; imps = imps.filter(m => m.life > 0);
     for (const st of ST) if (st) for (const k in st) st[k] = Math.max(0, st[k] - dt);
     const Pl = game.players; if (!Pl) return;
+    freshFx = []; freshB = [];
+    for (const f of game.fx) if (!seenO.has(f)) { seenO.add(f); freshFx.push(f); }
+    for (const b of (game.bullets || [])) if (!seenO.has(b)) { seenO.add(b); freshB.push(b); }
     Pl.forEach((p, i) => {
       const q = pv[i], fight = game.ph === 'fight', id = p.ch.id;
       if (fight && q && q.ph === 'fight' && q.round === game.round) {
@@ -2338,7 +2351,7 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
   const hist = [];
   function hit(e) {      // 적중: 흰 충격 별 (미리보기의 imps)
     const vic = game.players[e.to]; if (!vic) return; imps.push({ x: e.x, y: e.y + 8, a: rnd(0, 1), life: 0.22, max: 0.22, big: e.d >= 15 });
-    const nw = performance.now();
+    const nw = performance.now(); recentHits.push({ t: nw, vx: vic.x, vy: vic.y, team: vic.team }); if (recentHits.length > 8) recentHits.shift();
     for (const k in empPend) { const ep = empPend[k], a = game.players[k]; if (nw - ep.t > 400) { delete empPend[k]; continue; } if (a && a.team !== vic.team && hyp(a.x - vic.x, a.y - vic.y) < 130) { delete empPend[k]; try { ep.fn(vic.x, vic.y); } catch (er) { /* 무시 */ } break; } }
   }
   const stOf = i => ST[i] || (ST[i] = { frost: 0, root: 0, bind: 0 });
@@ -2994,7 +3007,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 99;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 101;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
