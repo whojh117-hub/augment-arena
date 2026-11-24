@@ -81,8 +81,22 @@
   .row { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
   #net { background: #0a0d13f5; }
   .netbox { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 300px; }
-  #nickBox { display: flex; align-items: center; gap: 8px; justify-content: flex-end; z-index: 3; }
-  #nickBox .tag { margin: 0; font-size: 12px; }
+  #btnSet { justify-self: end; background: none; border: 1px solid var(--line); border-radius: 12px; color: var(--fg); font: 900 17px var(--body); padding: 10px 20px; cursor: pointer; }
+  #setOv { position: absolute; inset: 0; z-index: 7; background: #05070b99; border-radius: 10px; overflow: hidden; }
+  #setOv .sdr { position: absolute; top: 0; right: 0; bottom: 0; width: 360px; max-width: 92%; background: var(--surface); border-left: 2px solid #4aa8ff; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; animation: sdrIn .22s ease; }
+  @keyframes sdrIn { from { transform: translateX(100%); } to { transform: none; } }
+  #setOv .sh { display: flex; align-items: center; justify-content: space-between; } #setOv .sh b { font: 900 24px var(--body); color: #cfe3ff; } #setOv .sh .btn { padding: 6px 14px; font-size: 16px; }
+  #setOv .ss { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); } #setOv .ss:last-child { border-bottom: 0; }
+  #setOv .st { font: 700 13px var(--body); color: var(--dim); } #setOv .sd { font-size: 12px; color: var(--dim); }
+  #setOv #nick { width: 100%; }
+  #setOv .sr2 { display: flex; align-items: center; gap: 10px; } #setOv .sr2 input[type=range] { flex: 1; min-width: 0; }
+  #setOv .tg { flex: 0 0 auto; min-width: 132px; background: #141a26; border: 1px solid var(--line); color: var(--fg); border-radius: 10px; padding: 9px 12px; font: 700 14px var(--body); cursor: pointer; text-align: left; }
+  #setOv .tg.on { border-color: #4aa8ff; background: #16345e; } #setOv .tg.off { opacity: .55; }
+  #setOv .wide { width: 100%; } #setOv .btn.wide { padding: 11px 12px; font-size: 16px; }
+  #tutOv { position: fixed; inset: 0; z-index: 92; background: #05070bd9; display: flex; align-items: center; justify-content: center; }
+  #tutOv .nbox { width: min(560px, 92vw); background: var(--surface); border: 2px solid #4aa8ff; border-radius: 18px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  #tutOv .nh { font: 900 24px var(--body); color: #cfe3ff; } #tutOv ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  #tutOv li > b { display: block; font-size: 17px; } #tutOv li span { display: block; font-size: 15px; color: #c3cde0; margin-top: 2px; } #tutOv li span b { color: var(--fg); }
   #nick { width: 190px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 15px var(--body); text-align: center; }
   #joinCode { width: 150px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 20px var(--body); text-align: center; letter-spacing: 3px; text-transform: lowercase; }
   #hostRow { display: flex; align-items: baseline; justify-content: center; gap: 14px; flex-wrap: wrap; }
@@ -173,15 +187,30 @@
       <div id="menuHead">
         <div><h1 class="logo"><span class="a">증강</span> <span class="b">아레나</span></h1><p class="tag" style="font-size:13px">캐릭터를 고르고 대전 방식을 선택하세요</p></div>
         <button type="button" id="btnAug">✨ 증강</button>
-        <div id="nickBox"><span class="tag">닉네임</span><input id="nick" maxlength="8" placeholder="최대 8글자" autocomplete="off" spellcheck="false"></div>
+        <button type="button" id="btnSet">설정</button>
       </div>
       <div id="menuMain"><div class="chars" id="chars"></div><div class="info" id="info"></div></div>
-      <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button><button class="btn ghost" id="btnCfg">🎮 조작 설정</button><button class="btn ghost" id="btnRand">🎲 랜덤</button><button class="btn ghost" id="btnSnd">🔊 소리</button></div>
-      <div class="note"><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심 · <b>오른쪽</b> 큰 버튼은 공격(톡=1회, 꾹=자동) · 스킬은 <b>누른 채 드래그한 방향</b>으로 시전(탭하면 상대 쪽) · 초록 버튼은 대시(무적, 쿨 5초) · 3라운드 먼저 이기면 승리</div>
+      <div class="row"><button class="btn" id="btnStart">컴퓨터 대전</button><button class="btn blue" id="btnOnline">🌐 온라인 대전</button><button class="btn ghost" id="btnRand">🎲 랜덤</button></div>
       <div class="note" id="verTag" style="font-size:11px;opacity:.7"></div>
       <div id="portraitHint">화면을 가로로 돌리면 더 넓게 플레이할 수 있어요</div>
       <div id="noticeOv" hidden><div class="nbox"><div class="nh">📢 업데이트 안내 <small>v90</small></div><ul><li><b>🥷 닌자 추가</b><span>덫과 인술 스택으로 싸우는 스피드형 신규 캐릭터가 나왔어요</span></li><li><b>❤️ 체력바 개선</b><span>피해를 받으면 하얀 잔상 바가 현재 체력까지 따라 내려와요</span></li></ul><button type="button" class="btn" id="btnNoticeOk">확인</button></div></div>
       <div id="sndOv" hidden><div class="nbox"><div class="nh">🔊 소리</div><div class="sr"><button type="button" class="btn ghost" id="sndBgmT">🎵 배경음악 켜짐</button><input type="range" id="sndBgmV" min="0" max="100" aria-label="배경음악 음량"></div><div class="sr"><button type="button" class="btn ghost" id="sndSfxT">🔔 효과음 켜짐</button><input type="range" id="sndSfxV" min="0" max="100" aria-label="효과음 음량"></div><button type="button" class="btn" id="btnSndOk">닫기</button></div></div>
+      <div id="setOv" hidden><div class="sdr" role="dialog" aria-label="설정">
+        <div class="sh"><b>설정</b><button type="button" class="btn ghost" id="btnSetX" aria-label="닫기">✕</button></div>
+        <div class="ss"><div class="st">닉네임</div><input id="nick" maxlength="8" placeholder="최대 8글자" autocomplete="off" spellcheck="false"></div>
+        <div class="ss"><div class="st">소리</div>
+          <div class="sr2"><button type="button" class="tg" id="setBgmT">🎵 배경음악</button><input type="range" id="setBgmV" min="0" max="100" aria-label="배경음악 음량"></div>
+          <div class="sr2"><button type="button" class="tg" id="setSfxT">🔔 효과음</button><input type="range" id="setSfxV" min="0" max="100" aria-label="효과음 음량"></div></div>
+        <div class="ss"><div class="st">이펙트 간단히</div><button type="button" class="tg wide" id="setLite"></button><div class="sd">켜면 파티클·빛 번짐·기운을 줄여 렉을 줄여요 (범위 표시는 그대로)</div></div>
+        <div class="ss"><button type="button" class="btn ghost wide" id="btnCfg">🎮 조작 설정</button></div>
+        <div class="ss"><button type="button" class="btn ghost wide" id="btnTut">📖 튜토리얼</button></div>
+      </div></div>
+      <div id="tutOv" hidden><div class="nbox"><div class="nh">📖 튜토리얼 · 기본 조작</div><ul>
+        <li><b>🕹️ 이동</b><span><b>왼쪽 화면을 터치</b>하면 그 자리가 이동 스틱 중심이 돼요</span></li>
+        <li><b>⚔️ 공격</b><span>오른쪽 큰 버튼: 톡 누르면 1회, 꾹 누르면 자동 공격</span></li>
+        <li><b>✨ 스킬</b><span>버튼을 <b>누른 채 드래그한 방향</b>으로 시전 (탭하면 상대 쪽)</span></li>
+        <li><b>💨 대시</b><span>초록 버튼: 짧게 돌진하며 그동안 무적 (쿨타임 5초)</span></li>
+        <li><b>🏆 승리</b><span>3라운드를 먼저 이기면 승리</span></li></ul><button type="button" class="btn" id="btnTutOk">확인</button></div></div>
       <div id="augOv" hidden><div class="augH"><button type="button" class="btn ghost" id="btnAugBack">← 뒤로</button>✨ 증강 목록</div><div class="augB"><i>✨</i>아직 증강이 출시되지 않았습니다</div></div>
     </div>
 
@@ -1538,7 +1567,7 @@ function cfgFold(f) { $('cfgBar').classList.toggle('fold', f); $('cfgTab').hidde
 $('cfgFold').onclick = () => cfgFold(true); $('cfgTab').onclick = () => cfgFold(false);
 $('cfgModeE').onclick = () => cfgMode('edit'); $('cfgModeP').onclick = () => cfgMode('play');
 $('cfgAim').oninput = e => { ctlCfg.aim = Number(e.target.value); $('cfgAimV').textContent = ctlCfg.aim; saveCtl(); };
-$('btnCfg').onclick = cfgOpen; $('cfgDone').onclick = cfgClose;
+$('btnCfg').onclick = () => { $('setOv').hidden = true; cfgOpen(); }; $('cfgDone').onclick = cfgClose;
 $('cfgReset').onclick = () => { ctlCfg = { b: {}, op: 93, st: 100, aim: ctlCfg.aim || 80 }; saveCtl(); applyLayout(); $('cfgOp').value = 93; $('cfgOpV').textContent = '93%'; cfgSelect(cfg.sel); };
 $('cfgSize').oninput = e => { if (cfg.sel === 'hintL') { ctlCfg.st = Number(e.target.value); $('cfgSizeV').textContent = ctlCfg.st + '%'; applyLayout(); saveCtl(); return; } const id = cfg.sel, el = $(id), r = el.getBoundingClientRect(), c = ctlCfg.b[id] || { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight, s: 100 }; c.s = Number(e.target.value); ctlCfg.b[id] = c; $('cfgSizeV').textContent = c.s + '%'; applyLayout(); saveCtl(); };
 $('cfgOp').oninput = e => { ctlCfg.op = Number(e.target.value); $('cfgOpV').textContent = ctlCfg.op + '%'; applyLayout(); saveCtl(); };
@@ -2041,16 +2070,18 @@ function sndFrame(now) {      // 매 프레임: 상태 변화를 보고 공격·
   S.prev = { ph: game.ph, round: game.round, cnt: Math.ceil(game.timer), sc: game.score.slice(), p: P.map(p => ({ atkCd: p.atkCd, skCd: p.skCd.slice(), dashT: p.dashT, charge: !!p.charge, rage: !!p.rage, adv: !!p.adv })) };
 }
 
+setTimeout(() => VFX.init(), 0);      // 저장된 '이펙트 간단히' 적용
 function addShake(a) { shake = Math.max(shake, a); }
 // ===== 스킬 이펙트: 미리보기의 이펙트 코드를 그대로 옮김 (화면에만 그림 · 서버·판정과 무관). 파티클 상한 250 =====
 const VFX = (() => {
-  const TAU = Math.PI * 2, PMAX = 250, FNT = FONT, EM = EMOJI;
-  const S = () => {}, txt = () => {}, shake = a => addShake(a), now = (t, fn) => fn();
+  const TAU = Math.PI * 2, PMAX = 250, FNT = FONT, EM = EMOJI, LITE = { on: false };
+  try { LITE.on = localStorage.getItem('aa_lite') === '1'; } catch (e) { /* 무시 */ }
+  const S = () => {}, txt = () => {}, shake = a => addShake(LITE.on ? a * 0.6 : a), now = (t, fn) => fn();
     const rnd=(a=0,b=1)=>a+Math.random()*(b-a),eo=t=>1-Math.pow(1-t,3),cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),ad=(a,b)=>{let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;if(d<-Math.PI)d+=TAU;return d},hyp=Math.hypot;
   let fx = [], parts = [], projs = [], imps = [], tm = 0, CD = null, freshFx = [], freshB = []; const seenO = new WeakSet(), recentHits = []; const EMPX = { fn: null }, empPend = {}, ST = []; const CAP = { on: false, list: [] };
   const add = (dur, draw, o = {}) => { const e = Object.assign({ t: 0, dur, draw }, o); if (!CAP.on && fx.length < 70) fx.push(e); return e; };
   const later = (t, fn) => { if (CAP.on) { fn(); return null; } return add(t, null, { end: fn }); };
-  function P(o) { if (CAP.on || parts.length >= PMAX) return; parts.push(Object.assign({ vx: 0, vy: 0, drag: 2.5, life: 0.5, t: 0, r: 3, col: '#fff', k: 'dot', add: 1, rot: rnd(0, TAU), vr: 0 }, o)); }
+  function P(o) { if (CAP.on || parts.length >= (LITE.on ? 100 : PMAX)) return; if (LITE.on && Math.random() < 0.5) return; parts.push(Object.assign({ vx: 0, vy: 0, drag: 2.5, life: 0.5, t: 0, r: 3, col: '#fff', k: 'dot', add: 1, rot: rnd(0, TAU), vr: 0 }, o)); }
   function burst(x,y,n,o){for(let i=0;i<n;i++){const a=o.a!=null?o.a+rnd(-0.5,0.5)*(o.spread??1):rnd(0,TAU),s=(o.s??200)*rnd(0.35,1);P({...o,x:x+rnd(-1,1)*(o.jit||0),y:y+rnd(-1,1)*(o.jit||0),vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:(o.life??0.5)*rnd(0.6,1.2),r:(o.r??3)*rnd(0.6,1.3),vr:rnd(-8,8)})}}
 function ringFx(x,y,r,col,dur=0.3,lw=4){add(dur,(c,e,u)=>{c.globalAlpha=(1-u)*0.9;c.strokeStyle=col;c.lineWidth=lw*(1-u)+1;c.shadowColor=col;c.shadowBlur=0;c.beginPath();c.arc(x,y,r*(0.35+0.65*eo(u)),0,TAU);c.stroke();c.globalAlpha=(1-u)*0.15;c.fillStyle=col;c.fill()})}
   function trail(c,p,col,w,n){p.tr.push([p.x,p.y]);if(p.tr.length>n)p.tr.shift();c.save();c.lineCap='round';c.globalCompositeOperation='lighter';for(let i=1;i<p.tr.length;i++){const k=i/p.tr.length;c.globalAlpha=k*0.7;c.strokeStyle=col;c.lineWidth=w*k;c.beginPath();c.moveTo(...p.tr[i-1]);c.lineTo(...p.tr[i]);c.stroke()}c.restore()}
@@ -2376,6 +2407,8 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
   const rg2 = {};
   function ring2(col) { if (rg2[col]) return rg2[col]; const cv = document.createElement('canvas'); cv.width = cv.height = 68; const x = cv.getContext('2d'), g = x.createRadialGradient(34, 34, 20, 34, 34, 34); g.addColorStop(0, col + '00'); g.addColorStop(1, col + '59'); x.fillStyle = g; x.beginPath(); x.arc(34, 34, 34, 0, 6.2832); x.fill(); return (rg2[col] = cv); }
   const tcol = p => teamCol(p);
+  // 간단히 모드: 화면 전체에서 빛 번짐('lighter' 합성)을 끔. 켜고 끌 때 한 번만 바꿈(매 프레임 바꾸면 오히려 느려짐)
+  function applyGlow() { try { if (LITE.on) Object.defineProperty(ctx, 'globalCompositeOperation', { configurable: true, get: () => 'source-over', set: () => {} }); else delete ctx.globalCompositeOperation; } catch (e) { /* 무시 */ } }
   function under(c) {
     for (const e of fx) if (e.draw && e.under) { c.save(); try { e.draw(c, e, cl(e.t / e.dur)); } catch (er) { /* 무시 */ } c.restore(); }
     const Pl = game.players; if (!Pl) return;
@@ -2383,6 +2416,7 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
       if (!p.alive || (p.team !== Pl[0].team && p.stl > 0)) continue; const id = p.ch.id, x = p.x, y = p.y;
       if (id === 'ninja' && (p.nin | 0) >= 4) { const h = hist[p.idx]; if (h) [3, 6, 9].forEach((k, i) => { const z = h.a[k]; if (!z || hyp(z[0] - x, z[1] - y) < 3) return; c.save(); c.globalAlpha = 0.22 - i * 0.06; c.fillStyle = '#3a404e'; c.strokeStyle = '#9aa4b8'; c.lineWidth = 2; c.beginPath(); c.arc(z[0], z[1], R, 0, TAU); c.fill(); c.stroke(); c.restore(); }); }
       if (id === 'ninja' && p.haste > 0) { c.save(); c.strokeStyle = '#e8edf7'; c.lineCap = 'round'; c.lineWidth = 2.5; for (let i = 0; i < 3; i++) { const s0 = -tm * 7 + i * TAU / 3, rr = R + 9 + i * 3; c.globalAlpha = 0.65; c.beginPath(); c.arc(x, y, rr, s0, s0 + 1.3); c.stroke(); } c.restore(); }
+      if (LITE.on && ((id === 'tank' && p.rage) || (id === 'assassin' && p.emp && !(p.stl > 0)))) { c.save(); c.strokeStyle = id === 'tank' ? '#ffd21a' : '#ff2a2a'; c.lineWidth = 3; c.globalAlpha = 0.85; c.beginPath(); c.arc(x, y, R + 6, 0, TAU); c.stroke(); c.restore(); continue; }
       if (id === 'tank' && p.rage) { c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.9; c.drawImage(sprite('#ffd21a'), x - (R + 20), y - (R + 20), (R + 20) * 2, (R + 20) * 2); c.restore(); }
       if (id === 'assassin' && p.emp && !(p.stl > 0)) { c.save(); c.globalCompositeOperation = 'lighter'; const pu = 0.75 + 0.25 * Math.sin(tm * 7); c.globalAlpha = 0.9 * pu; c.drawImage(sprite('#ff2828'), x - (R + 22), y - (R + 22), (R + 22) * 2, (R + 22) * 2); c.lineCap = 'round'; for (let i = 0; i < 3; i++) { const s0 = tm * 4.2 + i * TAU / 3; c.strokeStyle = i % 2 ? '#ff6b6b' : '#ff2a2a'; c.lineWidth = 3; c.globalAlpha = 0.9; c.beginPath(); c.arc(x, y, R + 8 + Math.sin(tm * 6 + i) * 2, s0, s0 + 1.1); c.stroke(); } c.restore(); }
     }
@@ -2464,24 +2498,38 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
   }
   function bullet(c, b) {
     const I = getInst(b); if (!I) return false;
+    if (LITE.on && I.p.tr && I.p.tr.length > 4) I.p.tr.splice(0, I.p.tr.length - 4);      // 꼬리 짧게
     c.save(); try { I.p.draw(c, I.p); } catch (er) { /* 무시 */ } c.restore(); return true;
   }
-  return { frame, under, over, hit, text, bullet, swap(i) { swapped[i] = true; } };
+  return { frame, under, over, hit, text, bullet, swap(i) { swapped[i] = true; }, get lite() { return LITE.on; }, set lite(v) { LITE.on = !!v; applyGlow(); }, init: applyGlow };
 })();
 
 document.addEventListener('pointerdown', e => {      // 첫 터치에서 소리를 켬(아이패드·브라우저는 터치 뒤에야 소리가 남) + 메뉴 버튼 소리
   SND.resume(); SND2.unlock(); const t = e.target; if (!t || !t.closest) return;
-  if (t.closest('.ch')) SND.sfx('select'); else if (t.closest('#menu button, #net button, #end button, #pauseOv button, #noticeOv button, #augOv button, #sndOv button, #gameBtns button, #cfgBar button')) SND.sfx('click');
+  if (t.closest('.ch')) SND.sfx('select'); else if (t.closest('#menu button, #net button, #end button, #pauseOv button, #noticeOv button, #augOv button, #sndOv button, #setOv button, #tutOv button, #gameBtns button, #cfgBar button')) SND.sfx('click');
 }, true);
 {
   const o = $('sndOv'), upd = () => {
     $('sndBgmT').textContent = SND.st.bgm ? '🎵 배경음악 켜짐' : '🎵 배경음악 꺼짐'; $('sndSfxT').textContent = SND.st.sfx ? '🔔 효과음 켜짐' : '🔔 효과음 꺼짐';
     $('sndBgmT').classList.toggle('off', !SND.st.bgm); $('sndSfxT').classList.toggle('off', !SND.st.sfx);
     $('sndBgmV').value = Math.round(SND.st.bv * 100); $('sndSfxV').value = Math.round(SND.st.sv * 100);
+    $('setBgmT').textContent = SND.st.bgm ? '🎵 배경음악 켜짐' : '🎵 배경음악 꺼짐'; $('setSfxT').textContent = SND.st.sfx ? '🔔 효과음 켜짐' : '🔔 효과음 꺼짐';
+    $('setBgmT').classList.toggle('off', !SND.st.bgm); $('setSfxT').classList.toggle('off', !SND.st.sfx);
+    $('setBgmV').value = Math.round(SND.st.bv * 100); $('setSfxV').value = Math.round(SND.st.sv * 100);
+    $('setLite').textContent = VFX.lite ? '✨ 켜짐 (간단히)' : '✨ 꺼짐 (화려하게)'; $('setLite').classList.toggle('on', VFX.lite);
   };
-  for (const id of ['btnSnd', 'btnSnd2']) $(id).onclick = () => { upd(); o.hidden = false; };
+  // 설정 창: 오른쪽에서 나옴 (닉네임 · 소리 · 이펙트 간단히 · 조작 설정 · 튜토리얼)
+  $('btnSet').onclick = () => { upd(); $('setOv').hidden = false; };
+  $('btnSetX').onclick = () => { $('setOv').hidden = true; };
+  $('setOv').addEventListener('pointerdown', e => { if (e.target === $('setOv')) $('setOv').hidden = true; });
+  $('setBgmT').onclick = () => { SND.set('bgm', SND.st.bgm ? 0 : 1); upd(); }; $('setSfxT').onclick = () => { SND.set('sfx', SND.st.sfx ? 0 : 1); upd(); };
+  $('setBgmV').oninput = e => { SND.set('bv', e.target.value / 100); }; $('setSfxV').oninput = e => { SND.set('sv', e.target.value / 100); };
+  $('setLite').onclick = () => { VFX.lite = !VFX.lite; try { localStorage.setItem('aa_lite', VFX.lite ? '1' : '0'); } catch (e) { /* 무시 */ } upd(); };
+  $('btnTut').onclick = () => { $('tutOv').hidden = false; }; $('btnTutOk').onclick = () => { $('tutOv').hidden = true; };
+  if (!SOUND_ON) $('setBgmT').closest('.ss').hidden = true;
+  $('btnSnd2').onclick = () => { upd(); o.hidden = false; };
   $('btnSndOk').onclick = () => { o.hidden = true; };
-  if (!SOUND_ON) for (const id of ['btnSnd', 'btnSnd2']) $(id).hidden = true;      // 🔊 버튼 숨김
+  if (!SOUND_ON) $('btnSnd2').hidden = true;      // 🔊 버튼 숨김
   $('sndBgmT').onclick = () => { SND.set('bgm', SND.st.bgm ? 0 : 1); upd(); }; $('sndSfxT').onclick = () => { SND.set('sfx', SND.st.sfx ? 0 : 1); upd(); };
   $('sndBgmV').oninput = e => SND.set('bv', e.target.value / 100); $('sndSfxV').oninput = e => SND.set('sv', e.target.value / 100);
   $('sndSfxV').onchange = () => SND.sfx('mage:1');
@@ -3007,7 +3055,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 101;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 102;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
