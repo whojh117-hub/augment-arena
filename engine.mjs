@@ -494,7 +494,7 @@ class Game {
       } else if (f.t === 'line') {
         if (f.delay) {
           this.zones.push({ owner: p.idx, x: p.x, y: p.y, a: ang, len: f.len, w: f.w, dmg: f.dmg, o: f, t: f.delay });
-          this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: f.len, w: f.w, life: f.delay, max: f.delay, col: f.col || '#ff8a4a' });
+          this.fx.push({ k: 'tele', x: p.x, y: p.y, a: ang, len: f.len, w: f.w, life: f.delay, max: f.delay, col: f.col || '#ff8a4a', dl: 1 });
         } else this.lineHit(p, f.len, f.w, f.dmg, f, ang);
       }
       else if (f.t === 'pool') {      // 조류술사 웅덩이: 내 자리에 설치, 만들어질 때 안에 있는 적에게 피해
@@ -879,11 +879,11 @@ class Game {
       }
     }
     {      // 상대 스킬 대응: 예고선(강타·돌진 등)·근거리 시전·돌진·구슬 접근을 알아채면 방어/반격/이동 스킬로 막거나 피함 (못 쓰면 대시)
-      let inc = false, pdx = 0, pdy = 0, tele = false;
+      let inc = false, pdx = 0, pdy = 0, tele = false, tdl = false;
       for (const f of this.fx) {
         if (f.k !== 'tele' || f.life <= 0 || Math.hypot(f.x - e.x, f.y - e.y) > 70) continue;
         const c = Math.cos(f.a), sn = Math.sin(f.a), rx = p.x - f.x, ry = p.y - f.y, al = rx * c + ry * sn, pe = -rx * sn + ry * c;
-        if (al >= -R && al <= f.len + R && Math.abs(pe) <= f.w / 2 + R + 8) { inc = tele = true; const sd = pe >= 0 ? 1 : -1; pdx = -sn * sd; pdy = c * sd; break; }
+        if (al >= -R && al <= f.len + R && Math.abs(pe) <= f.w / 2 + R + 8) { inc = tele = true; tdl = !!f.dl; const sd = pe >= 0 ? 1 : -1; pdx = -sn * sd; pdy = c * sd; break; }
       }
       const sc = e.skCd, pv = p._ecd || [0, 0, 0]; let cast = false; for (let i = 0; i < 3; i++) if (sc[i] > pv[i] + 0.5) cast = true; p._ecd = sc.slice();
       if (cast && dist < 260) inc = true;
@@ -893,15 +893,22 @@ class Game {
         danger = true; threat = true;
         if (tele) { mx = pdx; my = pdy; }
         const ans = [0, 1, 2].some(i => { const k = skOf(p, i); return p.skCd[i] <= 0 && ['defend', 'block', 'escape'].includes((k.ai || {}).use) && !(isRoot(p) && moveSkill(k)); });
-        if (!dodged && (tele || e.charge) && (p.ch.dashN ? p.dashN > 0 : p.dashCd <= 0) && Math.random() < d.dodge * (ans ? 0.35 : 1)) { p.want.dash = 1; dodged = true; }
+        if (!dodged && (tele || e.charge) && (p.ch.dashN ? p.dashN > 0 : p.dashCd <= 0) && Math.random() < d.dodge * (ans ? 0.35 : 1) * (tdl ? 0.6 : 1)) { p.want.dash = 1; dodged = true; }      // 강타 예고선은 대시로 완벽히 피하지 못하게
       }
     }
     p.inp = { mx, my };
     for (let i = 0; i < 3; i++) {
       const sk = skOf(p, i);
       if (dodged || p.skCd[i] > 0 || Math.random() > d.skillP) continue;
+      if (hid && !danger) continue;      // 은신한 상대(보이지 않음)에게는 스킬을 허공에 쓰지 않음
       const h = sk.ai || {}; let use = false;
-      if (h.use === 'attack') use = dist <= h.maxD && dist >= (h.minD || 0) && (!sk.proj || los);
+      if (h.use === 'attack') {
+        use = dist <= h.maxD && dist >= (h.minD || 0) && (!sk.proj || los);
+        if (use && sk.fx.some(f => f.t === 'line' && f.delay)) {      // 강타: 상대 대시가 남아 있으면 대부분 피하므로, 대시를 쓴 직후·묶였을 때를 노림
+          const noDash = (e.ch.dashN ? e.dashN <= 0 : e.dashCd > 0.35) || e.stun > 0 || isRoot(e) || (e.slowT > 0 && e.slowMul < 0.7);
+          use = noDash || Math.random() < 0.15;
+        }
+      }
       else if (h.use === 'defend') use = danger || (p.hp < p.maxHp * 0.75 && dist < 260);
       else if (h.use === 'escape') {
         use = dist < (h.minD || 110) || (threat && dist < 340);
@@ -913,7 +920,10 @@ class Game {
         if (use && sk.fx.some(f => f.t === 'charge' && f.soft)) p.want.angs[i] = Math.atan2(p.y - ey, p.x - ex);      // 날개짓: 상대 반대쪽으로
         if (use && sk.fx.some(f => f.t === 'blink' && !f.thru && f.dir === 'move')) p.want.angs[i] = Math.atan2(p.y - ey, p.x - ex);      // 그림자 도약: 상대 반대쪽으로
       }
-      else if (h.use === 'salv') use = dist <= sk.fx[0].radius && ((p.hits | 0) >= 4 || (p.hp < p.maxHp * 0.5 && (p.hits | 0) >= 2));
+      else if (h.use === 'salv') {      // 구원: 스택 6 이상 모으고 씀. 위험할 때(체력 40% 미만)는 3 이상이면 회복용으로, 상대를 끝낼 수 있으면 바로
+        const st = p.hits | 0, f0 = sk.fx[0], kill = e.hp <= f0.base + f0.dmgPer * st;
+        use = dist <= f0.radius - 10 && (st >= 6 || (p.hp < p.maxHp * 0.4 && st >= 3) || (kill && st >= 1) || st >= p.ch.stackMax);
+      }
       else if (h.use === 'block') use = danger || dist <= h.maxD;
       else if (h.use === 'wall') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && los && Math.random() < 0.5;
       else if (h.use === 'power') { const dr = this.minions.some(m => m.owner === p.idx && m.kind === 'dragon' && m.hp > 0); use = dr ? (dist < 170 && Math.random() < 0.4) : p.hits < p.ch.advent.hits; }
@@ -922,6 +932,10 @@ class Game {
       else if (h.use === 'rewind') { const o = p.hist && p.hist[0]; use = !!o && (o.hp - p.hp >= 18 || (p.hp < p.maxHp * 0.5 && o.hp > p.hp && dist < 230) || (Math.hypot(o.x - p.x, o.y - p.y) > 130 && dist < 90 && p.hp < p.maxHp * 0.7)); }
       else if (h.use === 'decoy') use = dist <= 330 && this.minions.filter(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0).length < 2 && Math.random() < 0.5;
       else if (h.use === 'detonate') use = (this.pools.some(z => z.owner === p.idx && z.kind === 'trap') || this.minions.some(m => m.owner === p.idx && m.kind === 'nin' && m.hp > 0)) && dist < 150;
+      else if (h.use === 'pool' && sk.fx[0].sil) {      // 천사 법률: 상대가 구역 안(가까이)에 있을 때. 근접 상대가 붙어 오거나 상대 스킬이 준비됐을 때 묶어 둠
+        const inZ = dist < sk.fx[0].r - 25, eMel = atkOf(e).type === 'melee', eReady = e.skCd.some(c => c <= 0.3);
+        use = inZ && !hid && (eMel || eReady || p.hp < p.maxHp * 0.6) && !this.pools.some(z => z.owner === p.idx && z.f && z.f.sil);
+      }
       else if (h.use === 'pool') use = dist < 130 && !this.pools.some(z => z.owner === p.idx && z.kind === 'pool');
       else if (h.use === 'tornado') use = dist >= (h.minD || 0) && dist <= (h.maxD || 9999) && los && Math.random() < 0.6;
       if (use) { p.want.sk[i] = 1; if (h.use === 'tornado') { const f0 = sk.fx[0]; p.want.dists[i] = clamp((dist - f0.min) / (f0.max - f0.min), 0, 1); } }
@@ -1051,4 +1065,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 102;
+export const BUILD = 103;
