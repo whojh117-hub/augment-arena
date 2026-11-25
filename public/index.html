@@ -2280,10 +2280,7 @@ d3(){S('c:d3');const a=aimA(),D=231,ex=cl(cs.x+Math.cos(a)*D,20,W-20),ey=cl(cs.y
   shoot({spd:640,r:16,range:hyp(ex-cs.x,ey-cs.y)-R-2,pierce:1,draw:(c,p)=>{c.save();c.translate(p.x,p.y);c.shadowColor='#9fe8ff';c.shadowBlur=0;c.lineCap='round';for(let k=0;k<3;k++){c.globalAlpha=0.9-k*0.2;c.strokeStyle='#e6fbff';c.lineWidth=3;c.beginPath();c.arc(0,0,p.r*(0.5+k*0.35),tm*9+k*2,tm*9+k*2+4);c.stroke()}c.restore()},
     tick:p=>{if(Math.random()<0.6){const aa=tm*9+rnd(0,TAU);P({k:'dot',x:p.x+Math.cos(aa)*p.r,y:p.y+Math.sin(aa)*p.r,vx:-Math.sin(aa)*80,vy:Math.cos(aa)*80,life:0.3,r:2.2,col:'#bfeaff'})}},hit:()=>{lh=true},end:()=>torn()});
   function torn(){const dl=lh?0.2:0.5,x0=dm.x,y0=dm.y;add(dl,(c,e,u)=>{c.globalAlpha=0.9;c.strokeStyle=TEAM;c.lineWidth=3;c.beginPath();c.arc(ex,ey,55,0,TAU);c.stroke();c.globalAlpha=0.38;c.fillStyle=TEAM;c.beginPath();c.arc(ex,ey,Math.max(1,55*u),0,TAU);c.fill()},{under:1,upd:(dt,e)=>{if(lh){const f=eo(cl(e.t/e.dur));dm.x=x0+(ex-x0)*f;dm.y=y0+(ey-y0)*f}},
-    end:()=>{S('d3t');shake(7);const deb=[];for(let i=0;i<26;i++)deb.push({a:rnd(0,TAU),r:rnd(10,60),s:rnd(5,9)});
-      add(0.9,(c,e,u)=>{const fi=Math.min(1,e.t/0.12,(0.9-e.t)/0.3);c.save();c.translate(ex,ey);c.globalCompositeOperation='lighter';const g=c.createRadialGradient(0,0,0,0,0,62);g.addColorStop(0,'rgba(230,251,255,.7)');g.addColorStop(1,'rgba(74,168,255,0)');c.globalAlpha=fi;c.fillStyle=g;c.beginPath();c.arc(0,0,62,0,TAU);c.fill();c.lineCap='round';
-        for(let k=0;k<4;k++){c.strokeStyle=k%2?'#9fe8ff':'#ffffff';c.lineWidth=5-k*0.6;c.beginPath();for(let i=0;i<=26;i++){const q=i/26,aa=-tm*14+k*TAU/4+q*5,rr=6+q*52;i?c.lineTo(Math.cos(aa)*rr,Math.sin(aa)*rr):c.moveTo(Math.cos(aa)*rr,Math.sin(aa)*rr)}c.stroke()}
-        c.fillStyle='#e6fbff';for(const d of deb){const aa=d.a-tm*d.s,rr=d.r*(1-0.3*u);c.beginPath();c.arc(Math.cos(aa)*rr,Math.sin(aa)*rr,2.2,0,TAU);c.fill()}c.restore()});
+    end:()=>{
       if(hyp(dm.x-ex,dm.y-ey)<=55+R){hurt(20,1);dm.hold=0.5;txt(dm.x,dm.y-R-30,'붙잡힘','#9fe8ff')}}})}return 2},
 g0(){S('c:g0');shoot({spd:560,r:7,range:320,draw:(c,p)=>{orb(c,p.x,p.y,p.r,'#ffffff','#fdfdff',0);c.fillStyle='#fff';star4(c,p.x,p.y,13,tm*5)},tick:p=>{if(Math.random()<0.5)P({k:'star',x:p.x+rnd(-4,4),y:p.y+rnd(-4,4),vx:-Math.cos(p.a)*40,vy:-Math.sin(p.a)*40,life:0.35,r:4,col:'#ffffff'})},
   hit:p=>{hurt(6);cs.stack=Math.min(10,cs.stack+1);add(0.25,(c,e,u)=>{c.globalAlpha=1-u;c.fillStyle='#fff';star4(c,p.x,p.y,30*(0.5+u),0.4)});burst(p.x,p.y,8,{k:'star',col:'#fff8d8',s:180,life:0.3,r:4})}});return 1},
@@ -2343,6 +2340,10 @@ g3s(){const a2=aimA();cs.swing=0.3;add(0.3,(c,e,u)=>crescent(c,cs.x,cs.y,a2,74,2
     if (name === 'sX' && EMPX.fn) { const nw = performance.now(), h = recentHits.find(z => nw - z.t < 400 && z.team !== p.team && hyp(z.vx - p.x, z.vy - p.y) < 140);
       if (h) { recentHits.splice(recentHits.indexOf(h), 1); try { EMPX.fn(h.vx, h.vy); } catch (er) { /* 무시 */ } } else empPend[p.idx] = { fn: EMPX.fn, t: nw }; }
   }
+  function whirlFx(ex, ey) { shake(7); const deb=[];for(let i=0;i<26;i++)deb.push({a:rnd(0,TAU),r:rnd(10,60),s:rnd(5,9)});
+      add(0.9,(c,e,u)=>{const fi=Math.min(1,e.t/0.12,(0.9-e.t)/0.3);c.save();c.translate(ex,ey);c.globalCompositeOperation='lighter';const g=c.createRadialGradient(0,0,0,0,0,62);g.addColorStop(0,'rgba(230,251,255,.7)');g.addColorStop(1,'rgba(74,168,255,0)');c.globalAlpha=fi;c.fillStyle=g;c.beginPath();c.arc(0,0,62,0,TAU);c.fill();c.lineCap='round';
+        for(let k=0;k<4;k++){c.strokeStyle=k%2?'#9fe8ff':'#ffffff';c.lineWidth=5-k*0.6;c.beginPath();for(let i=0;i<=26;i++){const q=i/26,aa=-tm*14+k*TAU/4+q*5,rr=6+q*52;i?c.lineTo(Math.cos(aa)*rr,Math.sin(aa)*rr):c.moveTo(Math.cos(aa)*rr,Math.sin(aa)*rr)}c.stroke()}
+        c.fillStyle='#e6fbff';for(const d of deb){const aa=d.a-tm*d.s,rr=d.r*(1-0.3*u);c.beginPath();c.arc(Math.cos(aa)*rr,Math.sin(aa)*rr,2.2,0,TAU);c.fill()}c.restore()}); }      // 용오름 토네이도 (실제 발동 위치·시점)
   function swapFx(p, x0, y0) {      // 용의 힘 위치 교환: 금색·주황 궤적이 서로 교차하며 즉시 바뀜
     const x1 = p.x, y1 = p.y, mx = (x0 + x1) / 2, my = (y0 + y1) / 2, Ln = hyp(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / Ln, ny = (x1 - x0) / Ln, off = Math.min(70, Ln * 0.35); shake(14);
     const qf = (t, s) => { const cx = mx + nx * off * s, cy = my + ny * off * s, ax = s > 0 ? x0 : x1, ay = s > 0 ? y0 : y1, bx = s > 0 ? x1 : x0, by = s > 0 ? y1 : y0, u = 1 - t; return [u * u * ax + 2 * u * t * cx + t * t * bx, u * u * ay + 2 * u * t * cy + t * t * by]; };
@@ -2372,7 +2373,7 @@ g3s(){const a2=aimA();cs.swing=0.3;add(0.3,(c,e,u)=>crescent(c,cs.x,cs.y,a2,74,2
     for (const st of ST) if (st) for (const k in st) st[k] = Math.max(0, st[k] - dt);
     const Pl = game.players; if (!Pl) return;
     freshFx = []; freshB = [];
-    for (const f of game.fx) if (!seenO.has(f)) { seenO.add(f); freshFx.push(f); }
+    for (const f of game.fx) if (!seenO.has(f)) { seenO.add(f); freshFx.push(f); if (f.k === 'whirl') { try { whirlFx(f.x, f.y); } catch (er) { /* 무시 */ } } }
     for (const b of (game.bullets || [])) if (!seenO.has(b)) { seenO.add(b); freshB.push(b); }
     Pl.forEach((p, i) => {
       const q = pv[i], fight = game.ph === 'fight', id = p.ch.id;
@@ -2651,7 +2652,7 @@ function drawArena() {
 }
 function drawFx() {
   for (const f of game.fx) {
-    if (f.k === 'tele' || f.k === 'teleC' || f.k === 'tri' || f.k === 'pool' || f.k === 'cone' || (f.k === 'bolt' && f.follow >= 0)) continue;      // 이 범위 표시는 VFX(미리보기 이펙트)가 대신 그림
+    if (f.k === 'tele' || f.k === 'teleC' || f.k === 'tri' || f.k === 'pool' || f.k === 'cone' || f.k === 'whirl' || (f.k === 'bolt' && f.follow >= 0)) continue;      // 이 범위 표시는 VFX(미리보기 이펙트)가 대신 그림
     const t = 1 - f.life / f.max;
     ctx.save();
     if (f.k === 'bolt') {      // 번개 경고: 빨간 원 테두리 + 중심에서 바깥으로 차오르는 면
@@ -3092,7 +3093,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 109;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 110;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
