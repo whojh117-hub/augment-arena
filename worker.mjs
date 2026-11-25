@@ -33,8 +33,9 @@ export class GameHub {
   }
 }
 
-// 게임 서버(Durable Object)를 아시아 쪽에 만들도록 힌트를 줌. 힌트는 '처음 만들어질 때'만 적용되므로 이름을 새로 바꿔서(apac1) 새로 만들게 함
-const hub = env => env.HUB.get(env.HUB.idFromName('apac1'), { locationHint: 'apac' });
+// 게임 서버(Durable Object)를 북동아시아(한국·일본) 쪽에 만들도록 힌트를 줌. 힌트는 '처음 만들어질 때'만 적용되므로
+// 이름을 새로 바꿔서(apac-ne1) 새로 만들게 함 (예전 'apac1'은 아시아 전체 힌트라 싱가포르 등에 놓일 수 있었음)
+const hub = env => env.HUB.get(env.HUB.idFromName('apac-ne1'), { locationHint: 'apac-ne' });
 
 export default {
   async fetch(request, env) {
