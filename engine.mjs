@@ -886,7 +886,7 @@ class Game {
         if (al >= -R && al <= f.len + R && Math.abs(pe) <= f.w / 2 + R + 8) { inc = tele = true; tdl = !!f.dl; const sd = pe >= 0 ? 1 : -1; pdx = -sn * sd; pdy = c * sd; break; }
       }
       const sc = e.skCd, pv = p._ecd || [0, 0, 0]; let cast = false; for (let i = 0; i < 3; i++) if (sc[i] > pv[i] + 0.5) cast = true; p._ecd = sc.slice();
-      if (cast && dist < 260) inc = true;
+      // (예전: 상대 스킬 쿨타임이 시작되는 순간을 보고 바로 반응 → 사람이 볼 수 없는 정보라 뺌. 이제 투사체·예고 범위·돌진처럼 화면에 보이는 것에만 반응)
       if (e.charge && dist < 380) inc = true;
       for (const m of this.minions) if (m.kind === 'orb' && m.hp > 0 && this.players[m.owner].team !== p.team && Math.hypot(m.x - p.x, m.y - p.y) < 150) inc = true;
       if (inc) {
@@ -1065,4 +1065,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 105;
+export const BUILD = 106;
