@@ -128,9 +128,9 @@ for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.so
 const PLAY_ORDER = CHAR_ORDER.filter(k => !CHARS[k].soon);      // 지금 고를 수 있는 캐릭터
 
 const DIFFS = {
-  easy:   { name: '쉬움',   react: 0.34, dodge: 0.10, skillP: 0.30 },
-  normal: { name: '보통',   react: 0.20, dodge: 0.40, skillP: 0.60 },
-  hard:   { name: '어려움', react: 0.10, dodge: 0.80, skillP: 0.92 },
+  easy:   { name: '쉬움',   rd: 0.45, react: 0.34, dodge: 0.10, skillP: 0.30 },
+  normal: { name: '보통',   rd: 0.3,  react: 0.20, dodge: 0.40, skillP: 0.60 },
+  hard:   { name: '어려움', rd: 0.2,  react: 0.10, dodge: 0.80, skillP: 0.92 },
 };
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -837,6 +837,7 @@ class Game {
   ai(p, dt) {
     p.atkHold = true;
     const e = this.foe(p), d = this.diff, inp = p.inp;
+    p.clk = (p.clk || 0) + dt; if (!p.seen) p.seen = new WeakMap(); const RD = d.rd || 0.2, sawLong = o => { let t = p.seen.get(o); if (t == null) { p.seen.set(o, p.clk); t = p.clk; } return p.clk - t >= RD; };      // 반응 지연: 처음 본 뒤 RD초가 지나야 반응(사람처럼)
     p.think -= dt; p.strafeT -= dt; p.unstick -= dt; p.stuckT += dt;
     if (p.stuckT >= 0.6) {
       const moved = Math.hypot(p.x - p.lx, p.y - p.ly); p.lx = p.x; p.ly = p.y; p.stuckT = 0;
@@ -868,7 +869,7 @@ class Game {
     for (const b of this.bullets) {
       if (b.owner === p.idx) continue;
       const rx = p.x - b.x, ry = p.y - b.y, rd = Math.hypot(rx, ry);
-      if (rd > 170 || rd < 1) continue;
+      if (rd > 170 || rd < 1 || !sawLong(b)) continue;
       const sp = Math.hypot(b.vx, b.vy) || 1;
       if ((b.vx * rx + b.vy * ry) / (sp * rd) > 0.85) {
         danger = true;
@@ -881,7 +882,7 @@ class Game {
     {      // 상대 스킬 대응: 예고선(강타·돌진 등)·근거리 시전·돌진·구슬 접근을 알아채면 방어/반격/이동 스킬로 막거나 피함 (못 쓰면 대시)
       let inc = false, pdx = 0, pdy = 0, tele = false, tdl = false;
       for (const f of this.fx) {
-        if (f.k !== 'tele' || f.life <= 0 || Math.hypot(f.x - e.x, f.y - e.y) > 70) continue;
+        if (f.k !== 'tele' || f.life <= 0 || Math.hypot(f.x - e.x, f.y - e.y) > 70 || !sawLong(f)) continue;
         const c = Math.cos(f.a), sn = Math.sin(f.a), rx = p.x - f.x, ry = p.y - f.y, al = rx * c + ry * sn, pe = -rx * sn + ry * c;
         if (al >= -R && al <= f.len + R && Math.abs(pe) <= f.w / 2 + R + 8) { inc = tele = true; tdl = !!f.dl; const sd = pe >= 0 ? 1 : -1; pdx = -sn * sd; pdy = c * sd; break; }
       }
@@ -1065,4 +1066,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 110;
+export const BUILD = 111;
