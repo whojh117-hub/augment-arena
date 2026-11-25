@@ -2789,15 +2789,16 @@ function drawAimPreview() {
 let myNick = '';
 try { myNick = (localStorage.getItem('aa_nick') || '').slice(0, 8); } catch (e) { /* 무시 */ }
 { const ni = document.getElementById('nick'); if (ni) { ni.value = myNick; ni.addEventListener('input', () => { myNick = ni.value.trim().slice(0, 8); try { localStorage.setItem('aa_nick', myNick); } catch (e) { /* 무시 */ } }); } }
-const hpTrail = {};      // 체력바 뒤의 하얀 잔상 바: 피해를 받으면 그대로 남아 있다가, 0.5초 동안 피해가 없으면 현재 체력까지 따라 내려옴
+const hpTrail = {};      // 체력바 뒤의 하얀 잔상 바: 피해마다 그 피해를 받은 지 0.5초 뒤에 줄어듦 (연속으로 맞아도 기다림이 늘어나지 않음)
 function trailOf(p) {
   const now = performance.now();
-  const k = p.idx, t = hpTrail[k] || (hpTrail[k] = { v: p.hp, hp: p.hp, hit: -1e9, at: now });
+  const k = p.idx, t = hpTrail[k] || (hpTrail[k] = { v: p.hp, hp: p.hp, hits: [], at: now });
   const dt = Math.min(0.1, Math.max(0, (now - t.at) / 1000)); t.at = now;
-  if (p.hp < t.hp - 0.01) t.hit = now;      // 방금 피해를 받음
+  if (p.hp < t.hp - 0.01) t.hits.push({ t: now, from: t.hp });      // 방금 피해: 맞기 전 체력을 0.5초 동안 기억 (피해마다 따로)
+  while (t.hits.length && now - t.hits[0].t >= 500) t.hits.shift();
   t.hp = p.hp;
   if (p.hp >= t.v || p.hp > t.v - 0.01) t.v = p.hp;      // 회복·라운드 시작: 바로 맞춤
-  else if (now - t.hit >= 500) t.v = Math.max(p.hp, t.v - Math.max(p.maxHp * 0.6, 30) * dt);      // 0.5초 뒤부터 부드럽게 따라옴
+  else { let tg = p.hp; for (const h of t.hits) if (h.from > tg) tg = h.from; if (t.v > tg) t.v = Math.max(tg, t.v - Math.max(p.maxHp * 0.6, 30) * dt); }      // 각 피해는 받은 지 0.5초 뒤에 줄어듦 (다음 피해를 받아도 기다리는 시간이 다시 늘지 않음)
   return t.v;
 }
 const haloOff = {};      // 천사 링: 법률이 끝난 시각
@@ -3081,7 +3082,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 106;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 107;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
