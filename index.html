@@ -2195,7 +2195,7 @@ m2(){S('c:m2');shoot({spd:720,r:15,range:792,draw:(c,p)=>{c.save();c.translate(p
     c.fillStyle='#e8f8ff';c.strokeStyle='#8fd8ff';c.lineWidth=2;c.beginPath();c.moveTo(22,0);c.lineTo(0,-9);c.lineTo(-16,0);c.lineTo(0,9);c.closePath();c.fill();c.stroke();c.rotate(tm*6);for(let i=0;i<3;i++){c.rotate(TAU/3);c.fillStyle='#bff4ff';c.beginPath();c.moveTo(19,0);c.lineTo(13,-3);c.lineTo(13,3);c.closePath();c.fill()}c.restore()},
     tick:p=>{if(Math.random()<0.8)P({k:Math.random()<0.5?'star':'dot',x:p.x+rnd(-8,8),y:p.y+rnd(-8,8),vx:-Math.cos(p.a)*60,vy:-Math.sin(p.a)*60,life:0.4,r:3.5,col:'#cfefff'})},
     hit:p=>{hurt(10);dm.frost=2;burst(p.x,p.y,16,{k:'shard',col:'#dff6ff',s:320,life:0.45,r:6,add:0});ringFx(p.x,p.y,40,'#8fd8ff',0.3,5);txt(dm.x,dm.y-R-30,'둔화','#8fd8ff')}});return 2.2},
-m3(){S('c:m3');const a=aimA()-Math.PI/2,x0=cs.x,y0=cs.y,x1=cl(x0+Math.cos(a)*147,R,W-R),y1=cl(y0+Math.sin(a)*147,R,H-R);
+m3(){S('c:m3');const a=aimA(),x0=cs.x,y0=cs.y,x1=cl(x0+Math.cos(a)*(CD||147),R,W-R),y1=cl(y0+Math.sin(a)*(CD||147),R,H-R);
   add(0.4,(c,e,u)=>{const r=44*(1-eo(u));c.save();c.translate(x0,y0);c.rotate(tm*4);c.globalAlpha=1-u;c.strokeStyle='#c36bff';c.lineWidth=2.5;c.shadowColor='#c36bff';c.shadowBlur=0;c.beginPath();c.arc(0,0,r+4,0,TAU);c.stroke();for(let i=0;i<6;i++){c.rotate(TAU/6);c.fillStyle='#e9c8ff';star4(c,r+4,0,6,0)}c.restore();c.globalCompositeOperation='lighter';c.globalAlpha=(1-u)*0.8;const g=c.createRadialGradient(x0,y0,0,x0,y0,30);g.addColorStop(0,'#ffffff');g.addColorStop(1,'#c36bff00');c.fillStyle=g;c.beginPath();c.arc(x0,y0,30*(1-u)+2,0,TAU);c.fill()},{under:1});
   for(let i=0;i<18;i++){const aa=rnd(0,TAU),d=rnd(30,55);P({k:'star',x:x0+Math.cos(aa)*d,y:y0+Math.sin(aa)*d,vx:-Math.cos(aa)*d*4,vy:-Math.sin(aa)*d*4,drag:4,life:0.3,r:4,col:'#e9c8ff'})}
   add(0.5,(c,e,u)=>{c.globalAlpha=(1-u)*0.7;c.strokeStyle='#e9c8ff';c.lineWidth=2;c.setLineDash([4,7]);c.lineDashOffset=-tm*60;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke()},{under:1});
@@ -2331,7 +2331,8 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
     { const near = f => (hyp(f.x - p.x, f.y - p.y) < 45 || hyp(f.x - q.x, f.y - q.y) < 45);
       const ff = freshFx.filter(f => f.a != null && f.x != null && near(f)), tel = ff.find(f => f.k === 'tele');
       const fb = freshB.filter(b => b.owner === p.idx), mv = hyp(p.x - q.x, p.y - q.y);
-      if (tel) { a = tel.a; if (name === 't2' || name === 'n3') CD = tel.len; }
+      if (name === 'm3' && mv > 5) { a = Math.atan2(p.y - q.y, p.x - q.x); CD = mv; }      // 순간이동: 실제로 옮겨 간 곳
+      else if (tel) { a = tel.a; if (name === 't2' || name === 'n3') CD = tel.len; }
       else if (ff.length) a = ff[ff.length - 1].a;
       else if (fb.length) { const b = fb[fb.length - 1]; a = Math.atan2(b.vy, b.vx); if (fb.length >= 3) { const m = fb[Math.floor(fb.length / 2)]; a = Math.atan2(m.vy, m.vx); } }
       else if (mv > 25) a = name === 'a2' ? Math.atan2(q.y - p.y, q.x - p.x) : Math.atan2(p.y - q.y, p.x - q.x); }
@@ -2497,9 +2498,10 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
       let I = getInst(b);
       if (!I) {      // 새 투사체: 방금 사라진 같은 주인·같은 모양의 투사체가 바로 옆에 있으면(예측 → 서버 교체) 그 상태를 이어받음
         const o = game.players[b.owner], key = o && styleKey(o, b);
-        for (const J of orphans) if (J.owner === b.owner && J.key === key && hyp(J.p.x - b.x, J.p.y - b.y) < 40) { I = J; J.taken = true; break; }
+        for (const J of orphans) if (J.owner === b.owner && J.key === key && hyp(J.p.x - b.x, J.p.y - b.y) < 140) { I = J; J.taken = true; break; }
         if (!I) I = makeInst(b); if (!I) continue; setInst(b, I);
       }
+      if (b.id == null) I.pred = true; else I.pred = false;
       const p = I.p, nx = b.x, ny = b.y; p.d += hyp(nx - p.x, ny - p.y); p.x = nx; p.y = ny; if (b.vx || b.vy) p.a = Math.atan2(b.vy, b.vx); p.t += dt; I.seen = bseen; I.b = b;
       if (p.tick) { try { p.tick(p, dt); } catch (er) { /* 무시 */ } }
       if (p.pierce) for (const e of game.players) if (e.alive && e.team !== (game.players[I.owner] || {}).team && !I.hits.has(e.idx) && hyp(e.x - p.x, e.y - p.y) < p.r + R) { I.hits.add(e.idx); if (p.hit) { try { p.hit(p); } catch (er) { /* 무시 */ } } }
@@ -2514,6 +2516,7 @@ g3(){S('c:g3');cs.hammer=5;const x0=cs.x,y0=cs.y;add(0.4,(c,e,u)=>{c.save();c.gl
   }
   let alive = [], orphans = [];
   function finish(J) {
+    if (J.pred && net.role !== 'none') return;      // 온라인: 내가 먼저 그린 예측 투사체는 서버 투사체가 이어받으므로 터지는 효과를 내지 않음
     const p = J.p, own = game.players[J.owner]; let near = false;
     for (const e of game.players) if (e.alive && own && e.team !== own.team && hyp(e.x - p.x, e.y - p.y) < p.r + R + 14) near = true;
     try { if (near && !p.pierce && p.hit) { p.hit(p); if (J.key === 'm2') markNear(p.x, p.y, own, 'frost', 2); if (J.key === 'a2') markNear(p.x, p.y, own, 'root', 1); } else if (!near && p.end) p.end(p); } catch (er) { /* 무시 */ }
@@ -2794,7 +2797,8 @@ function trailOf(p) {
   const now = performance.now();
   const k = p.idx, t = hpTrail[k] || (hpTrail[k] = { v: p.hp, hp: p.hp, hits: [], at: now });
   const dt = Math.min(0.1, Math.max(0, (now - t.at) / 1000)); t.at = now;
-  if (p.hp < t.hp - 0.01) t.hits.push({ t: now, from: t.hp });      // 방금 피해: 맞기 전 체력을 0.5초 동안 기억 (피해마다 따로)
+  if (p.hp < t.hp - 2.5) t.hits.push({ t: now, from: t.hp });      // 작은 피해(지옥 열기 1 등)는 하얀 바 없이 바로 줄어듦
+  else if (p.hp < t.hp - 0.01) { const dd = t.hp - p.hp; t.v = Math.max(p.hp, t.v - dd); for (const h of t.hits) h.from -= dd; }      // 방금 피해: 맞기 전 체력을 0.5초 동안 기억 (피해마다 따로)
   while (t.hits.length && now - t.hits[0].t >= 500) t.hits.shift();
   t.hp = p.hp;
   if (p.hp >= t.v || p.hp > t.v - 0.01) t.v = p.hp;      // 회복·라운드 시작: 바로 맞춤
@@ -3082,7 +3086,7 @@ function banner(txt, sub, col, dy) {
 // ===== 온라인 대전 (room 기능) =====
 // 방장 기기가 게임을 계산하고(host), 상대 기기(guest)는 입력만 보내고 화면 상태를 받아 그립니다.
 // 상대 화면은 좌우를 뒤집어서, 항상 내가 왼쪽·조작 방향이 화면 그대로가 되게 합니다.
-const BUILD = 107;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
+const BUILD = 108;      // 새 버전을 올릴 때마다 1씩 올림. 두 사람의 버전이 다르면 대전을 막고 새로고침을 안내합니다.
 { const vt = document.getElementById('verTag'); if (vt) vt.textContent = '버전 ' + BUILD; }
 const net = {
   role: 'none', room: null, m: null, code: '', started: false, offPeers: null, offLobby: null,
