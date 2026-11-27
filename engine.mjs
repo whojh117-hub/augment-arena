@@ -128,9 +128,9 @@ for (const id of CHAR_ORDER) for (const s of CHARS[id].skills) s.aimed = s.fx.so
 const PLAY_ORDER = CHAR_ORDER.filter(k => !CHARS[k].soon);      // 지금 고를 수 있는 캐릭터
 
 const DIFFS = {
-  easy:   { name: '쉬움',   rd: 0.45, react: 0.34, dodge: 0.10, skillP: 0.30 },
-  normal: { name: '보통',   rd: 0.3,  react: 0.20, dodge: 0.40, skillP: 0.60 },
-  hard:   { name: '어려움', rd: 0.2,  react: 0.10, dodge: 0.80, skillP: 0.92 },
+  easy:   { name: '쉬움',   rd: 0.25, crd: 0.4, react: 0.34, dodge: 0.10, skillP: 0.30 },
+  normal: { name: '보통',   rd: 0.15, crd: 0.25, react: 0.20, dodge: 0.40, skillP: 0.60 },
+  hard:   { name: '어려움', rd: 0.09, crd: 0.15, react: 0.10, dodge: 0.80, skillP: 0.92 },
 };
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -836,8 +836,8 @@ class Game {
 
   ai(p, dt) {
     p.atkHold = true;
-    const e = this.foe(p), d = this.diff, inp = p.inp;
-    p.clk = (p.clk || 0) + dt; if (!p.seen) p.seen = new WeakMap(); const RD = d.rd || 0.2, sawLong = o => { let t = p.seen.get(o); if (t == null) { p.seen.set(o, p.clk); t = p.clk; } return p.clk - t >= RD; };      // 반응 지연: 처음 본 뒤 RD초가 지나야 반응(사람처럼)
+    const e = this.foe(p), d = p.dif || this.diff, inp = p.inp;
+    p.clk = (p.clk || 0) + dt; if (!p.seen) p.seen = new WeakMap(); const RD = d.rd ?? 0.2, sawLong = o => { let t = p.seen.get(o); if (t == null) { p.seen.set(o, p.clk); t = p.clk; } return p.clk - t >= RD; };      // 반응 지연: 처음 본 뒤 RD초가 지나야 반응(사람처럼)
     p.think -= dt; p.strafeT -= dt; p.unstick -= dt; p.stuckT += dt;
     if (p.stuckT >= 0.6) {
       const moved = Math.hypot(p.x - p.lx, p.y - p.ly); p.lx = p.x; p.ly = p.y; p.stuckT = 0;
@@ -845,6 +845,7 @@ class Game {
     }
     if (p.strafeT <= 0) { p.strafe = Math.random() < 0.5 ? -1 : 1; p.strafeT = 0.6 + Math.random() * 1.2; }
     if (p.adv && p.alive) { const hid0 = e.stl > 0; p.atkAng = Math.atan2((hid0 ? e.seenY : e.y) - p.y, (hid0 ? e.seenX : e.x) - p.x); p.atkBuf = ATK_BUFFER; }      // 강림은 상대 쪽으로
+    if (RD > 0) { for (const b of this.bullets) if (b.owner !== p.idx) sawLong(b); for (const f of this.fx) if (f.k === 'tele') sawLong(f); }      // 처음 본 시각은 매 프레임 기록(생각 주기와 상관없이 정확한 반응 지연)
     if (p.think > 0) return;
     p.think = d.react;
     const hid = e.stl > 0, ex = hid ? e.seenX : e.x, ey = hid ? e.seenY : e.y;      // 은신한 상대는 마지막으로 본 위치만 알 수 있음
@@ -886,7 +887,8 @@ class Game {
         const c = Math.cos(f.a), sn = Math.sin(f.a), rx = p.x - f.x, ry = p.y - f.y, al = rx * c + ry * sn, pe = -rx * sn + ry * c;
         if (al >= -R && al <= f.len + R && Math.abs(pe) <= f.w / 2 + R + 8) { inc = tele = true; tdl = !!f.dl; const sd = pe >= 0 ? 1 : -1; pdx = -sn * sd; pdy = c * sd; break; }
       }
-      const sc = e.skCd, pv = p._ecd || [0, 0, 0]; let cast = false; for (let i = 0; i < 3; i++) if (sc[i] > pv[i] + 0.5) cast = true; p._ecd = sc.slice();
+      const sc = e.skCd, pv = p._ecd || [0, 0, 0]; for (let i = 0; i < 3; i++) if (sc[i] > pv[i] + 0.5) p._castT = p.clk; p._ecd = sc.slice();
+      if (d.crd != null && p._castT != null && p.clk - p._castT >= d.crd && p.clk - p._castT < d.crd + 0.5 && dist < 260) inc = true;      // 상대가 스킬을 쓰는 모습을 보고 crd초 뒤 반응(사람 반응 속도 흉내)
       // (예전: 상대 스킬 쿨타임이 시작되는 순간을 보고 바로 반응 → 사람이 볼 수 없는 정보라 뺌. 이제 투사체·예고 범위·돌진처럼 화면에 보이는 것에만 반응)
       if (e.charge && dist < 380) inc = true;
       for (const m of this.minions) if (m.kind === 'orb' && m.hp > 0 && this.players[m.owner].team !== p.team && Math.hypot(m.x - p.x, m.y - p.y) < 150) inc = true;
@@ -1066,4 +1068,4 @@ class Game {
 }
 
 export { Game, CHARS, CHAR_ORDER, W, H, MAPS, MAP_ORDER, resolveCircleRect };
-export const BUILD = 111;
+export const BUILD = 112;
